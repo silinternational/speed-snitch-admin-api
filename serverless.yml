@@ -1,0 +1,127 @@
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: speedsnitch
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: go1.x
+# you can overwrite defaults here
+#  stage: dev
+#  region: us-east-1
+
+  # you can add statements to the Lambda function's IAM Role here
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:DeleteItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:GetRecords"
+        - "dynamodb:PutItem"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+        - "dynamodb:UpdateItem"
+      Resource:
+        - Fn::GetAtt:
+          - nodesTable
+          - Arn
+        - Fn::GetAtt:
+          - usersTable
+          - Arn
+        - Fn::GetAtt:
+          - tagsTable
+          - Arn
+        - Fn::GetAtt:
+          - versionsTable
+          - Arn
+
+  # you can define service wide environment variables here
+  environment:
+    stage: ${self:custom.stage}
+    namespace: ${self:custom.namespace}
+    nodeTable: ${self:custom.nodeTable}
+    userTable: ${self:custom.userTable}
+    tagTable: ${self:custom.tagTable}
+    versionTable: ${self:custom.versionTable}
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  namespace: ${self:service}_${self:custom.stage}
+  nodeTable: ${self:custom.namespace}_node
+  userTable: ${self:custom.namespace}_user
+  tagTable: ${self:custom.namespace}_tag
+  versionTable: ${self:custom.namespace}_version
+
+package:
+ exclude:
+   - ./**
+ include:
+   - ./bin/**
+
+functions:
+  hello:
+      handler: bin/hello
+      events:
+        - http:
+            path: hello
+            method: post
+
+resources:
+  Resources:
+    nodesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: '${self:custom.nodeTable}'
+        AttributeDefinitions:
+          - AttributeName: MacAddr
+            AttributeType: S
+        KeySchema:
+          - AttributeName: MacAddr
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    usersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: '${self:custom.userTable}'
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    tagsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: '${self:custom.tagTable}'
+        AttributeDefinitions:
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: name
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+    versionsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: '${self:custom.versionTable}'
+        AttributeDefinitions:
+          - AttributeName: number
+            AttributeType: S
+        KeySchema:
+          - AttributeName: number
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+

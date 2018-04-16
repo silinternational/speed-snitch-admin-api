@@ -1,0 +1,14 @@
+# Serverless directories
+.serverless
+
+# golang output binary directory
+bin
+
+# golang vendor (dependencies) directory
+vendor
+
+# local creds and stuff
+aws.credentials
+
+# dev tools metadata
+.idea/
