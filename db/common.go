@@ -11,48 +11,13 @@ import (
 
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
 
-//func GetItem(tableName, attrName, attrValue string, returnObj *interface{}) error {
-//	// Prepare the input for the query.
-//	input := &dynamodb.GetItemInput{
-//		TableName: aws.String(tableName),
-//		Key: map[string]*dynamodb.AttributeValue{
-//			attrName: {
-//				S: aws.String(attrValue),
-//			},
-//		},
-//	}
-//
-//	// Retrieve the item from DynamoDB. If no matching item is found
-//	// return nil.
-//	result, err := db.GetItem(input)
-//	if err != nil {
-//		return nil, err
-//	}
-//	if result.Item == nil {
-//		return nil, nil
-//	}
-//
-//	// The result.Item object returned has the underlying type
-//	// map[string]*AttributeValue. We can use the UnmarshalMap helper
-//	// to parse this straight into the fields of a struct. Note:
-//	// UnmarshalListOfMaps also exists if you are working with multiple
-//	// items.
-//	//item := new(returnType)
-//	err = dynamodbattribute.UnmarshalMap(result.Item, returnObj)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	return nil
-//}
-
-func GetNode(macAddr string) (*domain.Node, error) {
+func GetItem(tableName, attrName, attrValue string, returnObj interface{}) error {
 	// Prepare the input for the query.
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(domain.GetDbTableName(domain.NodeTable)),
+		TableName: aws.String(tableName),
 		Key: map[string]*dynamodb.AttributeValue{
-			"MacAddr": {
-				S: aws.String(macAddr),
+			attrName: {
+				S: aws.String(attrValue),
 			},
 		},
 	}
@@ -61,10 +26,10 @@ func GetNode(macAddr string) (*domain.Node, error) {
 	// return nil.
 	result, err := db.GetItem(input)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 	if result.Item == nil {
-		return nil, nil
+		return nil
 	}
 
 	// The result.Item object returned has the underlying type
@@ -72,13 +37,13 @@ func GetNode(macAddr string) (*domain.Node, error) {
 	// to parse this straight into the fields of a struct. Note:
 	// UnmarshalListOfMaps also exists if you are working with multiple
 	// items.
-	node := new(domain.Node)
-	err = dynamodbattribute.UnmarshalMap(result.Item, node)
+	//item := new(returnType)
+	err = dynamodbattribute.UnmarshalMap(result.Item, returnObj)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return node, nil
+	return nil
 }
 
 func PutItem(tableName string, item interface{}) error {
