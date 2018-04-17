@@ -29,7 +29,6 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	// Fetch existing node if exists
-	//node, err := db.GetNode(helloReq.ID)
 	var node domain.Node
 	err = db.GetItem(domain.NodeTable, "MacAddr", helloReq.ID, node)
 	if err != nil {
