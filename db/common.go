@@ -1,12 +1,12 @@
 package db
 
 import (
-	"github.com/silinternational/speed-snitch-admin-api"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
-	"fmt"
+	"github.com/silinternational/speed-snitch-admin-api"
 )
 
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
@@ -85,7 +85,8 @@ func DeleteItem(tableAlias, attrName, attrValue string) (bool, error) {
 	return true, nil
 }
 
-func scanTable(tableName string) ([]map[string]*dynamodb.AttributeValue, error) {
+func scanTable(tableAlias string) ([]map[string]*dynamodb.AttributeValue, error) {
+	tableName := domain.GetDbTableName(tableAlias)
 	input := &dynamodb.ScanInput{
 		TableName: &tableName,
 	}
@@ -108,7 +109,7 @@ func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
 
-	items, err := scanTable(domain.GetDbTableName(domain.TagTable))
+	items, err := scanTable(domain.TagTable)
 	if err != nil {
 		return list, err
 	}
