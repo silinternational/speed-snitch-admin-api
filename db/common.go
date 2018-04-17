@@ -52,7 +52,7 @@ func PutItem(tableAlias string, item interface{}) error {
 	}
 	input := &dynamodb.PutItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
-		Item: av,
+		Item:      av,
 	}
 
 	_, err = db.PutItem(input)
