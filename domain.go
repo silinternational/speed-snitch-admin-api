@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"fmt"
+	"strings"
 )
 
 const TagTable = "tagTable"
@@ -88,4 +90,27 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 // GetTableName returns the env var value of the string passed in
 func GetDbTableName(table string) string {
 	return os.Getenv(table)
+}
+
+// IsValidMacAddress checks whether the input is ...
+//   - 12 hexacedimal digits OR
+//   - 6 pairs of hexadecimal digits separated by colons and/or hyphens
+func IsValidMACAddress(mAddr string) bool {
+	controller := "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$"
+	match, _ := regexp.MatchString(controller, mAddr)
+
+	// no separators
+	if ! match {
+		match, _ = regexp.MatchString("^([0-9A-Fa-f]{12})$", mAddr)
+	}
+
+	return match
+}
+
+func CleanMACAddress(mAddr string) (string, error) {
+	if ! IsValidMACAddress(mAddr) {
+		return "", fmt.Errorf("Invalid MAC Address: " + mAddr)
+	}
+
+	return strings.ToLower(mAddr), nil
 }
