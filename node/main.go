@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"strings"
 )
 
 
@@ -19,6 +20,8 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if !domain.IsValidMACAddress(macAddr) {
 		return domain.ClientError(http.StatusBadRequest, "Bad Mac Address: " + macAddr	)
 	}
+
+	macAddr = strings.ToLower(macAddr)
 
 	tableName := "Node"
 	attributes := map[string]*dynamodb.AttributeValue{
@@ -55,6 +58,12 @@ func showNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	macAddr := req.QueryStringParameters["macAddr"]
+	if !domain.IsValidMACAddress(macAddr) {
+		return domain.ClientError(http.StatusBadRequest, "Bad Mac Address: " + macAddr	)
+	}
+
+	macAddr = strings.ToLower(macAddr)
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
