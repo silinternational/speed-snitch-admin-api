@@ -29,15 +29,15 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	// Fetch existing node if exists
-	node, err := db.GetNode(helloReq.ID)
-	//err := db.GetItem(domain.NodeTable, "MacAddr", helloReq.ID, &domain.Node{})
+	//node, err := db.GetNode(helloReq.ID)
+	var node domain.Node
+	err = db.GetItem(domain.NodeTable, "MacAddr", helloReq.ID, node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	if node == nil {
+	if node.MacAddr == "" {
 		// Initialize new node record
-		node = &domain.Node{}
 		node.MacAddr = helloReq.ID
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
