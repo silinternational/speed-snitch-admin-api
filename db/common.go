@@ -85,7 +85,7 @@ func DeleteItem(tableAlias, attrName, attrValue string) (bool, error) {
 	return true, nil
 }
 
-func scanTable(tableName string) ([]map[string]*dynamodb.AttributeValue, error) {
+func ScanTable(tableName string) ([]map[string]*dynamodb.AttributeValue, error) {
 	input := &dynamodb.ScanInput{
 		TableName: &tableName,
 	}
@@ -108,7 +108,7 @@ func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
 
-	items, err := scanTable(domain.GetDbTableName(domain.TagTable))
+	items, err := ScanTable(domain.GetDbTableName(domain.TagTable))
 	if err != nil {
 		return list, err
 	}
