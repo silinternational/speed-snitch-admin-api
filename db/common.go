@@ -59,3 +59,26 @@ func PutItem(tableName string, item interface{}) error {
 	_, err = db.PutItem(input)
 	return err
 }
+
+
+func DeleteItem(tableName string, attributes map[string]*dynamodb.AttributeValue) (bool, error) {
+
+	// Prepare the input for the query.
+	input := &dynamodb.DeleteItemInput{
+		TableName: aws.String(tableName),
+		Key: attributes,
+	}
+
+	// Delete the item from DynamoDB. I
+	_, err := db.DeleteItem(input)
+
+	if err.Error() == dynamodb.ErrCodeReplicaNotFoundException {
+		return false, nil
+	}
+
+	if err != nil {
+		return true, err
+	}
+
+	return true, nil
+}
