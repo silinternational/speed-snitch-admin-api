@@ -105,6 +105,7 @@ func scanTable(tableAlias string) ([]map[string]*dynamodb.AttributeValue, error)
 	return results, nil
 }
 
+
 func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
@@ -119,6 +120,69 @@ func ListTags() ([]domain.Tag, error) {
 		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
 		if err != nil {
 			return []domain.Tag{}, err
+		}
+		list = append(list, itemObj)
+	}
+
+	return list, nil
+}
+
+func ListNodes() ([]domain.Node, error) {
+
+	var list []domain.Node
+
+	items, err := scanTable(domain.NodeTable)
+	if err != nil {
+		return list, err
+	}
+
+	for _, item := range items {
+		var itemObj domain.Node
+		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
+		if err != nil {
+			return []domain.Node{}, err
+		}
+		list = append(list, itemObj)
+	}
+
+	return list, nil
+}
+
+func ListVersions() ([]domain.Version, error) {
+
+	var list []domain.Version
+
+	items, err := scanTable(domain.VersionTable)
+	if err != nil {
+		return list, err
+	}
+
+	for _, item := range items {
+		var itemObj domain.Version
+		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
+		if err != nil {
+			return []domain.Version{}, err
+		}
+		list = append(list, itemObj)
+	}
+
+	return list, nil
+}
+
+func ListUsers() ([]domain.User, error) {
+
+	var list []domain.User
+
+	items, err := scanTable(domain.UserTable)
+	if err != nil {
+		return list, err
+	}
+
+	for _, item := range items {
+		var itemObj domain.User
+		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
+		if err != nil {
+			return []domain.User{}, err
 		}
 		list = append(list, itemObj)
 	}
