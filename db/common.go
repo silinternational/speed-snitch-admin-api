@@ -256,20 +256,15 @@ func GetServerDataFromNode(node domain.Node) ([]ServerData, error) {
 	return allServerData, nil
 }
 
-// GetAllTestServers returns something like this ...
+// GetNodesForServers returns something like this ...
 //   {<serverID> : {{ID: <server ID>, Host: "<server Host>"}, [<node1>, <node2>]}, ...  }
 //   In other words, each speedtest server has an entry in the output map that includes a
 //     a struct with its ID and Host and a list of the nodes that are meant to use it.
-func GetNodesForServers() (map[int]NodesForServer, error) {
-	allNodes, err := ListNodes()
-	if err != nil {
-		return map[int]NodesForServer{}, err
-	}
-
+func GetNodesForServers(nodes []domain.Node) (map[int]NodesForServer, error) {
 	allNodesForServer := map[int]NodesForServer{}
 
 	// For each node in the database, add its servers to the output
-	for _, node := range allNodes {
+	for _, node := range nodes {
 		serverDataList, err := GetServerDataFromNode(node)
 
 		if err != nil {
@@ -283,11 +278,11 @@ func GetNodesForServers() (map[int]NodesForServer, error) {
 			nodesForServer, ok := allNodesForServer[serverData.ID]
 			if !ok {
 				nodesForServer = NodesForServer{ServerData: serverData}
-				allNodesForServer[serverData.ID] = nodesForServer
 			}
 
 			// Add this node to this servers list of nodes
 			nodesForServer.Nodes = append(nodesForServer.Nodes, node)
+			allNodesForServer[serverData.ID] = nodesForServer
 		}
 	}
 
