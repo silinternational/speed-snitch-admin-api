@@ -20,7 +20,6 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	// Save changes
 	// Return 204
 
-
 	// Parse request body
 	var helloReq domain.HelloRequest
 	err := json.Unmarshal([]byte(req.Body), &helloReq)

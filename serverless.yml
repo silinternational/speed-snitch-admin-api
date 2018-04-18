@@ -69,6 +69,36 @@ functions:
         - http:
             path: hello
             method: post
+  tag:
+      handler: bin/tag
+      events:
+        - http:
+            path: tag
+            method: GET
+        - http:
+            path: tag
+            method: POST
+        - http:
+            path: /tag/{name}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  name: true
+        - http:
+            path: /tag/{name}
+            method: PUT
+            request:
+              parameters:
+                paths:
+                  name: true
+        - http:
+            path: /tag/{name}
+            method: DELETE
+            request:
+              parameters:
+                paths:
+                  name: true
 
 resources:
   Resources:

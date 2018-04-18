@@ -28,8 +28,8 @@ type HelloRequest struct {
 }
 
 type Tag struct {
-	Number      string `json:"Number"`
-	Description string `json:"Description"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type Node struct {
@@ -62,14 +62,13 @@ type Version struct {
 	Description string `json:"Description"`
 }
 
-
-var errorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
+var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
 // Add a helper for handling errors. This logs any error to os.Stderr
 // and returns a 500 Internal Server Error response that the AWS API
 // Gateway understands.
 func ServerError(err error) (events.APIGatewayProxyResponse, error) {
-	errorLogger.Println(err.Error())
+	ErrorLogger.Println(err.Error())
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
