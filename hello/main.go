@@ -1,12 +1,12 @@
 package main
 
 import (
+	"encoding/json"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
-	"github.com/aws/aws-lambda-go/events"
-	"net/http"
-	"encoding/json"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"net/http"
 )
 
 type Response struct {

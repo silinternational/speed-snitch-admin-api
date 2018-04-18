@@ -105,7 +105,6 @@ func scanTable(tableAlias string) ([]map[string]*dynamodb.AttributeValue, error)
 	return results, nil
 }
 
-
 func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag

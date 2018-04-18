@@ -1,13 +1,13 @@
 package domain
 
 import (
-	"github.com/silinternational/speed-snitch-agent"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"net/http"
+	"github.com/silinternational/speed-snitch-agent"
 	"log"
+	"net/http"
 	"os"
 	"regexp"
-	"fmt"
 	"strings"
 )
 
@@ -100,7 +100,7 @@ func IsValidMACAddress(mAddr string) bool {
 	match, _ := regexp.MatchString(controller, mAddr)
 
 	// no separators
-	if ! match {
+	if !match {
 		match, _ = regexp.MatchString("^([0-9A-Fa-f]{12})$", mAddr)
 	}
 
@@ -108,7 +108,7 @@ func IsValidMACAddress(mAddr string) bool {
 }
 
 func CleanMACAddress(mAddr string) (string, error) {
-	if ! IsValidMACAddress(mAddr) {
+	if !IsValidMACAddress(mAddr) {
 		return "", fmt.Errorf("Invalid MAC Address: " + mAddr)
 	}
 

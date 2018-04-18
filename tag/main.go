@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/silinternational/speed-snitch-admin-api"
-	"net/http"
-	"github.com/silinternational/speed-snitch-admin-api/db"
 	"encoding/json"
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-admin-api/db"
+	"net/http"
 )
 
 func main() {

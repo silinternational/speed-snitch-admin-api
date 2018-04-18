@@ -1,21 +1,18 @@
 package main
 
 import (
-	"github.com/aws/aws-lambda-go/lambda"
+	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
-	"net/http"
-	"github.com/silinternational/speed-snitch-admin-api"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
-	"encoding/json"
+	"net/http"
 )
 
-
 var dynamo = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
-
-
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, nodeSpecified := req.PathParameters["macAddr"]
@@ -32,10 +29,9 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 	case "PUT":
 		return updateNode(req)
 	default:
-		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: " + req.HTTPMethod)
+		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: "+req.HTTPMethod)
 	}
 }
-
 
 func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	macAddr, err := domain.CleanMACAddress(req.QueryStringParameters["macAddr"])
@@ -50,7 +46,7 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ServerError(err)
 	}
 
-	if ! success {
+	if !success {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "",

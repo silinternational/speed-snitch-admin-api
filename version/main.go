@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/aws/aws-sdk-go/service/dynamodb"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/silinternational/speed-snitch-admin-api"
-	"net/http"
-	"github.com/silinternational/speed-snitch-admin-api/db"
 	"encoding/json"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-admin-api/db"
+	"net/http"
 )
 
 var dynamo = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
@@ -29,10 +29,9 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 	case "PUT":
 		return updateVersion(req)
 	default:
-		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: " + req.HTTPMethod)
+		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: "+req.HTTPMethod)
 	}
 }
-
 
 func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	number := req.QueryStringParameters["number"]
@@ -47,7 +46,7 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ServerError(err)
 	}
 
-	if ! success {
+	if !success {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "",
