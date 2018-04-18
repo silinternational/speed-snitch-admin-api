@@ -17,6 +17,11 @@ func TestCleanMACAddress(t *testing.T) {
 			ExpectError: false,
 		},
 		{
+			MA1:         "11:22:33:AA:bb:CC",
+			MA2:         "11:22:33:aa:bb:cc",
+			ExpectError: false,
+		},
+		{
 			MA1:         "11:22-33:AA-bb:CC",
 			MA2:         "11:22-33:aa-bb:cc",
 			ExpectError: false,
