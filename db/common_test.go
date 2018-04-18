@@ -73,6 +73,7 @@ var testNodes = map[string]domain.Node{
 		"1/3/2018",
 		"1/1/2018",
 		"Kenya, , Nairobi",
+		"1Lat 1Lon",
 		"1.1.1.1",
 		[]agent.Task{
 			testTasks["111Ping"],
@@ -99,6 +100,7 @@ var testNodes = map[string]domain.Node{
 		"1/3/2018",
 		"1/1/2018",
 		"Chad, , N'Djamena",
+		"2Lat 2Lon",
 		"2.2.2.2",
 		[]agent.Task{
 			testTasks["222Ping"],
