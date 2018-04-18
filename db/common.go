@@ -223,7 +223,8 @@ type NodesForServer struct {
 }
 
 func GetServerDataFromNode(node domain.Node) ([]ServerData, error) {
-	allServerData := []ServerData{}
+	// Use a map to avoid multiple entries for the same server
+	tempData := map[int]ServerData{}
 
 	for _, task := range node.Tasks {
 		if task.Type != agent.TypePing && task.Type != agent.TypeSpeedTest {
@@ -242,7 +243,14 @@ func GetServerDataFromNode(node domain.Node) ([]ServerData, error) {
 			return []ServerData{}, err
 		}
 
-		allServerData = append(allServerData, ServerData{ID: id, Host: host})
+		tempData[id] = ServerData{ID: id, Host: host}
+	}
+
+	// Convert the map back to a slice
+	allServerData := []ServerData{}
+
+	for _, data := range tempData {
+		allServerData = append(allServerData, data)
 	}
 
 	return allServerData, nil
