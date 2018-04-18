@@ -86,7 +86,7 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	nodes, err := db.ListTags()
+	nodes, err := db.ListNodes()
 	if err != nil {
 		return domain.ServerError(err)
 	}

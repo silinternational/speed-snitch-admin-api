@@ -45,6 +45,7 @@ type Node struct {
 	LastSeen          string       `json:"LastSeen"`
 	FirstSeen         string       `json:"FirstSeen"`
 	Location          string       `json:"Location"`
+	Coordinates       string       `json:"Coordinates"`
 	IPAddress         string       `json:"IPAddress"`
 	Tasks             []agent.Task `json:"Tasks,omitempty"`
 	Contacts          []Contact    `json:"Contacts,omitempty"`
