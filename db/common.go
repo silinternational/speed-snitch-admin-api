@@ -7,6 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-agent"
+	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
 )
 
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
@@ -189,9 +191,9 @@ func ListUsers() ([]domain.User, error) {
 	return list, nil
 }
 
-func ListSpeedTestNetServers() ([]domain.STNetServer, error) {
+func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 
-	var list []domain.STNetServer
+	var list []domain.SpeedTestNetServer
 
 	items, err := scanTable(domain.SpeedTestNetServerTable)
 	if err != nil {
@@ -199,13 +201,87 @@ func ListSpeedTestNetServers() ([]domain.STNetServer, error) {
 	}
 
 	for _, item := range items {
-		var itemObj domain.STNetServer
+		var itemObj domain.SpeedTestNetServer
 		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
 		if err != nil {
-			return []domain.STNetServer{}, err
+			return []domain.SpeedTestNetServer{}, err
 		}
 		list = append(list, itemObj)
 	}
 
 	return list, nil
+}
+
+type ServerData struct {
+	ID   int
+	Host string
+}
+
+type NodesForServer struct {
+	ServerData ServerData
+	Nodes      []domain.Node
+}
+
+func GetServerDataFromNode(node domain.Node) ([]ServerData, error) {
+	allServerData := []ServerData{}
+
+	for _, task := range node.Tasks {
+		if task.Type != agent.TypePing && task.Type != agent.TypeSpeedTest {
+			continue
+		}
+
+		id, ok := task.Data.IntValues[speedtestnet.CFG_SERVER_ID]
+		if !ok {
+			err := fmt.Errorf("task.Data.IntValues is missing an entry for %s", speedtestnet.CFG_SERVER_ID)
+			return []ServerData{}, err
+		}
+
+		host, ok := task.Data.StringValues[speedtestnet.CFG_SERVER_HOST]
+		if !ok {
+			err := fmt.Errorf("task.Data.StringValues is missing an entry for %s", speedtestnet.CFG_SERVER_HOST)
+			return []ServerData{}, err
+		}
+
+		allServerData = append(allServerData, ServerData{ID: id, Host: host})
+	}
+
+	return allServerData, nil
+}
+
+// GetAllTestServers returns something like this ...
+//   {<serverID> : {{ID: <server ID>, Host: "<server Host>"}, [<node1>, <node2>]}, ...  }
+//   In other words, each speedtest server has an entry in the output map that includes a
+//     a struct with its ID and Host and a list of the nodes that are meant to use it.
+func GetNodesForServers() (map[int]NodesForServer, error) {
+	allNodes, err := ListNodes()
+	if err != nil {
+		return map[int]NodesForServer{}, err
+	}
+
+	allNodesForServer := map[int]NodesForServer{}
+
+	// For each node in the database, add its servers to the output
+	for _, node := range allNodes {
+		serverDataList, err := GetServerDataFromNode(node)
+
+		if err != nil {
+			err = fmt.Errorf("Error getting server data for node with MAC Address %s\n\t%s", node.MacAddr, err.Error())
+			return map[int]NodesForServer{}, err
+		}
+
+		// For each server, make sure it is in the output and add the current node to its list of nodes
+		for _, serverData := range serverDataList {
+			// If this server isn't in the output, include it
+			nodesForServer, ok := allNodesForServer[serverData.ID]
+			if !ok {
+				nodesForServer = NodesForServer{ServerData: serverData}
+				allNodesForServer[serverData.ID] = nodesForServer
+			}
+
+			// Add this node to this servers list of nodes
+			nodesForServer.Nodes = append(nodesForServer.Nodes, node)
+		}
+	}
+
+	return allNodesForServer, nil
 }
