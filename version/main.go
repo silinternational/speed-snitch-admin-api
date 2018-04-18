@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"encoding/json"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
@@ -93,20 +92,9 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	var versions []domain.Version
-
-	items, err := db.ScanTable(domain.GetDbTableName(domain.VersionTable))
+	versions, err := db.ListVersions()
 	if err != nil {
 		return domain.ServerError(err)
-	}
-
-	for _, item := range items {
-		var itemObj domain.Version
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return domain.ServerError(err)
-		}
-		versions = append(versions, itemObj)
 	}
 
 	js, err := json.Marshal(versions)

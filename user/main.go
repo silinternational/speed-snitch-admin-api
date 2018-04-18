@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"encoding/json"
-	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
@@ -93,20 +92,9 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	var users []domain.User
-
-	items, err := db.ScanTable(domain.GetDbTableName(domain.UserTable))
+	users, err := db.ListUsers()
 	if err != nil {
 		return domain.ServerError(err)
-	}
-
-	for _, item := range items {
-		var itemObj domain.User
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return domain.ServerError(err)
-		}
-		users = append(users, itemObj)
 	}
 
 	js, err := json.Marshal(users)
