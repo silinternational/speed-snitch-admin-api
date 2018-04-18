@@ -48,6 +48,8 @@ func TestCleanMACAddress(t *testing.T) {
 		resultMA, err := CleanMACAddress(ma.MA1)
 		if ma.ExpectError && err == nil {
 			t.Errorf("For test MAC Address %s expected an error but did not get one.", ma.MA1)
+		} else 	if ! ma.ExpectError && err != nil {
+			t.Errorf("For test MAC Address %s did not expect an error but got one:\n\t%s.", ma.MA1, err.Error())
 		}
 
 		if resultMA != ma.MA2 {
