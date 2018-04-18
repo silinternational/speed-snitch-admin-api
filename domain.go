@@ -68,7 +68,7 @@ type Version struct {
 	Description string `json:"Description"`
 }
 
-type STNetServer struct {
+type SpeedTestNetServer struct {
 	URL         string `xml:"url,attr" json:"URL""`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
@@ -82,7 +82,7 @@ type STNetServer struct {
 }
 
 type STNetServerList struct {
-	Servers []STNetServer `xml:"speedtestnetserver"`
+	Servers []SpeedTestNetServer `xml:"speedtestnetserver"`
 }
 
 type STNetServerSettings struct {

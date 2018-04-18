@@ -53,7 +53,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	id := req.QueryStringParameters["id"]
 
-	var server domain.STNetServer
+	var server domain.SpeedTestNetServer
 	err := db.GetItem(domain.SpeedTestNetServerTable, "ID", id, &server)
 	if err != nil {
 		return domain.ServerError(err)
@@ -95,9 +95,9 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	var server domain.STNetServer
+	var server domain.SpeedTestNetServer
 
-	// Get the STNetServer struct from the request body
+	// Get the SpeedTestNetServer struct from the request body
 	err := json.Unmarshal([]byte(req.Body), &server)
 	if err != nil {
 		return domain.ServerError(err)
