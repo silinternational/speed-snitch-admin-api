@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"github.com/silinternational/speed-snitch-admin-api/ipinfo"
 	"net/http"
 )
 
@@ -29,7 +31,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 	// Fetch existing node if exists
 	var node domain.Node
-	err = db.GetItem(domain.NodeTable, "MacAddr", helloReq.ID, node)
+	err = db.GetItem(domain.NodeTable, "MacAddr", helloReq.ID, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -39,6 +41,18 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		node.MacAddr = helloReq.ID
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
+		node.IPAddress = req.RequestContext.Identity.SourceIP
+	}
+
+	// If node is new or IP address has changed, update ip address, location, and coordinates
+	if node.IPAddress != req.RequestContext.Identity.SourceIP {
+		node.IPAddress = req.RequestContext.Identity.SourceIP
+		ipDetails, err := ipinfo.GetIPInfo(req.RequestContext.Identity.SourceIP)
+		if err != err {
+			return domain.ServerError(err)
+		}
+		node.Location = fmt.Sprintf("%s, %s, %s", ipDetails.Country, ipDetails.Region, ipDetails.City)
+		node.Coordinates = ipDetails.Loc
 	}
 
 	// Update transient fields
