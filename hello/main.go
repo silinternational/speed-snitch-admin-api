@@ -41,13 +41,13 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		node.MacAddr = helloReq.ID
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
-		node.IPAddress = req.RequestContext.Identity.SourceIP
 	}
 
 	// If node is new or IP address has changed, update ip address, location, and coordinates
-	if node.IPAddress != req.RequestContext.Identity.SourceIP {
-		node.IPAddress = req.RequestContext.Identity.SourceIP
-		ipDetails, err := ipinfo.GetIPInfo(req.RequestContext.Identity.SourceIP)
+	reqSourceIP := req.RequestContext.Identity.SourceIP
+	if node.IPAddress != reqSourceIP {
+		node.IPAddress = reqSourceIP
+		ipDetails, err := ipinfo.GetIPInfo(reqSourceIP)
 		if err != err {
 			return domain.ServerError(err)
 		}

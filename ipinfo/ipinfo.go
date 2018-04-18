@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -55,8 +54,7 @@ func CallAPI(method, url, postData string, headers map[string]string) (*http.Res
 	}
 
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		return nil, err
 	}
 
 	for key, val := range headers {
