@@ -69,6 +69,7 @@ functions:
         - http:
             path: hello
             method: post
+            cors: true
   node:
       handler: bin/node
       events:
@@ -85,6 +86,7 @@ functions:
         - http:
             path: /node/{macAddr}
             method: PUT
+            cors: true
             request:
               parameters:
                 paths:
@@ -92,6 +94,7 @@ functions:
         - http:
             path: /node/{macAddr}
             method: DELETE
+            cors: true
             request:
               parameters:
                 paths:
@@ -105,6 +108,7 @@ functions:
         - http:
             path: tag
             method: POST
+            cors: true
         - http:
             path: /tag/{name}
             method: GET
@@ -115,6 +119,7 @@ functions:
         - http:
             path: /tag/{name}
             method: PUT
+            cors: true
             request:
               parameters:
                 paths:
@@ -122,6 +127,7 @@ functions:
         - http:
             path: /tag/{name}
             method: DELETE
+            cors: true
             request:
               parameters:
                 paths:
@@ -135,6 +141,7 @@ functions:
         - http:
             path: user
             method: POST
+            cors: true
         - http:
             path: /user/{id}
             method: GET
@@ -145,6 +152,7 @@ functions:
         - http:
             path: /user/{id}
             method: PUT
+            cors: true
             request:
               parameters:
                 paths:
@@ -152,6 +160,7 @@ functions:
         - http:
             path: /user/{id}
             method: DELETE
+            cors: true
             request:
               parameters:
                 paths:
@@ -165,6 +174,7 @@ functions:
         - http:
             path: version
             method: POST
+            cors: true
         - http:
             path: /version/{number}
             method: GET
@@ -175,6 +185,7 @@ functions:
         - http:
             path: /version/{number}
             method: PUT
+            cors: true
             request:
               parameters:
                 paths:
@@ -182,6 +193,7 @@ functions:
         - http:
             path: /version/{number}
             method: DELETE
+            cors: true
             request:
               parameters:
                 paths:
