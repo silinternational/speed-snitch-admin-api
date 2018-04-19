@@ -26,11 +26,11 @@ type Contact struct {
 }
 
 type HelloRequest struct {
-	ID      string `json:"id"`
-	Version string `json:"version"`
-	Uptime  string `json:"uptime"`
-	OS      string `json:"os"`
-	Arch    string `json:"arch"`
+	ID      string `json:"ID"`
+	Version string `json:"Version"`
+	Uptime  string `json:"Uptime"`
+	OS      string `json:"OS"`
+	Arch    string `json:"Arch"`
 }
 
 type Tag struct {
