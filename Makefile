@@ -6,8 +6,11 @@ build:
 	docker-compose run go go build -ldflags="-s -w" -o bin/user               api/user/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/version            api/version/main.go
 
-deploy: build
+slsdeploy:
 	docker-compose run sls sls deploy
+
+deploy: build
+	make slsdeploy
 
 dep:
 	docker-compose run go dep ensure

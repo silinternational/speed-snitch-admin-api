@@ -69,6 +69,36 @@ functions:
         - http:
             path: hello
             method: post
+            cors: true
+  node:
+      handler: bin/node
+      events:
+        - http:
+            path: node
+            method: GET
+        - http:
+            path: /node/{macAddr}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}
+            method: PUT
+            cors: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}
+            method: DELETE
+            cors: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
   tag:
       handler: bin/tag
       events:
@@ -78,6 +108,7 @@ functions:
         - http:
             path: tag
             method: POST
+            cors: true
         - http:
             path: /tag/{name}
             method: GET
@@ -88,6 +119,7 @@ functions:
         - http:
             path: /tag/{name}
             method: PUT
+            cors: true
             request:
               parameters:
                 paths:
@@ -95,10 +127,77 @@ functions:
         - http:
             path: /tag/{name}
             method: DELETE
+            cors: true
             request:
               parameters:
                 paths:
                   name: true
+  user:
+      handler: bin/user
+      events:
+        - http:
+            path: user
+            method: GET
+        - http:
+            path: user
+            method: POST
+            cors: true
+        - http:
+            path: /user/{id}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /user/{id}
+            method: PUT
+            cors: true
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /user/{id}
+            method: DELETE
+            cors: true
+            request:
+              parameters:
+                paths:
+                  id: true
+  version:
+      handler: bin/version
+      events:
+        - http:
+            path: version
+            method: GET
+        - http:
+            path: version
+            method: POST
+            cors: true
+        - http:
+            path: /version/{number}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  number: true
+        - http:
+            path: /version/{number}
+            method: PUT
+            cors: true
+            request:
+              parameters:
+                paths:
+                  number: true
+        - http:
+            path: /version/{number}
+            method: DELETE
+            cors: true
+            request:
+              parameters:
+                paths:
+                  number: true
 
 resources:
   Resources:
@@ -120,10 +219,10 @@ resources:
       Properties:
         TableName: '${self:custom.userTable}'
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: ID
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: ID
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
@@ -133,10 +232,10 @@ resources:
       Properties:
         TableName: '${self:custom.tagTable}'
         AttributeDefinitions:
-          - AttributeName: name
+          - AttributeName: Name
             AttributeType: S
         KeySchema:
-          - AttributeName: name
+          - AttributeName: Name
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
@@ -146,12 +245,11 @@ resources:
       Properties:
         TableName: '${self:custom.versionTable}'
         AttributeDefinitions:
-          - AttributeName: number
+          - AttributeName: Number
             AttributeType: S
         KeySchema:
-          - AttributeName: number
+          - AttributeName: Number
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-

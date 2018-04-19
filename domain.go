@@ -34,8 +34,8 @@ type HelloRequest struct {
 }
 
 type Tag struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	Name        string `json:"Name"`
+	Description string `json:"Description"`
 }
 
 type Node struct {
