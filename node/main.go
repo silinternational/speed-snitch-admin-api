@@ -29,7 +29,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	macAddr, err := domain.CleanMACAddress(req.QueryStringParameters["macAddr"])
+	macAddr, err := domain.CleanMACAddress(req.PathParameters["macAddr"])
 
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
@@ -55,7 +55,7 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	macAddr, err := domain.CleanMACAddress(req.QueryStringParameters["macAddr"])
+	macAddr, err := domain.CleanMACAddress(req.PathParameters["macAddr"])
 
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())

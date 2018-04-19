@@ -10,7 +10,7 @@ import (
 )
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, versionSpecified := req.PathParameters["version"]
+	_, versionSpecified := req.PathParameters["number"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteVersion(req)
@@ -29,7 +29,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	number := req.QueryStringParameters["number"]
+	number := req.PathParameters["number"]
 
 	if number == "" {
 		return domain.ClientError(http.StatusBadRequest, "number param must be specified")
@@ -55,7 +55,7 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 }
 
 func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	number := req.QueryStringParameters["number"]
+	number := req.PathParameters["number"]
 
 	if number == "" {
 		return domain.ClientError(http.StatusBadRequest, "Number param must be specified")

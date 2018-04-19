@@ -29,7 +29,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	id := req.QueryStringParameters["id"]
+	id := req.PathParameters["id"]
 
 	if id == "" {
 		return domain.ClientError(http.StatusBadRequest, "id param must be specified")
@@ -55,7 +55,7 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	id := req.QueryStringParameters["id"]
+	id := req.PathParameters["id"]
 
 	if id == "" {
 		return domain.ClientError(http.StatusBadRequest, "id param must be specified")

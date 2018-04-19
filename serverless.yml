@@ -69,6 +69,33 @@ functions:
         - http:
             path: hello
             method: post
+  node:
+      handler: bin/node
+      events:
+        - http:
+            path: node
+            method: GET
+        - http:
+            path: /node/{macAddr}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}
+            method: PUT
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}
+            method: DELETE
+            request:
+              parameters:
+                paths:
+                  macAddr: true
   tag:
       handler: bin/tag
       events:
@@ -99,6 +126,66 @@ functions:
               parameters:
                 paths:
                   name: true
+  user:
+      handler: bin/user
+      events:
+        - http:
+            path: user
+            method: GET
+        - http:
+            path: user
+            method: POST
+        - http:
+            path: /user/{id}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /user/{id}
+            method: PUT
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /user/{id}
+            method: DELETE
+            request:
+              parameters:
+                paths:
+                  id: true
+  version:
+      handler: bin/version
+      events:
+        - http:
+            path: version
+            method: GET
+        - http:
+            path: version
+            method: POST
+        - http:
+            path: /version/{number}
+            method: GET
+            request:
+              parameters:
+                paths:
+                  number: true
+        - http:
+            path: /version/{number}
+            method: PUT
+            request:
+              parameters:
+                paths:
+                  number: true
+        - http:
+            path: /version/{number}
+            method: DELETE
+            request:
+              parameters:
+                paths:
+                  number: true
 
 resources:
   Resources:
@@ -120,10 +207,10 @@ resources:
       Properties:
         TableName: '${self:custom.userTable}'
         AttributeDefinitions:
-          - AttributeName: id
+          - AttributeName: ID
             AttributeType: S
         KeySchema:
-          - AttributeName: id
+          - AttributeName: ID
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
@@ -133,10 +220,10 @@ resources:
       Properties:
         TableName: '${self:custom.tagTable}'
         AttributeDefinitions:
-          - AttributeName: name
+          - AttributeName: Name
             AttributeType: S
         KeySchema:
-          - AttributeName: name
+          - AttributeName: Name
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
@@ -146,12 +233,11 @@ resources:
       Properties:
         TableName: '${self:custom.versionTable}'
         AttributeDefinitions:
-          - AttributeName: number
+          - AttributeName: Number
             AttributeType: S
         KeySchema:
-          - AttributeName: number
+          - AttributeName: Number
             KeyType: HASH
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-
