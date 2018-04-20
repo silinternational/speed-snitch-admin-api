@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
-	"github.com/silinternational/speed-snitch-admin-api/ipinfo"
+	"github.com/silinternational/speed-snitch-admin-api/lib/ipinfo"
 	"net/http"
 )
 
