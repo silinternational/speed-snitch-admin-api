@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/silinternational/speed-snitch-agent"
@@ -141,16 +142,19 @@ func CleanMACAddress(mAddr string) (string, error) {
 	return strings.ToLower(mAddr), nil
 }
 
-// GetTagsInJson returns a list of a struct's fields whose json tags are
+// GetFieldNamesFromJson returns a list of a struct's fields whose json tags are
 //  present in the json string being fed to it.
-// NOTE: It assumes that the "json:" tag on the field will not be followed by anything
-func GetTagsInJson(intfc interface{}, inJson string) [][2]string {
-	internals := reflect.TypeOf(intfc).Elem()
-	jsonTags := [][2]string{}
+// NOTE: It assumes that the "json:" tag on the field will not be followed by other tags
+func GetFieldNamesFromJson(intfc interface{}, inJson string) []string {
+	reflectType := reflect.ValueOf(intfc).Type()
+	fieldNames := []string{}
 
-	for i := 0; i < internals.NumField(); i++ {
-		f := internals.Field(i)
-		wholeTag := fmt.Sprintf("%v", f.Tag)
+	for i := 0; i < reflectType.NumField(); i++ {
+		field := reflectType.Field(i)
+
+		attrTag := field.Tag
+
+		wholeTag := fmt.Sprintf("%v", attrTag)
 		parts := strings.Split(wholeTag, "json:")
 		if len(parts) < 2 {
 			continue
@@ -158,21 +162,36 @@ func GetTagsInJson(intfc interface{}, inJson string) [][2]string {
 		tag := parts[len(parts)-1]
 
 		if strings.Contains(inJson, tag) {
-			jsonTags = append(jsonTags, [2]string{f.Name, tag})
+			fieldNames = append(fieldNames, field.Name)
 		}
 	}
-	return jsonTags
+	return fieldNames
 }
 
-func MergeStructsFromJson(oldIntfc interface{}, inJson string) interface{} {
-	jsonTags := GetTagsInJson(oldIntfc, inJson)
+func MergeStructsFromJson(oldIntfc interface{}, inJson string) error {
+	jsonTags := GetFieldNamesFromJson(oldIntfc, inJson)
 	intfcType := reflect.TypeOf(oldIntfc)
 
-	finalIntfc := reflect.New(intfcType)
-	newIntfc := reflect.New(intfcType)
+	newIntfc := reflect.New(intfcType).Elem().Interface()
 
-	for _, tags := range jsonTags {
-		fieldName := tag[0]
-		field, _ := internals
+	err := json.Unmarshal([]byte(inJson), &newIntfc)
+
+	fmt.Printf("NEW: %v ... %v \n", newIntfc, reflect.TypeOf(newIntfc))
+	if err != nil {
+		err = fmt.Errorf("Error decoding json to merge structs: %s", err.Error())
+		return err
 	}
+
+	fmt.Printf("JT: %v\n", jsonTags)
+	newValue := reflect.ValueOf(newIntfc)
+
+	for _, fieldName := range jsonTags {
+		field := newValue.Field(1)
+
+		fmt.Printf("Value for %s: %v", fieldName, reflect.TypeOf(field))
+
+		//reflect.ValueOf(oldIntfc).FieldByName(fieldName).Set(newValue)
+	}
+
+	return nil
 }

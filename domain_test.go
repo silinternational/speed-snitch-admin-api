@@ -1,6 +1,8 @@
 package domain
 
-import "testing"
+import (
+	"testing"
+)
 
 type testMACAddr struct {
 	MA1         string
@@ -60,5 +62,38 @@ func TestCleanMACAddress(t *testing.T) {
 		if resultMA != ma.MA2 {
 			t.Errorf(`For test MAC Address %s expected: "%s", but got "%s".`, ma.MA1, ma.MA2, resultMA)
 		}
+	}
+}
+
+func TestMergeStructsFromJson(t *testing.T) {
+	versionNumber := "0.0.1"
+	newDescription := "New Version"
+
+	oldObj := Version{
+		versionNumber,
+		"Old Version",
+	}
+
+	newJson := `{
+	"Description": "` + newDescription + `"
+}`
+
+	err := MergeStructsFromJson(oldObj, newJson)
+	if err != nil {
+		t.Errorf("Did not expect an error but got \n\t%s", err.Error())
+		return
+	}
+
+	results := oldObj.Number
+
+	if versionNumber != results {
+		t.Errorf("Bad Number. Expected %s, but got %s", versionNumber, results)
+		return
+	}
+
+	results = oldObj.Description
+	if newDescription != results {
+		t.Errorf("Bad Description. Expected %s, but got %s", newDescription, results)
+		return
 	}
 }
