@@ -10,6 +10,8 @@ service: speedsnitch
 provider:
   name: aws
   runtime: go1.x
+  apiKeys:
+    - ${self:custom.namespace}-admin
 # you can overwrite defaults here
 #  stage: dev
 #  region: us-east-1
@@ -60,25 +62,20 @@ package:
  exclude:
    - ./**
  include:
-   - ./bin/**
+   - ../../bin/**
 
 functions:
-  hello:
-      handler: bin/hello
-      events:
-        - http:
-            path: hello
-            method: post
-            cors: true
   node:
       handler: bin/node
       events:
         - http:
             path: node
             method: GET
+            private: true
         - http:
             path: /node/{macAddr}
             method: GET
+            private: true
             request:
               parameters:
                 paths:
@@ -86,6 +83,7 @@ functions:
         - http:
             path: /node/{macAddr}
             method: PUT
+            private: true
             cors: true
             request:
               parameters:
@@ -94,6 +92,7 @@ functions:
         - http:
             path: /node/{macAddr}
             method: DELETE
+            private: true
             cors: true
             request:
               parameters:
@@ -105,13 +104,16 @@ functions:
         - http:
             path: tag
             method: GET
+            private: true
         - http:
             path: tag
             method: POST
+            private: true
             cors: true
         - http:
             path: /tag/{name}
             method: GET
+            private: true
             request:
               parameters:
                 paths:
@@ -119,6 +121,7 @@ functions:
         - http:
             path: /tag/{name}
             method: PUT
+            private: true
             cors: true
             request:
               parameters:
@@ -127,6 +130,7 @@ functions:
         - http:
             path: /tag/{name}
             method: DELETE
+            private: true
             cors: true
             request:
               parameters:
@@ -138,13 +142,16 @@ functions:
         - http:
             path: user
             method: GET
+            private: true
         - http:
             path: user
             method: POST
+            private: true
             cors: true
         - http:
             path: /user/{id}
             method: GET
+            private: true
             request:
               parameters:
                 paths:
@@ -152,6 +159,7 @@ functions:
         - http:
             path: /user/{id}
             method: PUT
+            private: true
             cors: true
             request:
               parameters:
@@ -160,6 +168,7 @@ functions:
         - http:
             path: /user/{id}
             method: DELETE
+            private: true
             cors: true
             request:
               parameters:
@@ -171,13 +180,16 @@ functions:
         - http:
             path: version
             method: GET
+            private: true
         - http:
             path: version
             method: POST
+            private: true
             cors: true
         - http:
             path: /version/{number}
             method: GET
+            private: true
             request:
               parameters:
                 paths:
@@ -185,6 +197,7 @@ functions:
         - http:
             path: /version/{number}
             method: PUT
+            private: true
             cors: true
             request:
               parameters:
@@ -193,6 +206,7 @@ functions:
         - http:
             path: /version/{number}
             method: DELETE
+            private: true
             cors: true
             request:
               parameters:
