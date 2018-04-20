@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 )
@@ -138,4 +139,40 @@ func CleanMACAddress(mAddr string) (string, error) {
 	}
 
 	return strings.ToLower(mAddr), nil
+}
+
+// GetTagsInJson returns a list of a struct's fields whose json tags are
+//  present in the json string being fed to it.
+// NOTE: It assumes that the "json:" tag on the field will not be followed by anything
+func GetTagsInJson(intfc interface{}, inJson string) [][2]string {
+	internals := reflect.TypeOf(intfc).Elem()
+	jsonTags := [][2]string{}
+
+	for i := 0; i < internals.NumField(); i++ {
+		f := internals.Field(i)
+		wholeTag := fmt.Sprintf("%v", f.Tag)
+		parts := strings.Split(wholeTag, "json:")
+		if len(parts) < 2 {
+			continue
+		}
+		tag := parts[len(parts)-1]
+
+		if strings.Contains(inJson, tag) {
+			jsonTags = append(jsonTags, [2]string{f.Name, tag})
+		}
+	}
+	return jsonTags
+}
+
+func MergeStructsFromJson(oldIntfc interface{}, inJson string) interface{} {
+	jsonTags := GetTagsInJson(oldIntfc, inJson)
+	intfcType := reflect.TypeOf(oldIntfc)
+
+	finalIntfc := reflect.New(intfcType)
+	newIntfc := reflect.New(intfcType)
+
+	for _, tags := range jsonTags {
+		fieldName := tag[0]
+		field, _ := internals
+	}
 }
