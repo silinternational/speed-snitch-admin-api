@@ -1,0 +1,62 @@
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: speedsnitch-agent
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: go1.x
+  apiKeys:
+    - ${self:custom.namespace}-agent
+# you can overwrite defaults here
+#  stage: dev
+#  region: us-east-1
+
+  # you can add statements to the Lambda function's IAM Role here
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:UpdateItem"
+      Resource:
+        - Fn::Join:
+          - ":"
+          - - "arn:aws:dynamodb"
+            - Ref: 'AWS::Region'
+            - Ref: 'AWS::AccountId'
+            - Fn::Join:
+              - ""
+              - - "table/"
+                - ${self:custom.nodeTable}
+
+  # you can define service wide environment variables here
+  environment:
+    stage: ${self:custom.stage}
+    namespace: ${self:custom.namespace}
+    nodeTable: ${self:custom.nodeTable}
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  namespace: ${self:service}_${self:custom.stage}
+  nodeTable: speedsnitch_${self:custom.stage}_node
+
+package:
+ exclude:
+   - ./**
+ include:
+   - ../../bin/hello
+
+functions:
+  hello:
+      handler: bin/hello
+      events:
+        - http:
+            path: hello
+            method: post
+            private: true
+            cors: true
