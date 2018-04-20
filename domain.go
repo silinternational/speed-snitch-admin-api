@@ -63,7 +63,37 @@ type User struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
 	Role  string `json:"Role"`
-	Tags  []Tag  `json:"Tags,omitempty"`
+	Tags  []Tag  `json:"Tags"` // ,omitempty"`
+}
+
+func (u User) MakeUpdatedCopy(inJson string) User {
+	jsonFields := GetFieldNamesFromJson(u, inJson)
+
+	if len(jsonFields) <= 0 {
+		return u
+	}
+
+	newObj := User{}
+	json.Unmarshal([]byte(inJson), &newObj)
+
+	if newObj.Name != "" {
+		u.Name = newObj.Name
+	}
+	if newObj.Email != "" {
+		u.Email = newObj.Email
+	}
+	if newObj.Role != "" {
+		u.Role = newObj.Role
+	}
+
+	for _, fieldName := range jsonFields {
+		if fieldName == "Tags" {
+			u.Tags = newObj.Tags
+			break
+		}
+	}
+
+	return u
 }
 
 type Version struct {
@@ -166,32 +196,4 @@ func GetFieldNamesFromJson(intfc interface{}, inJson string) []string {
 		}
 	}
 	return fieldNames
-}
-
-func MergeStructsFromJson(oldIntfc interface{}, inJson string) error {
-	jsonTags := GetFieldNamesFromJson(oldIntfc, inJson)
-	intfcType := reflect.TypeOf(oldIntfc)
-
-	newIntfc := reflect.New(intfcType).Elem().Interface()
-
-	err := json.Unmarshal([]byte(inJson), &newIntfc)
-
-	fmt.Printf("NEW: %v ... %v \n", newIntfc, reflect.TypeOf(newIntfc))
-	if err != nil {
-		err = fmt.Errorf("Error decoding json to merge structs: %s", err.Error())
-		return err
-	}
-
-	fmt.Printf("JT: %v\n", jsonTags)
-	newValue := reflect.ValueOf(newIntfc)
-
-	for _, fieldName := range jsonTags {
-		field := newValue.Field(1)
-
-		fmt.Printf("Value for %s: %v", fieldName, reflect.TypeOf(field))
-
-		//reflect.ValueOf(oldIntfc).FieldByName(fieldName).Set(newValue)
-	}
-
-	return nil
 }
