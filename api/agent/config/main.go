@@ -9,7 +9,6 @@ import (
 	"net/http"
 )
 
-
 func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	macAddr, err := domain.CleanMACAddress(req.PathParameters["macAddr"])
 
@@ -37,8 +36,8 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			URL    string
 		}{
 			Number: node.ConfiguredVersion,
-			URL: downloadUrl,
-		 },
+			URL:    downloadUrl,
+		},
 		Tasks: node.Tasks,
 	}
 

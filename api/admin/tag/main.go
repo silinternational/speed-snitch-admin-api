@@ -43,7 +43,7 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       http.StatusText(http.StatusNotFound),
-			Headers: domain.DefaultResponseCorsHeaders,
+			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
@@ -55,7 +55,7 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers: domain.DefaultResponseCorsHeaders,
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -73,7 +73,7 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers: domain.DefaultResponseCorsHeaders,
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -101,7 +101,7 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers: domain.DefaultResponseCorsHeaders,
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -118,13 +118,13 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       http.StatusText(http.StatusNotFound),
-			Headers: domain.DefaultResponseCorsHeaders,
+			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       "",
-		Headers: domain.DefaultResponseCorsHeaders,
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
