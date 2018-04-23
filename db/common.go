@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/fillup/semver"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-agent"
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
@@ -287,4 +288,31 @@ func GetNodesForServers(nodes []domain.Node) (map[int]NodesForServer, error) {
 	}
 
 	return allNodesForServer, nil
+}
+
+// GetLatestVersion iterates through version in db to return only the latest version
+func GetLatestVersion() (domain.Version, error) {
+	versions, err := ListVersions()
+	if err != nil {
+		return domain.Version{}, err
+	}
+
+	var latest domain.Version
+
+	for _, version := range versions {
+		if latest.Number == "" {
+			latest = version
+		} else {
+			isNewer, err := semver.IsNewer(latest.Number, version.Number)
+			if err != nil {
+				return domain.Version{}, err
+			}
+			if isNewer {
+				latest = version
+			}
+		}
+
+	}
+
+	return latest, nil
 }

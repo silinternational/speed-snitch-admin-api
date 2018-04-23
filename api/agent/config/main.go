@@ -29,6 +29,15 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		}, nil
 	}
 
+	if node.ConfiguredVersion == "" || node.ConfiguredVersion == "latest" {
+		latestVersion, err := db.GetLatestVersion()
+		if err != nil {
+			return domain.ServerError(err)
+		}
+		node.ConfiguredVersion = latestVersion.Number
+
+	}
+
 	downloadUrl := domain.GetUrlForAgentVersion(node.ConfiguredVersion, node.OS, node.Arch)
 	config := domain.NodeConfig{
 		Version: struct {
