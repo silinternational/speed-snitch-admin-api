@@ -41,12 +41,14 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "",
+			Headers: domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
+		Headers: domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -63,6 +65,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       http.StatusText(http.StatusNotFound),
+			Headers: domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
@@ -74,6 +77,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
+		Headers: domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -91,6 +95,7 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
+		Headers: domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -118,6 +123,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
+		Headers: domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 

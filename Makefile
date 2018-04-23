@@ -1,5 +1,6 @@
 build:
 	docker-compose run go go build -ldflags="-s -w" -o bin/hello              api/agent/hello/main.go
+	docker-compose run go go build -ldflags="-s -w" -o bin/config             api/agent/config/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/tag                api/admin/tag/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/node               api/admin/node/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/speedtestnetserver api/admin/speedtestnetserver/main.go

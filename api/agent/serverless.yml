@@ -50,6 +50,7 @@ package:
    - ./**
  include:
    - ../../bin/hello
+   - ../../bin/config
 
 functions:
   hello:
@@ -58,5 +59,15 @@ functions:
         - http:
             path: hello
             method: post
-            private: true
-            cors: true
+            private: false
+  config:
+      handler: bin/config
+      events:
+        - http:
+            path: config/{macAddr}
+            method: get
+            private: false
+            request:
+              parameters:
+                paths:
+                  macAddr: true
