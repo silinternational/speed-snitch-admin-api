@@ -56,6 +56,14 @@ type Node struct {
 	ConfiguredBy      string       `json:"ConfiguredBy,omitempty"`
 }
 
+type NodeConfig struct {
+	Version struct {
+		Number string
+		URL    string
+	}
+	Tasks []agent.Task
+}
+
 type User struct {
 	ID    string `json:"ID"`
 	Name  string `json:"Name"`
@@ -92,6 +100,12 @@ type STNetServerSettings struct {
 
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
+// API call responses have to provide CORS headers manually
+var DefaultResponseCorsHeaders = map[string]string{
+	"Access-Control-Allow-Origin":      "*",
+	"Access-Control-Allow-Credentials": "true",
+}
+
 // Add a helper for handling errors. This logs any error to os.Stderr
 // and returns a 500 Internal Server Error response that the AWS API
 // Gateway understands.
@@ -101,6 +115,7 @@ func ServerError(err error) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
 		Body:       http.StatusText(http.StatusInternalServerError),
+		Headers:    DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -109,6 +124,7 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       body,
+		Headers:    DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -138,4 +154,19 @@ func CleanMACAddress(mAddr string) (string, error) {
 	}
 
 	return strings.ToLower(mAddr), nil
+}
+
+// GetUrlForAgentVersion creates url to agent binary for given version, os, and arch
+func GetUrlForAgentVersion(version, os, arch string) string {
+	version = strings.ToLower(version)
+	os = strings.ToLower(os)
+	arch = strings.ToLower(arch)
+	url := fmt.Sprintf(
+		"https://github.com/silinternational/speedsnitch-agent/raw/%s/dist/%s/%s/speedsnitch-agent",
+		version, os, arch)
+	if os == "windows" {
+		url = url + ".exe"
+	}
+
+	return url
 }

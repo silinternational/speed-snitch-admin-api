@@ -49,6 +49,12 @@
   version = "v1.13.32"
 
 [[projects]]
+  name = "github.com/fillup/semver"
+  packages = ["."]
+  revision = "08201dc719617e5457b54d07b66988c422da44e6"
+  version = "0.1.0"
+
+[[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
   revision = "ace140f73450505f33e8b8418216792275ae82a7"
@@ -62,12 +68,16 @@
 [[projects]]
   branch = "develop"
   name = "github.com/silinternational/speed-snitch-agent"
-  packages = ["."]
+  packages = [
+    ".",
+    "lib/httputils",
+    "lib/speedtestnet"
+  ]
   revision = "333470d211f0fedebd9dcad8e7209a8a248c5924"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "860e4d2eedba72b156343ff772d47a29946cdaa37415bb99d0825b5c449f9c85"
+  inputs-digest = "169f13b96672bde45b01676753a338d463c274794c4f77224bfcbe688da2ec3e"
   solver-name = "gps-cdcl"
   solver-version = 1

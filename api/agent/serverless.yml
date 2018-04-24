@@ -33,23 +33,40 @@ provider:
               - ""
               - - "table/"
                 - ${self:custom.nodeTable}
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:Scan"
+      Resource:
+        - Fn::Join:
+          - ":"
+          - - "arn:aws:dynamodb"
+            - Ref: 'AWS::Region'
+            - Ref: 'AWS::AccountId'
+            - Fn::Join:
+              - ""
+              - - "table/"
+                - ${self:custom.versionTable}
 
   # you can define service wide environment variables here
   environment:
     stage: ${self:custom.stage}
     namespace: ${self:custom.namespace}
     nodeTable: ${self:custom.nodeTable}
+    versionTable: ${self:custom.versionTable}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
   nodeTable: speedsnitch_${self:custom.stage}_node
+  versionTable: speedsnitch_${self:custom.stage}_version
 
 package:
  exclude:
    - ./**
  include:
    - ../../bin/hello
+   - ../../bin/config
 
 functions:
   hello:
@@ -58,5 +75,15 @@ functions:
         - http:
             path: hello
             method: post
-            private: true
-            cors: true
+            private: false
+  config:
+      handler: bin/config
+      events:
+        - http:
+            path: config/{macAddr}
+            method: get
+            private: false
+            request:
+              parameters:
+                paths:
+                  macAddr: true

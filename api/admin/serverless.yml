@@ -72,12 +72,26 @@ functions:
             path: node
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: /node/{macAddr}
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -86,7 +100,14 @@ functions:
             path: /node/{macAddr}
             method: PUT
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -95,7 +116,14 @@ functions:
             path: /node/{macAddr}
             method: DELETE
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -107,17 +135,38 @@ functions:
             path: tag
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: tag
             method: POST
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: /tag/{name}
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -126,7 +175,14 @@ functions:
             path: /tag/{name}
             method: PUT
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -135,7 +191,14 @@ functions:
             path: /tag/{name}
             method: DELETE
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -147,17 +210,38 @@ functions:
             path: user
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: user
             method: POST
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: /user/{id}
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -166,7 +250,14 @@ functions:
             path: /user/{id}
             method: PUT
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -175,7 +266,14 @@ functions:
             path: /user/{id}
             method: DELETE
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -187,17 +285,38 @@ functions:
             path: version
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: version
             method: POST
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
         - http:
             path: /version/{number}
             method: GET
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -206,7 +325,14 @@ functions:
             path: /version/{number}
             method: PUT
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
@@ -215,7 +341,14 @@ functions:
             path: /version/{number}
             method: DELETE
             #private: true
-            cors: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
             request:
               parameters:
                 paths:
