@@ -23,10 +23,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}
 
 	if node.Arch == "" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-		}, nil
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
 	if node.ConfiguredVersion == "" || node.ConfiguredVersion == "latest" {

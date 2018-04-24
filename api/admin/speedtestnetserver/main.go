@@ -62,11 +62,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	if server.URL == "" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-			Headers:    domain.DefaultResponseCorsHeaders,
-		}, nil
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
 	js, err := json.Marshal(server)
