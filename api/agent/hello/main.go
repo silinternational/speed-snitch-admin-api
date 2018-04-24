@@ -9,6 +9,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/ipinfo"
 	"net/http"
+	"time"
 )
 
 type Response struct {
@@ -41,6 +42,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		node.MacAddr = helloReq.ID
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
+		node.FirstSeen = getTimeNow()
 	}
 
 	// If node is new or IP address has changed, update ip address, location, and coordinates
@@ -58,6 +60,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	// Update transient fields
 	node.RunningVersion = helloReq.Version
 	node.Uptime = helloReq.Uptime
+	node.LastSeen = getTimeNow()
 
 	// Write to DB
 	err = db.PutItem(domain.NodeTable, node)
@@ -75,4 +78,9 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 func main() {
 	lambda.Start(Handler)
+}
+
+func getTimeNow() string {
+	t := time.Now().UTC()
+	return t.Format(time.RFC3339)
 }

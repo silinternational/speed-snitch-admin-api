@@ -21,8 +21,8 @@ const SpeedTestNetServerURL = "http://c.speedtest.net/speedtest-servers-static.p
 
 type Contact struct {
 	Name  string `json:"Name"`
-	Email string `json:"Email,omitempty"`
-	Phone string `json:"Phone,omitempty"`
+	Email string `json:"Email"`
+	Phone string `json:"Phone"`
 }
 
 type HelloRequest struct {
@@ -50,10 +50,10 @@ type Node struct {
 	Location          string       `json:"Location"`
 	Coordinates       string       `json:"Coordinates"`
 	IPAddress         string       `json:"IPAddress"`
-	Tasks             []agent.Task `json:"Tasks,omitempty"`
-	Contacts          []Contact    `json:"Contacts,omitempty"`
-	Tags              []Tag        `json:"Tags,omitempty"`
-	ConfiguredBy      string       `json:"ConfiguredBy,omitempty"`
+	Tasks             []agent.Task `json:"Tasks"`
+	Contacts          []Contact    `json:"Contacts"`
+	Tags              []Tag        `json:"Tags"`
+	ConfiguredBy      string       `json:"ConfiguredBy"`
 }
 
 type NodeConfig struct {
@@ -69,7 +69,7 @@ type User struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
 	Role  string `json:"Role"`
-	Tags  []Tag  `json:"Tags,omitempty"`
+	Tags  []Tag  `json:"Tags"`
 }
 
 type Version struct {
