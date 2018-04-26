@@ -24,8 +24,8 @@ const UserRoleSuperAdmin = "superAdmin"
 
 type Contact struct {
 	Name  string `json:"Name"`
-	Email string `json:"Email,omitempty"`
-	Phone string `json:"Phone,omitempty"`
+	Email string `json:"Email"`
+	Phone string `json:"Phone"`
 }
 
 type HelloRequest struct {
@@ -53,10 +53,18 @@ type Node struct {
 	Location          string       `json:"Location"`
 	Coordinates       string       `json:"Coordinates"`
 	IPAddress         string       `json:"IPAddress"`
-	Tasks             []agent.Task `json:"Tasks,omitempty"`
-	Contacts          []Contact    `json:"Contacts,omitempty"`
-	Tags              []Tag        `json:"Tags,omitempty"`
-	ConfiguredBy      string       `json:"ConfiguredBy,omitempty"`
+	Tasks             []agent.Task `json:"Tasks"`
+	Contacts          []Contact    `json:"Contacts"`
+	Tags              []Tag        `json:"Tags"`
+	ConfiguredBy      string       `json:"ConfiguredBy"`
+}
+
+type NodeConfig struct {
+	Version struct {
+		Number string
+		URL    string
+	}
+	Tasks []agent.Task
 }
 
 type User struct {
@@ -64,7 +72,7 @@ type User struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
 	Role  string `json:"Role"`
-	Tags  []Tag  `json:"Tags,omitempty"`
+	Tags  []Tag  `json:"Tags"`
 }
 
 type Version struct {
@@ -95,6 +103,12 @@ type STNetServerSettings struct {
 
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
+// API call responses have to provide CORS headers manually
+var DefaultResponseCorsHeaders = map[string]string{
+	"Access-Control-Allow-Origin":      "*",
+	"Access-Control-Allow-Credentials": "true",
+}
+
 // Add a helper for handling errors. This logs any error to os.Stderr
 // and returns a 500 Internal Server Error response that the AWS API
 // Gateway understands.
@@ -104,6 +118,7 @@ func ServerError(err error) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
 		Body:       http.StatusText(http.StatusInternalServerError),
+		Headers:    DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -112,6 +127,7 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       body,
+		Headers:    DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -141,6 +157,21 @@ func CleanMACAddress(mAddr string) (string, error) {
 	}
 
 	return strings.ToLower(mAddr), nil
+}
+
+// GetUrlForAgentVersion creates url to agent binary for given version, os, and arch
+func GetUrlForAgentVersion(version, os, arch string) string {
+	version = strings.ToLower(version)
+	os = strings.ToLower(os)
+	arch = strings.ToLower(arch)
+	url := fmt.Sprintf(
+		"https://github.com/silinternational/speedsnitch-agent/raw/%s/dist/%s/%s/speedsnitch-agent",
+		version, os, arch)
+	if os == "windows" {
+		url = url + ".exe"
+	}
+
+	return url
 }
 
 // DoTagsOverlap returns true if there is a tag with the same name
