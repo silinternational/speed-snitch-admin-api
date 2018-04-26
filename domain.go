@@ -19,6 +19,9 @@ const SpeedTestNetServerTable = "speedTestNetServerTable"
 
 const SpeedTestNetServerURL = "http://c.speedtest.net/speedtest-servers-static.php?threads=1"
 
+const UserReqHeaderID = "userID"
+const UserRoleSuperAdmin = "superAdmin"
+
 type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email,omitempty"`
@@ -159,5 +162,8 @@ func DoTagsOverlap(tags1, tags2 []Tag) bool {
 }
 
 func CanUserUseNode(user User, node Node) bool {
+	if user.Role == UserRoleSuperAdmin {
+		return true
+	}
 	return DoTagsOverlap(user.Tags, node.Tags)
 }
