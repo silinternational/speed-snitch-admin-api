@@ -42,10 +42,7 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	if !success {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       "",
-		}, nil
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
 	return events.APIGatewayProxyResponse{
@@ -68,10 +65,17 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	if node.Arch == "" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-		}, nil
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+	}
+
+	// Ensure user is authorized ...
+	httpStatus, err := isUserForbidden(req, node)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	if httpStatus > 0 {
+		return domain.ClientError(httpStatus, http.StatusText(httpStatus))
 	}
 
 	js, err := json.Marshal(node)
@@ -138,4 +142,27 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 func main() {
 	lambda.Start(router)
+}
+
+func isUserForbidden(req events.APIGatewayProxyRequest, node domain.Node) (int, error) {
+	// Ensure user is authorized ...
+	// Get the user's ID
+	userID, ok := req.Headers[domain.UserReqHeaderID]
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	// Get the user
+	var user domain.User
+	err := db.GetItem(domain.UserTable, "ID", userID, &user)
+	if err != nil {
+		return 0, err
+	}
+
+	// Forbid the user if inadequate permissions
+	if !domain.CanUserUseNode(user, node) {
+		return http.StatusForbidden, nil
+	}
+
+	return 0, nil
 }
