@@ -29,34 +29,24 @@ provider:
         - "dynamodb:UpdateItem"
       Resource:
         - Fn::GetAtt:
-          - nodesTable
+          - dataTable
           - Arn
         - Fn::GetAtt:
-          - usersTable
-          - Arn
-        - Fn::GetAtt:
-          - tagsTable
-          - Arn
-        - Fn::GetAtt:
-          - versionsTable
+          - taskLogTable
           - Arn
 
   # you can define service wide environment variables here
   environment:
     stage: ${self:custom.stage}
     namespace: ${self:custom.namespace}
-    nodeTable: ${self:custom.nodeTable}
-    userTable: ${self:custom.userTable}
-    tagTable: ${self:custom.tagTable}
-    versionTable: ${self:custom.versionTable}
+    dataTable: ${self:custom.dataTable}
+    taskLogTable: ${self:custom.taskLogTable}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
-  nodeTable: ${self:custom.namespace}_node
-  userTable: ${self:custom.namespace}_user
-  tagTable: ${self:custom.namespace}_tag
-  versionTable: ${self:custom.namespace}_version
+  dataTable: ${self:custom.namespace}_data
+  taskLogTable: speedsnitch_${self:custom.stage}_task_log
 
 package:
  exclude:
@@ -359,20 +349,7 @@ resources:
     nodesTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: '${self:custom.nodeTable}'
-        AttributeDefinitions:
-          - AttributeName: MacAddr
-            AttributeType: S
-        KeySchema:
-          - AttributeName: MacAddr
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-    usersTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: '${self:custom.userTable}'
+        TableName: '${self:custom.dataTable}'
         AttributeDefinitions:
           - AttributeName: ID
             AttributeType: S
@@ -382,29 +359,20 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-    tagsTable:
+    taskLogTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        TableName: '${self:custom.tagTable}'
+        TableName: '${self:custom.taskLogTable}'
         AttributeDefinitions:
-          - AttributeName: Name
+          - AttributeName: ID
             AttributeType: S
+          - AttributeName: Timestamp
+            AttributeType: N
         KeySchema:
-          - AttributeName: Name
+          - AttributeName: ID
             KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-    versionsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: '${self:custom.versionTable}'
-        AttributeDefinitions:
-          - AttributeName: Number
-            AttributeType: S
-        KeySchema:
-          - AttributeName: Number
-            KeyType: HASH
+          - AttributeName: Timestamp
+            KeyType: RANGE
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
