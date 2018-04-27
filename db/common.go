@@ -119,7 +119,7 @@ func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
 
-	items, err := scanTable(domain.TagTable, "tag")
+	items, err := scanTable(domain.DataTable, "tag")
 	if err != nil {
 		return list, err
 	}
@@ -140,7 +140,7 @@ func ListNodes() ([]domain.Node, error) {
 
 	var list []domain.Node
 
-	items, err := scanTable(domain.NodeTable, "node")
+	items, err := scanTable(domain.DataTable, "node")
 	if err != nil {
 		return list, err
 	}
@@ -161,7 +161,7 @@ func ListVersions() ([]domain.Version, error) {
 
 	var list []domain.Version
 
-	items, err := scanTable(domain.VersionTable, "version")
+	items, err := scanTable(domain.DataTable, "version")
 	if err != nil {
 		return list, err
 	}
@@ -182,7 +182,7 @@ func ListUsers() ([]domain.User, error) {
 
 	var list []domain.User
 
-	items, err := scanTable(domain.UserTable, "user")
+	items, err := scanTable(domain.DataTable, "user")
 	if err != nil {
 		return list, err
 	}
@@ -203,7 +203,7 @@ func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 
 	var list []domain.SpeedTestNetServer
 
-	items, err := scanTable(domain.SpeedTestNetServerTable, "speedtestnetserver")
+	items, err := scanTable(domain.DataTable, "speedtestnetserver")
 	if err != nil {
 		return list, err
 	}

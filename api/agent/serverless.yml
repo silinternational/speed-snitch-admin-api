@@ -47,15 +47,6 @@ provider:
               - ""
               - - "table/"
                 - ${self:custom.taskLogTable}
-        - Fn::Join:
-          - ":"
-          - - "arn:aws:dynamodb"
-            - Ref: 'AWS::Region'
-            - Ref: 'AWS::AccountId'
-            - Fn::Join:
-              - ""
-              - - "table/"
-                - ${self:custom.taskLogTable}
 
   # you can define service wide environment variables here
   environment:

@@ -346,7 +346,7 @@ functions:
 
 resources:
   Resources:
-    nodesTable:
+    dataTable:
       Type: AWS::DynamoDB::Table
       Properties:
         TableName: '${self:custom.dataTable}'

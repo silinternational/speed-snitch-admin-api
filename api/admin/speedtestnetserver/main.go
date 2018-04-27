@@ -31,7 +31,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	id := req.QueryStringParameters["id"]
 
-	success, err := db.DeleteItem(domain.SpeedTestNetServerTable, "ID", id)
+	success, err := db.DeleteItem(domain.DataTable, "speedtestnetserver", id)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -56,7 +56,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	id := req.QueryStringParameters["id"]
 
 	var server domain.SpeedTestNetServer
-	err := db.GetItem(domain.SpeedTestNetServerTable, "ID", id, &server)
+	err := db.GetItem(domain.DataTable, "speedtestnetserver", id, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -103,9 +103,10 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	if err != nil {
 		return domain.ServerError(err)
 	}
+	server.ID = "server-" + server.ServerID
 
 	// Update the speedtestnetserver in the database
-	err = db.PutItem(domain.SpeedTestNetServerTable, server)
+	err = db.PutItem(domain.DataTable, server)
 	if err != nil {
 		return domain.ServerError(err)
 	}

@@ -17,7 +17,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}
 
 	var node domain.Node
-	err = db.GetItem(domain.NodeTable, "MacAddr", macAddr, &node)
+	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}

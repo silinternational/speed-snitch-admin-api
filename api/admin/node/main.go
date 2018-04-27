@@ -122,6 +122,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 	node.MacAddr = macAddr
+	node.ID = "node-" + macAddr
 
 	// Update the node in the database
 	err = db.PutItem(domain.DataTable, node)

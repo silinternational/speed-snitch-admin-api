@@ -34,7 +34,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 
 func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var tag domain.Tag
-	err := db.GetItem(domain.TagTable, "name", req.PathParameters["name"], &tag)
+	err := db.GetItem(domain.DataTable, "tag", req.PathParameters["name"], &tag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -88,7 +88,9 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(http.StatusUnprocessableEntity, "Name and Description are required")
 	}
 
-	err = db.PutItem(domain.TagTable, tag)
+	tag.ID = "tag-" + tag.Name
+
+	err = db.PutItem(domain.DataTable, tag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -109,7 +111,7 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	name := req.PathParameters["name"]
 
-	deleted, err := db.DeleteItem(domain.TagTable, "name", name)
+	deleted, err := db.DeleteItem(domain.DataTable, "tag", name)
 	if err != nil {
 		return domain.ServerError(err)
 	}
