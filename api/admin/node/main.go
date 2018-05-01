@@ -167,7 +167,7 @@ func isUserForbidden(req events.APIGatewayProxyRequest, node domain.Node) (int, 
 
 	// Get the user
 	var user domain.User
-	err := db.GetItem(domain.UserTable, "ID", userID, &user)
+	err := db.GetItem(domain.DataTable, "user", userID, &user)
 	if err != nil {
 		return 0, err
 	}

@@ -70,18 +70,22 @@ func getTestTags() []Tag {
 		{
 			"000",
 			"Tag 000",
+			"",
 		},
 		{
 			"111",
 			"Tag 111",
+			"",
 		},
 		{
 			"222",
-			"Tag222",
+			"Tag 222",
+			"",
 		},
 		{
 			"333",
-			"Tag333",
+			"Tag 333",
+			"",
 		},
 	}
 }
@@ -126,6 +130,7 @@ func TestCanUserUseNode(t *testing.T) {
 	allTags := getTestTags()
 	user := User{
 		"123",
+		"AA123",
 		"Andy Admin",
 		"andy_admin@some.org",
 		"Admin",
