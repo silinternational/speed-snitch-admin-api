@@ -17,13 +17,14 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}
 
 	var node domain.Node
-	err = db.GetItem(domain.NodeTable, "MacAddr", macAddr, &node)
+	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
+	// If node was not found in db, return 204 No Content
 	if node.Arch == "" {
-		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+		return domain.ClientError(http.StatusNoContent, "")
 	}
 
 	if node.ConfiguredVersion == "" || node.ConfiguredVersion == "latest" {

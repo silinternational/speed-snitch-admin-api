@@ -35,7 +35,7 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(http.StatusBadRequest, "number param must be specified")
 	}
 
-	success, err := db.DeleteItem(domain.VersionTable, "Number", number)
+	success, err := db.DeleteItem(domain.DataTable, "version", number)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -64,7 +64,7 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	var version domain.Version
-	err := db.GetItem(domain.VersionTable, "Number", number, &version)
+	err := db.GetItem(domain.DataTable, "version", number, &version)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -116,8 +116,10 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ServerError(err)
 	}
 
+	version.ID = "version-" + version.Number
+
 	// Update the version in the database
-	err = db.PutItem(domain.VersionTable, version)
+	err = db.PutItem(domain.DataTable, version)
 	if err != nil {
 		return domain.ServerError(err)
 	}

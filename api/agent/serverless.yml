@@ -22,6 +22,7 @@ provider:
       Action:
         - "dynamodb:GetItem"
         - "dynamodb:PutItem"
+        - "dynamodb:Scan"
         - "dynamodb:UpdateItem"
       Resource:
         - Fn::Join:
@@ -32,11 +33,10 @@ provider:
             - Fn::Join:
               - ""
               - - "table/"
-                - ${self:custom.nodeTable}
+                - ${self:custom.dataTable}
     - Effect: "Allow"
       Action:
-        - "dynamodb:GetItem"
-        - "dynamodb:Scan"
+        - "dynamodb:PutItem"
       Resource:
         - Fn::Join:
           - ":"
@@ -46,20 +46,20 @@ provider:
             - Fn::Join:
               - ""
               - - "table/"
-                - ${self:custom.versionTable}
+                - ${self:custom.taskLogTable}
 
   # you can define service wide environment variables here
   environment:
     stage: ${self:custom.stage}
     namespace: ${self:custom.namespace}
-    nodeTable: ${self:custom.nodeTable}
-    versionTable: ${self:custom.versionTable}
+    dataTable: ${self:custom.dataTable}
+    taskLogTable: ${self:custom.taskLogTable}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
-  nodeTable: speedsnitch_${self:custom.stage}_node
-  versionTable: speedsnitch_${self:custom.stage}_version
+  dataTable: speedsnitch_${self:custom.stage}_data
+  taskLogTable: speedsnitch_${self:custom.stage}_task_log
 
 package:
  exclude:
@@ -75,15 +75,22 @@ functions:
         - http:
             path: hello
             method: post
-            private: false
+            private: true
   config:
       handler: bin/config
       events:
         - http:
             path: config/{macAddr}
             method: get
-            private: false
+            private: true
             request:
               parameters:
                 paths:
                   macAddr: true
+  log:
+      handler: bin/tasklog
+      events:
+        - http:
+            path: log
+            method: post
+            private: false
