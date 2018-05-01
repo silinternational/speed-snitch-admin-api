@@ -179,7 +179,7 @@ func GetUrlForAgentVersion(version, os, arch string) string {
 	os = strings.ToLower(os)
 	arch = strings.ToLower(arch)
 	url := fmt.Sprintf(
-		"https://github.com/silinternational/speedsnitch-agent/raw/%s/dist/%s/%s/speedsnitch-agent",
+		"https://github.com/silinternational/speed-snitch-agent/raw/%s/dist/%s/%s/speedsnitch",
 		version, os, arch)
 	if os == "windows" {
 		url = url + ".exe"
