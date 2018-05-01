@@ -11,13 +11,19 @@ import (
 	"strings"
 )
 
-const TagTable = "tagTable"
-const NodeTable = "nodeTable"
-const UserTable = "userTable"
-const VersionTable = "versionTable"
-const SpeedTestNetServerTable = "speedTestNetServerTable"
+const DataTable = "dataTable"
+const TaskLogTable = "taskLogTable"
 
 const SpeedTestNetServerURL = "http://c.speedtest.net/speedtest-servers-static.php?threads=1"
+
+// Log errors to stderr
+var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
+
+// API call responses have to provide CORS headers manually
+var DefaultResponseCorsHeaders = map[string]string{
+	"Access-Control-Allow-Origin":      "*",
+	"Access-Control-Allow-Credentials": "true",
+}
 
 const UserReqHeaderID = "userID"
 const UserRoleSuperAdmin = "superAdmin"
@@ -31,23 +37,25 @@ type Contact struct {
 type HelloRequest struct {
 	ID      string `json:"ID"`
 	Version string `json:"Version"`
-	Uptime  string `json:"Uptime"`
+	Uptime  int64  `json:"Uptime"`
 	OS      string `json:"OS"`
 	Arch    string `json:"Arch"`
 }
 
 type Tag struct {
+	ID          string
 	Name        string `json:"Name"`
 	Description string `json:"Description"`
 }
 
 type Node struct {
+	ID                string
 	MacAddr           string       `json:"MacAddr"`
 	OS                string       `json:"OS"`
 	Arch              string       `json:"Arch"`
 	RunningVersion    string       `json:"RunningVersion"`
 	ConfiguredVersion string       `json:"ConfiguredVersion"`
-	Uptime            string       `json:"Uptime"`
+	Uptime            int64        `json:"Uptime"`
 	LastSeen          string       `json:"LastSeen"`
 	FirstSeen         string       `json:"FirstSeen"`
 	Location          string       `json:"Location"`
@@ -68,19 +76,22 @@ type NodeConfig struct {
 }
 
 type User struct {
-	ID    string `json:"ID"`
-	Name  string `json:"Name"`
-	Email string `json:"Email"`
-	Role  string `json:"Role"`
-	Tags  []Tag  `json:"Tags"`
+	ID     string
+	UserID string `json:"UserID"`
+	Name   string `json:"Name"`
+	Email  string `json:"Email"`
+	Role   string `json:"Role"`
+	Tags   []Tag  `json:"Tags"`
 }
 
 type Version struct {
+	ID          string
 	Number      string `json:"Number"`
 	Description string `json:"Description"`
 }
 
 type SpeedTestNetServer struct {
+	ID          string
 	URL         string `xml:"url,attr" json:"URL""`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
@@ -88,7 +99,7 @@ type SpeedTestNetServer struct {
 	Country     string `xml:"country,attr" json:"Country"`
 	CountryCode string `xml:"cc,attr"  json:"CountryCode"`
 	Sponsor     string `xml:"sponsor,attr" json:"Sponsor"`
-	ID          string `xml:"id,attr" json:"ID"`
+	ServerID    string `xml:"id,attr" json:"ID"`
 	URL2        string `xml:"url2,attr" json:"URL2"`
 	Host        string `xml:"host,attr" json:"Host"`
 }
@@ -101,12 +112,18 @@ type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
 }
 
-var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
-
-// API call responses have to provide CORS headers manually
-var DefaultResponseCorsHeaders = map[string]string{
-	"Access-Control-Allow-Origin":      "*",
-	"Access-Control-Allow-Credentials": "true",
+type TaskLogEntry struct {
+	ID                string
+	MacAddr           string  `json:"MacAddr"`
+	Timestamp         int64   `json:"Timestamp"`
+	Upload            float64 `json:"Upload"`
+	Download          float64 `json:"Download"`
+	Latency           float64 `json:"Latency"`
+	ErrorCode         string  `json:"ErrorCode"`
+	ErrorMessage      string  `json:"ErrorMessage"`
+	ServerID          string  `json:"ServerID"`
+	ServerCountry     string
+	ServerCoordinates string
 }
 
 // Add a helper for handling errors. This logs any error to os.Stderr
@@ -165,7 +182,7 @@ func GetUrlForAgentVersion(version, os, arch string) string {
 	os = strings.ToLower(os)
 	arch = strings.ToLower(arch)
 	url := fmt.Sprintf(
-		"https://github.com/silinternational/speedsnitch-agent/raw/%s/dist/%s/%s/speedsnitch-agent",
+		"https://github.com/silinternational/speed-snitch-agent/raw/%s/dist/%s/%s/speedsnitch",
 		version, os, arch)
 	if os == "windows" {
 		url = url + ".exe"

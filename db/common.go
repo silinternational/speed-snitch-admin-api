@@ -14,13 +14,13 @@ import (
 
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
 
-func GetItem(tableAlias, attrName, attrValue string, itemObj interface{}) error {
+func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
 	// Prepare the input for the query.
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
 		Key: map[string]*dynamodb.AttributeValue{
-			attrName: {
-				S: aws.String(attrValue),
+			"ID": {
+				S: aws.String(dataType + "-" + value),
 			},
 		},
 	}
@@ -62,14 +62,14 @@ func PutItem(tableAlias string, item interface{}) error {
 	return err
 }
 
-func DeleteItem(tableAlias, attrName, attrValue string) (bool, error) {
+func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 
 	// Prepare the input for the query.
 	input := &dynamodb.DeleteItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
 		Key: map[string]*dynamodb.AttributeValue{
-			attrName: {
-				S: aws.String(attrValue),
+			"ID": {
+				S: aws.String(dataType + "-" + value),
 			},
 		},
 	}
@@ -88,10 +88,17 @@ func DeleteItem(tableAlias, attrName, attrValue string) (bool, error) {
 	return true, nil
 }
 
-func scanTable(tableAlias string) ([]map[string]*dynamodb.AttributeValue, error) {
+func scanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeValue, error) {
 	tableName := domain.GetDbTableName(tableAlias)
+	filterExpression := "begins_with(ID, :dataType)"
 	input := &dynamodb.ScanInput{
-		TableName: &tableName,
+		TableName:        &tableName,
+		FilterExpression: &filterExpression,
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":dataType": {
+				S: aws.String(dataType + "-"),
+			},
+		},
 	}
 
 	var results []map[string]*dynamodb.AttributeValue
@@ -112,7 +119,7 @@ func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
 
-	items, err := scanTable(domain.TagTable)
+	items, err := scanTable(domain.DataTable, "tag")
 	if err != nil {
 		return list, err
 	}
@@ -133,7 +140,7 @@ func ListNodes() ([]domain.Node, error) {
 
 	var list []domain.Node
 
-	items, err := scanTable(domain.NodeTable)
+	items, err := scanTable(domain.DataTable, "node")
 	if err != nil {
 		return list, err
 	}
@@ -154,7 +161,7 @@ func ListVersions() ([]domain.Version, error) {
 
 	var list []domain.Version
 
-	items, err := scanTable(domain.VersionTable)
+	items, err := scanTable(domain.DataTable, "version")
 	if err != nil {
 		return list, err
 	}
@@ -175,7 +182,7 @@ func ListUsers() ([]domain.User, error) {
 
 	var list []domain.User
 
-	items, err := scanTable(domain.UserTable)
+	items, err := scanTable(domain.DataTable, "user")
 	if err != nil {
 		return list, err
 	}
@@ -196,7 +203,7 @@ func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 
 	var list []domain.SpeedTestNetServer
 
-	items, err := scanTable(domain.SpeedTestNetServerTable)
+	items, err := scanTable(domain.DataTable, "speedtestnetserver")
 	if err != nil {
 		return list, err
 	}

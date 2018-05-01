@@ -35,7 +35,7 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusBadRequest, "id param must be specified")
 	}
 
-	success, err := db.DeleteItem(domain.UserTable, "ID", id)
+	success, err := db.DeleteItem(domain.DataTable, "user", id)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -64,7 +64,7 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	var user domain.User
-	err := db.GetItem(domain.UserTable, "ID", id, &user)
+	err := db.GetItem(domain.DataTable, "user", id, &user)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -116,8 +116,14 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ServerError(err)
 	}
 
+	if user.UserID == "" {
+		return domain.ClientError(http.StatusBadRequest, "UserID is required")
+	}
+
+	user.ID = "user-" + user.UserID
+
 	// Update the user in the database
-	err = db.PutItem(domain.UserTable, user)
+	err = db.PutItem(domain.DataTable, user)
 	if err != nil {
 		return domain.ServerError(err)
 	}

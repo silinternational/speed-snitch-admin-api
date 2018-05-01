@@ -35,7 +35,7 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	success, err := db.DeleteItem(domain.NodeTable, "MacAddr", macAddr)
+	success, err := db.DeleteItem(domain.DataTable, "node", macAddr)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -64,7 +64,7 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	var node domain.Node
-	err = db.GetItem(domain.NodeTable, "MacAddr", macAddr, &node)
+	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -132,9 +132,10 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 	node.MacAddr = macAddr
+	node.ID = "node-" + macAddr
 
 	// Update the node in the database
-	err = db.PutItem(domain.NodeTable, node)
+	err = db.PutItem(domain.DataTable, node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
