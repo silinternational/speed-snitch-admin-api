@@ -64,12 +64,13 @@ var testTasks = map[string]agent.Task{
 
 var testNodes = map[string]domain.Node{
 	"11Kenya": {
+		"1111",
 		"11:11:11:11:11:11",
 		"linux",
 		"amd",
 		"0.0.1",
 		"0.0.1",
-		"10:11:12",
+		1111,
 		"1/3/2018",
 		"1/1/2018",
 		"Kenya, , Nairobi",
@@ -91,12 +92,13 @@ var testNodes = map[string]domain.Node{
 		"John Doe",
 	},
 	"22Chad": {
+		"2222",
 		"22:22:22:22:22:22",
 		"linux",
 		"amd",
 		"0.0.2",
 		"0.0.2",
-		"10:11:12",
+		2222,
 		"1/3/2018",
 		"1/1/2018",
 		"Chad, , N'Djamena",

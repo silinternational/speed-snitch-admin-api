@@ -25,6 +25,9 @@ var DefaultResponseCorsHeaders = map[string]string{
 	"Access-Control-Allow-Credentials": "true",
 }
 
+const UserReqHeaderID = "userID"
+const UserRoleSuperAdmin = "superAdmin"
+
 type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
@@ -186,4 +189,29 @@ func GetUrlForAgentVersion(version, os, arch string) string {
 	}
 
 	return url
+}
+
+// DoTagsOverlap returns true if there is a tag with the same name
+//  in both slices of tags.  Otherwise, returns false.
+func DoTagsOverlap(tags1, tags2 []Tag) bool {
+	if len(tags1) == 0 || len(tags2) == 0 {
+		return false
+	}
+
+	for _, tag1 := range tags1 {
+		for _, tag2 := range tags2 {
+			if tag1.Name == tag2.Name {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func CanUserUseNode(user User, node Node) bool {
+	if user.Role == UserRoleSuperAdmin {
+		return true
+	}
+	return DoTagsOverlap(user.Tags, node.Tags)
 }

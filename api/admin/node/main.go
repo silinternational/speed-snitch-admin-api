@@ -77,6 +77,16 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		}, nil
 	}
 
+	// Ensure user is authorized ...
+	httpStatus, err := isUserForbidden(req, node)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	if httpStatus > 0 {
+		return domain.ClientError(httpStatus, http.StatusText(httpStatus))
+	}
+
 	js, err := json.Marshal(node)
 	if err != nil {
 		return domain.ServerError(err)
@@ -145,4 +155,27 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 func main() {
 	lambda.Start(router)
+}
+
+func isUserForbidden(req events.APIGatewayProxyRequest, node domain.Node) (int, error) {
+	// Ensure user is authorized ...
+	// Get the user's ID
+	userID, ok := req.Headers[domain.UserReqHeaderID]
+	if !ok {
+		return http.StatusUnauthorized, nil
+	}
+
+	// Get the user
+	var user domain.User
+	err := db.GetItem(domain.DataTable, "user", userID, &user)
+	if err != nil {
+		return 0, err
+	}
+
+	// Forbid the user if inadequate permissions
+	if !domain.CanUserUseNode(user, node) {
+		return http.StatusForbidden, nil
+	}
+
+	return 0, nil
 }

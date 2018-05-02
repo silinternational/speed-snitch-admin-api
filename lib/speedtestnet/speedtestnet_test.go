@@ -43,7 +43,7 @@ func TestGetSTNetServers(t *testing.T) {
 
 	expectedIDs := []string{"4600", "4961", "3433", "11786"}
 	for index, nextServer := range servers {
-		result := nextServer.ID
+		result := nextServer.ServerID
 		expected := expectedIDs[index]
 		if result != expected {
 			t.Errorf("Wrong speedtestnetserver ID at index %d. Expected: %s. Got: %s", index, expected, result)
