@@ -67,6 +67,7 @@ package:
  include:
    - ../../bin/hello
    - ../../bin/config
+   - ../../bin/tasklog
 
 functions:
   hello:
@@ -91,6 +92,11 @@ functions:
       handler: bin/tasklog
       events:
         - http:
-            path: log
+            path: log/{macAddr}/{entryType}
             method: post
-            private: false
+            private: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+                  entryType: true
