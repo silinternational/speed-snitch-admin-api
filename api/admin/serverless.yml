@@ -146,7 +146,7 @@ functions:
                 - X-Amz-User-Agent
               allowCredentials: true
         - http:
-            path: /tag/{name}
+            path: /tag/{uid}
             method: GET
             #private: true
             cors:
@@ -160,9 +160,9 @@ functions:
             request:
               parameters:
                 paths:
-                  name: true
+                  uid: true
         - http:
-            path: /tag/{name}
+            path: /tag/{uid}
             method: PUT
             #private: true
             cors:
@@ -176,9 +176,9 @@ functions:
             request:
               parameters:
                 paths:
-                  name: true
+                  uid: true
         - http:
-            path: /tag/{name}
+            path: /tag/{uid}
             method: DELETE
             #private: true
             cors:
@@ -192,7 +192,7 @@ functions:
             request:
               parameters:
                 paths:
-                  name: true
+                  uid: true
   user:
       handler: bin/user
       events:

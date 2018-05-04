@@ -5,10 +5,12 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/silinternational/speed-snitch-agent"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const DataTable = "dataTable"
@@ -43,13 +45,14 @@ type HelloRequest struct {
 }
 
 type Tag struct {
-	ID          string
+	ID          string `json:"-"`
+	UID         string `json:"UID"`
 	Name        string `json:"Name"`
 	Description string `json:"Description"`
 }
 
 type Node struct {
-	ID                string
+	ID                string       `json:"-"`
 	MacAddr           string       `json:"MacAddr"`
 	OS                string       `json:"OS"`
 	Arch              string       `json:"Arch"`
@@ -65,6 +68,8 @@ type Node struct {
 	Contacts          []Contact    `json:"Contacts"`
 	Tags              []Tag        `json:"Tags"`
 	ConfiguredBy      string       `json:"ConfiguredBy"`
+	Nickname          string       `json:"Nickname"`
+	Notes             string       `json:"Notes"`
 }
 
 type NodeConfig struct {
@@ -76,7 +81,7 @@ type NodeConfig struct {
 }
 
 type User struct {
-	ID     string
+	ID     string `json:"-"`
 	UserID string `json:"UserID"`
 	Name   string `json:"Name"`
 	Email  string `json:"Email"`
@@ -85,14 +90,14 @@ type User struct {
 }
 
 type Version struct {
-	ID          string
+	ID          string `json:"-"`
 	Number      string `json:"Number"`
 	Description string `json:"Description"`
 }
 
 type SpeedTestNetServer struct {
-	ID          string
-	URL         string `xml:"url,attr" json:"URL""`
+	ID          string `json:"-"`
+	URL         string `xml:"url,attr" json:"URL"`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
 	Name        string `xml:"name,attr" json:"Name"`
@@ -113,7 +118,7 @@ type STNetServerSettings struct {
 }
 
 type TaskLogEntry struct {
-	ID                string
+	ID                string  `json:"-"`
 	MacAddr           string  `json:"MacAddr"`
 	Timestamp         int64   `json:"Timestamp"`
 	Upload            float64 `json:"Upload"`
@@ -214,4 +219,31 @@ func CanUserUseNode(user User, node Node) bool {
 		return true
 	}
 	return DoTagsOverlap(user.Tags, node.Tags)
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+// GetRandString returns a random string of given length
+func GetRandString(length int) string {
+	var src = rand.NewSource(time.Now().UnixNano())
+	b := make([]byte, length)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := length-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return string(b)
 }
