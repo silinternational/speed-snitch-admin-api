@@ -123,7 +123,7 @@ type TaskLogEntry struct {
 	Latency            float64 `json:"Latency"`
 	ErrorCode          string  `json:"ErrorCode"`
 	ErrorMessage       string  `json:"ErrorMessage"`
-	ServerID           string  `json:"ServerID"`
+	ServerID           int64   `json:"ServerID"`
 	ServerCountry      string  `json:"ServerCountry"`
 	ServerCoordinates  string  `json:"ServerCoordinates"`
 	ServerSponsor      string  `json:"ServerSponsor"`
