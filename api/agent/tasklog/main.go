@@ -50,8 +50,6 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 	err = db.PutItem(domain.TaskLogTable, taskLogEntry)
 
-	// Return a response with a 200 OK status and the JSON book record
-	// as the body.
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
