@@ -60,6 +60,7 @@ type Node struct {
 	FirstSeen         string       `json:"FirstSeen"`
 	Location          string       `json:"Location"`
 	Coordinates       string       `json:"Coordinates"`
+	Network           string       `json:"Network"`
 	IPAddress         string       `json:"IPAddress"`
 	Tasks             []agent.Task `json:"Tasks"`
 	Contacts          []Contact    `json:"Contacts"`
@@ -113,17 +114,24 @@ type STNetServerSettings struct {
 }
 
 type TaskLogEntry struct {
-	ID                string
-	MacAddr           string  `json:"MacAddr"`
-	Timestamp         int64   `json:"Timestamp"`
-	Upload            float64 `json:"Upload"`
-	Download          float64 `json:"Download"`
-	Latency           float64 `json:"Latency"`
-	ErrorCode         string  `json:"ErrorCode"`
-	ErrorMessage      string  `json:"ErrorMessage"`
-	ServerID          string  `json:"ServerID"`
-	ServerCountry     string
-	ServerCoordinates string
+	ID                 string
+	Timestamp          int64   `json:"Timestamp"`
+	ExpirationTime     int64   `json:"ExpirationTime"`
+	MacAddr            string  `json:"MacAddr"`
+	Upload             float64 `json:"Upload"`
+	Download           float64 `json:"Download"`
+	Latency            float64 `json:"Latency"`
+	ErrorCode          string  `json:"ErrorCode"`
+	ErrorMessage       string  `json:"ErrorMessage"`
+	ServerID           int64   `json:"ServerID"`
+	ServerCountry      string  `json:"ServerCountry"`
+	ServerCoordinates  string  `json:"ServerCoordinates"`
+	ServerSponsor      string  `json:"ServerSponsor"`
+	NodeLocation       string  `json:"Location"`
+	NodeCoordinates    string  `json:"Coordinates"`
+	NodeNetwork        string  `json:"Network"`
+	NodeIPAddress      string  `json:"IPAddress"`
+	NodeRunningVersion string  `json:"RunningVersion"`
 }
 
 // Add a helper for handling errors. This logs any error to os.Stderr
