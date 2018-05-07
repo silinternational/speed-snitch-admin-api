@@ -28,6 +28,9 @@ var DefaultResponseCorsHeaders = map[string]string{
 const UserReqHeaderID = "userID"
 const UserRoleSuperAdmin = "superAdmin"
 
+const PermissionSuperAdmin = "superAdmin"
+const PermissionTagBased = "tagBased"
+
 type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
