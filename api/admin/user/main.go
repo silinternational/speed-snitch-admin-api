@@ -61,14 +61,14 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	id := req.PathParameters["uid"]
+	uid := req.PathParameters["uid"]
 
-	if id == "" {
-		return domain.ClientError(http.StatusBadRequest, "id param must be specified")
+	if uid == "" {
+		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
 	}
 
 	var user domain.User
-	err := db.GetItem(domain.DataTable, "user", id, &user)
+	err := db.GetItem(domain.DataTable, "user", uid, &user)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -94,9 +94,14 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	uid := req.PathParameters["uid"]
+
+	if uid == "" {
+		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
+	}
 
 	var user domain.User
-	err := db.GetItem(domain.DataTable, "user", req.PathParameters["uid"], &user)
+	err := db.GetItem(domain.DataTable, "user", uid, &user)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -178,12 +183,12 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Make sure tags are valid and user calling api is allowed to use them
-	if len(updatedUser.TagUIDs) > 0 && !db.AreTagsValid(updatedUser.TagUIDs) {
+	if !db.AreTagsValid(updatedUser.TagUIDs) {
 		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
 	}
 	// @todo do we need to check if user making api call can use the tags provided?
 
-	// Make sure tag does not already exist with different UID
+	// Make sure user does not already exist with different UID
 	exists, err := userAlreadyExists(user.UID, user.Email)
 	if err != nil {
 		return domain.ServerError(err)
@@ -222,7 +227,7 @@ func main() {
 }
 
 func isValidRole(role string) bool {
-	if role == domain.UserRoleSuperAdmin || role == domain.UserRolerAdmin {
+	if role == domain.UserRoleSuperAdmin || role == domain.UserRoleAdmin {
 		return true
 	}
 

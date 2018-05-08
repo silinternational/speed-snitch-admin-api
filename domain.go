@@ -30,7 +30,7 @@ var DefaultResponseCorsHeaders = map[string]string{
 
 const UserReqHeaderID = "userID"
 const UserRoleSuperAdmin = "superAdmin"
-const UserRolerAdmin = "admin"
+const UserRoleAdmin = "admin"
 
 type Contact struct {
 	Name  string `json:"Name"`

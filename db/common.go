@@ -326,7 +326,7 @@ func GetLatestVersion() (domain.Version, error) {
 
 func AreTagsValid(tags []string) bool {
 	if len(tags) == 0 {
-		return false
+		return true
 	}
 
 	allTags, err := ListTags()

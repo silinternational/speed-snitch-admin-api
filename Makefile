@@ -8,8 +8,9 @@ buildadmin:
 	docker-compose run go go build -ldflags="-s -w" -o bin/version            api/admin/version/main.go
 
 buildagent:
-	docker-compose run go go build -ldflags="-s -w" -o bin/hello  api/agent/hello/main.go
-	docker-compose run go go build -ldflags="-s -w" -o bin/config api/agent/config/main.go
+	docker-compose run go go build -ldflags="-s -w" -o bin/hello   api/agent/hello/main.go
+	docker-compose run go go build -ldflags="-s -w" -o bin/config  api/agent/config/main.go
+	docker-compose run go go build -ldflags="-s -w" -o bin/tasklog api/agent/tasklog/main.go
 
 slsdeploy: slsdeployadmin slsdeployagent
 

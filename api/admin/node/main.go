@@ -181,7 +181,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Make sure tags are valid and user calling api is allowed to use them
-	if len(updatedNode.TagUIDs) > 0 && !db.AreTagsValid(updatedNode.TagUIDs) {
+	if !db.AreTagsValid(updatedNode.TagUIDs) {
 		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
 	}
 	// @todo do we need to check if user making api call can use the tags provided?
@@ -219,7 +219,6 @@ func main() {
 }
 
 func isUserForbidden(req events.APIGatewayProxyRequest, node domain.Node) (int, error) {
-	return 0, nil
 	// Ensure user is authorized ...
 	// Get the user's ID
 	userID, ok := req.Headers[domain.UserReqHeaderID]
