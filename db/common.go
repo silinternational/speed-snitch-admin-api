@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
@@ -10,6 +11,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-agent"
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
+	"net/http"
 )
 
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
@@ -322,6 +324,49 @@ func GetLatestVersion() (domain.Version, error) {
 	}
 
 	return latest, nil
+}
+
+func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) {
+	userID, ok := req.Headers[domain.UserReqHeaderID]
+	if !ok {
+		return domain.User{}, fmt.Errorf("Missing Header: %s", domain.UserReqHeaderID)
+	}
+
+	// Get the user
+	var user domain.User
+	err := GetItem(domain.DataTable, "user", userID, &user)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return user, nil
+}
+
+// GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
+func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
+	user, err := GetUserFromRequest(req)
+	if err != nil {
+		return http.StatusBadRequest, err.Error()
+	}
+
+	if user.Role == domain.PermissionSuperAdmin {
+		return 0, ""
+	}
+
+	if permissionType == domain.PermissionSuperAdmin {
+		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
+	}
+
+	if permissionType == domain.PermissionTagBased {
+		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
+		if tagsOverlap {
+			return 0, ""
+		}
+
+		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
+	}
+
+	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
 }
 
 func AreTagsValid(tags []string) bool {

@@ -29,6 +29,11 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	id := req.QueryStringParameters["id"]
 
 	success, err := db.DeleteItem(domain.DataTable, "speedtestnetserver", id)
@@ -53,6 +58,11 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	id := req.QueryStringParameters["id"]
 
 	var server domain.SpeedTestNetServer
@@ -78,6 +88,11 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	servers, err := db.ListSpeedTestNetServers()
 	if err != nil {
 		return domain.ServerError(err)
@@ -96,6 +111,11 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	var server domain.SpeedTestNetServer
 
 	// Get the SpeedTestNetServer struct from the request body
@@ -103,7 +123,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	if err != nil {
 		return domain.ServerError(err)
 	}
-	server.ID = "server-" + server.ServerID
+	server.ID = "speedtestnetserver-" + server.ServerID
 
 	// Update the speedtestnetserver in the database
 	err = db.PutItem(domain.DataTable, server)
