@@ -7,6 +7,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"strings"
 )
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -16,11 +17,12 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 		return deleteNode(req)
 	case "GET":
 		if nodeSpecified {
+			if strings.HasSuffix(req.Path, "/tag") {
+				return listNodeTags(req)
+			}
 			return viewNode(req)
 		}
 		return listNodes(req)
-	case "POST":
-		return updateNode(req)
 	case "PUT":
 		return updateNode(req)
 	default:
@@ -58,7 +60,6 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	macAddr, err := domain.CleanMACAddress(req.PathParameters["macAddr"])
-
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
@@ -99,6 +100,44 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}, nil
 }
 
+func listNodeTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	macAddr, err := domain.CleanMACAddress(req.PathParameters["macAddr"])
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	var node domain.Node
+	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	allTags, err := db.ListTags()
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	var nodeTags []domain.Tag
+
+	for _, tag := range allTags {
+		inArray, _ := domain.InArray(tag.UID, node.TagUIDs)
+		if inArray {
+			nodeTags = append(nodeTags, tag)
+		}
+	}
+
+	js, err := json.Marshal(nodeTags)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(js),
+		Headers:    domain.DefaultResponseCorsHeaders,
+	}, nil
+}
+
 func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	nodes, err := db.ListNodes()
 	if err != nil {
@@ -120,19 +159,41 @@ func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var node domain.Node
 
-	// Get the node struct from the request body
-	err := json.Unmarshal([]byte(req.Body), &node)
+	if req.PathParameters["macAddr"] == "" {
+		return domain.ClientError(http.StatusBadRequest, "Mac Address is required")
+	}
+
+	// Clean the MAC Address
+	macAddr, err := domain.CleanMACAddress(req.PathParameters["macAddr"])
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	// Clean the MAC Address
-	macAddr, err := domain.CleanMACAddress(node.MacAddr)
+	// Get the node struct from the request body
+	var updatedNode domain.Node
+	err = json.Unmarshal([]byte(req.Body), &updatedNode)
 	if err != nil {
-		return domain.ClientError(http.StatusBadRequest, err.Error())
+		return domain.ServerError(err)
 	}
-	node.MacAddr = macAddr
+
+	// Make sure tags are valid and user calling api is allowed to use them
+	if len(updatedNode.TagUIDs) > 0 && !db.AreTagsValid(updatedNode.TagUIDs) {
+		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
+	}
+	// @todo do we need to check if user making api call can use the tags provided?
+
+	// Apply updates to node
 	node.ID = "node-" + macAddr
+	node.ConfiguredVersion = updatedNode.ConfiguredVersion
+	node.Tasks = updatedNode.Tasks
+	node.Contacts = updatedNode.Contacts
+	node.TagUIDs = updatedNode.TagUIDs
+	node.Nickname = updatedNode.Nickname
+	node.Notes = updatedNode.Notes
 
 	// Update the node in the database
 	err = db.PutItem(domain.DataTable, node)
@@ -158,6 +219,7 @@ func main() {
 }
 
 func isUserForbidden(req events.APIGatewayProxyRequest, node domain.Node) (int, error) {
+	return 0, nil
 	// Ensure user is authorized ...
 	// Get the user's ID
 	userID, ok := req.Headers[domain.UserReqHeaderID]

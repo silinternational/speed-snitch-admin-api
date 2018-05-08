@@ -87,6 +87,22 @@ functions:
                 paths:
                   macAddr: true
         - http:
+            path: /node/{macAddr}/tag
+            method: GET
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
             path: /node/{macAddr}
             method: PUT
             #private: true
@@ -221,7 +237,7 @@ functions:
                 - X-Amz-User-Agent
               allowCredentials: true
         - http:
-            path: /user/{id}
+            path: /user/{uid}
             method: GET
             #private: true
             cors:
@@ -235,9 +251,25 @@ functions:
             request:
               parameters:
                 paths:
-                  id: true
+                  uid: true
         - http:
-            path: /user/{id}
+            path: /node/{uid}/tag
+            method: GET
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /user/{uid}
             method: PUT
             #private: true
             cors:
@@ -251,9 +283,9 @@ functions:
             request:
               parameters:
                 paths:
-                  id: true
+                  uid: true
         - http:
-            path: /user/{id}
+            path: /user/{uid}
             method: DELETE
             #private: true
             cors:
@@ -267,7 +299,7 @@ functions:
             request:
               parameters:
                 paths:
-                  id: true
+                  uid: true
   version:
       handler: bin/version
       events:

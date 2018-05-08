@@ -323,3 +323,28 @@ func GetLatestVersion() (domain.Version, error) {
 
 	return latest, nil
 }
+
+func AreTagsValid(tags []string) bool {
+	if len(tags) == 0 {
+		return false
+	}
+
+	allTags, err := ListTags()
+	if err != nil {
+		return false
+	}
+
+	allTagUIDs := []string{}
+	for _, tag := range allTags {
+		allTagUIDs = append(allTagUIDs, tag.UID)
+	}
+
+	for _, tag := range tags {
+		inArray, _ := domain.InArray(tag, allTagUIDs)
+		if !inArray {
+			return false
+		}
+	}
+
+	return true
+}

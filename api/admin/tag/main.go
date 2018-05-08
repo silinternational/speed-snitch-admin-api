@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -91,6 +92,7 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	// If UID is not set generate a UID
 	if tag.UID == "" {
 		tag.UID = domain.GetRandString(4)
+		tag.ID = "tag-" + tag.UID
 	}
 
 	// Parse request body for updated attributes
@@ -116,10 +118,11 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	// Update tag record attributes for persistence
 	tag.Name = updatedTag.Name
 	tag.Description = updatedTag.Description
-	tag.ID = "tag-" + tag.UID
 
 	err = db.PutItem(domain.DataTable, tag)
 	if err != nil {
+		tagJson, _ := json.Marshal(tag)
+		return domain.ServerError(fmt.Errorf("%s", tagJson))
 		return domain.ServerError(err)
 	}
 
@@ -159,7 +162,7 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}, nil
 }
 
-// doesTagAlreadyExist returns true if a tag with the same name but different UID already exists
+// tagAlreadyExist returns true if a tag with the same name but different UID already exists
 func tagAlreadyExists(uid, name string) (bool, error) {
 	allTags, err := db.ListTags()
 	if err != nil {

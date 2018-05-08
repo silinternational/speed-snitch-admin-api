@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ var DefaultResponseCorsHeaders = map[string]string{
 
 const UserReqHeaderID = "userID"
 const UserRoleSuperAdmin = "superAdmin"
+const UserRolerAdmin = "admin"
 
 type Contact struct {
 	Name  string `json:"Name"`
@@ -45,14 +47,14 @@ type HelloRequest struct {
 }
 
 type Tag struct {
-	ID          string `json:"-"`
+	ID          string `json:"ID"`
 	UID         string `json:"UID"`
 	Name        string `json:"Name"`
 	Description string `json:"Description"`
 }
 
 type Node struct {
-	ID                string       `json:"-"`
+	ID                string       `json:"ID"`
 	MacAddr           string       `json:"MacAddr"`
 	OS                string       `json:"OS"`
 	Arch              string       `json:"Arch"`
@@ -67,7 +69,7 @@ type Node struct {
 	IPAddress         string       `json:"IPAddress"`
 	Tasks             []agent.Task `json:"Tasks"`
 	Contacts          []Contact    `json:"Contacts"`
-	Tags              []Tag        `json:"Tags"`
+	TagUIDs           []string     `json:"TagUIDs"`
 	ConfiguredBy      string       `json:"ConfiguredBy"`
 	Nickname          string       `json:"Nickname"`
 	Notes             string       `json:"Notes"`
@@ -82,22 +84,23 @@ type NodeConfig struct {
 }
 
 type User struct {
-	ID     string `json:"-"`
-	UserID string `json:"UserID"`
-	Name   string `json:"Name"`
-	Email  string `json:"Email"`
-	Role   string `json:"Role"`
-	Tags   []Tag  `json:"Tags"`
+	ID      string   `json:"ID"`
+	UID     string   `json:"UID"`
+	UserID  string   `json:"UserID"`
+	Name    string   `json:"Name"`
+	Email   string   `json:"Email"`
+	Role    string   `json:"Role"`
+	TagUIDs []string `json:"TagUIDs"`
 }
 
 type Version struct {
-	ID          string `json:"-"`
+	ID          string `json:"ID"`
 	Number      string `json:"Number"`
 	Description string `json:"Description"`
 }
 
 type SpeedTestNetServer struct {
-	ID          string `json:"-"`
+	ID          string `json:"ID"`
 	URL         string `xml:"url,attr" json:"URL"`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
@@ -119,7 +122,7 @@ type STNetServerSettings struct {
 }
 
 type TaskLogEntry struct {
-	ID                 string
+	ID                 string  `json:"ID"`
 	Timestamp          int64   `json:"Timestamp"`
 	ExpirationTime     int64   `json:"ExpirationTime"`
 	MacAddr            string  `json:"MacAddr"`
@@ -206,14 +209,14 @@ func GetUrlForAgentVersion(version, os, arch string) string {
 
 // DoTagsOverlap returns true if there is a tag with the same name
 //  in both slices of tags.  Otherwise, returns false.
-func DoTagsOverlap(tags1, tags2 []Tag) bool {
+func DoTagsOverlap(tags1, tags2 []string) bool {
 	if len(tags1) == 0 || len(tags2) == 0 {
 		return false
 	}
 
 	for _, tag1 := range tags1 {
 		for _, tag2 := range tags2 {
-			if tag1.Name == tag2.Name {
+			if tag1 == tag2 {
 				return true
 			}
 		}
@@ -226,7 +229,7 @@ func CanUserUseNode(user User, node Node) bool {
 	if user.Role == UserRoleSuperAdmin {
 		return true
 	}
-	return DoTagsOverlap(user.Tags, node.Tags)
+	return DoTagsOverlap(user.TagUIDs, node.TagUIDs)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
@@ -254,4 +257,28 @@ func GetRandString(length int) string {
 	}
 
 	return string(b)
+}
+
+// This function will search element inside array with any type.
+// Will return boolean and index for matched element.
+// True and index more than 0 if element is exist.
+// needle is element to search, haystack is slice of value to be search.
+func InArray(needle interface{}, haystack interface{}) (exists bool, index int) {
+	exists = false
+	index = -1
+
+	switch reflect.TypeOf(haystack).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(haystack)
+
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(needle, s.Index(i).Interface()) == true {
+				index = i
+				exists = true
+				return
+			}
+		}
+	}
+
+	return
 }
