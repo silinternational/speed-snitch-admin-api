@@ -29,6 +29,11 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	id := req.PathParameters["id"]
 
 	if id == "" {
@@ -57,6 +62,11 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	id := req.PathParameters["id"]
 
 	if id == "" {
@@ -90,6 +100,11 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	users, err := db.ListUsers()
 	if err != nil {
 		return domain.ServerError(err)
@@ -108,6 +123,11 @@ func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	var user domain.User
 
 	// Get the user struct from the request body

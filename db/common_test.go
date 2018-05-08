@@ -76,6 +76,7 @@ var testNodes = map[string]domain.Node{
 		"Kenya, , Nairobi",
 		"1Lat 1Lon",
 		"1.1.1.1",
+		"11.11.11.11",
 		[]agent.Task{
 			testTasks["111Ping"],
 			testTasks["111SpeedTest"],
@@ -104,6 +105,7 @@ var testNodes = map[string]domain.Node{
 		"Chad, , N'Djamena",
 		"2Lat 2Lon",
 		"2.2.2.2",
+		"22.22.22.22",
 		[]agent.Task{
 			testTasks["222Ping"],
 			testTasks["222SpeedTest"],

@@ -28,6 +28,9 @@ var DefaultResponseCorsHeaders = map[string]string{
 const UserReqHeaderID = "userID"
 const UserRoleSuperAdmin = "superAdmin"
 
+const PermissionSuperAdmin = "superAdmin"
+const PermissionTagBased = "tagBased"
+
 type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
@@ -217,6 +220,8 @@ func DoTagsOverlap(tags1, tags2 []Tag) bool {
 	return false
 }
 
+// CanUserUseNode returns true if the user has a superAdmin role or
+//   if the user has a tag that the node has
 func CanUserUseNode(user User, node Node) bool {
 	if user.Role == UserRoleSuperAdmin {
 		return true

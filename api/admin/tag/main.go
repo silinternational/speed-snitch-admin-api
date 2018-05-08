@@ -33,6 +33,11 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	var tag domain.Tag
 	err := db.GetItem(domain.DataTable, "tag", req.PathParameters["name"], &tag)
 	if err != nil {
@@ -60,6 +65,11 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 }
 
 func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	tags, err := db.ListTags()
 	if err != nil {
 		return domain.ServerError(err)
@@ -78,6 +88,11 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	var tag domain.Tag
 	err := json.Unmarshal([]byte(req.Body), &tag)
 	if err != nil {
@@ -108,6 +123,10 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	name := req.PathParameters["name"]
 
