@@ -31,7 +31,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -84,7 +84,7 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	// Ensure user is authorized ...
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.TagUIDs)
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -221,7 +221,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	var existingNode domain.Node
 	err = db.GetItem(domain.DataTable, "node", macAddr, &existingNode)
 	if err == nil {
-		statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, existingNode.Tags)
+		statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, existingNode.TagUIDs)
 		if statusCode > 0 {
 			return domain.ClientError(statusCode, errMsg)
 		}

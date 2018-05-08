@@ -343,7 +343,7 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 }
 
 // GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
-func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
+func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTagUIDs []string) (int, string) {
 	user, err := GetUserFromRequest(req)
 	if err != nil {
 		return http.StatusBadRequest, err.Error()
@@ -358,7 +358,7 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	}
 
 	if permissionType == domain.PermissionTagBased {
-		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
+		tagsOverlap := domain.DoTagsOverlap(user.TagUIDs, objectTagUIDs)
 		if tagsOverlap {
 			return 0, ""
 		}
