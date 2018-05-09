@@ -5,10 +5,13 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/silinternational/speed-snitch-agent"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const DataTable = "dataTable"
@@ -27,6 +30,7 @@ var DefaultResponseCorsHeaders = map[string]string{
 
 const UserReqHeaderID = "userID"
 const UserRoleSuperAdmin = "superAdmin"
+const UserRoleAdmin = "admin"
 
 const PermissionSuperAdmin = "superAdmin"
 const PermissionTagBased = "tagBased"
@@ -46,13 +50,14 @@ type HelloRequest struct {
 }
 
 type Tag struct {
-	ID          string
+	ID          string `json:"ID"`
+	UID         string `json:"UID"`
 	Name        string `json:"Name"`
 	Description string `json:"Description"`
 }
 
 type Node struct {
-	ID                string
+	ID                string       `json:"ID"`
 	MacAddr           string       `json:"MacAddr"`
 	OS                string       `json:"OS"`
 	Arch              string       `json:"Arch"`
@@ -67,8 +72,10 @@ type Node struct {
 	IPAddress         string       `json:"IPAddress"`
 	Tasks             []agent.Task `json:"Tasks"`
 	Contacts          []Contact    `json:"Contacts"`
-	Tags              []Tag        `json:"Tags"`
+	TagUIDs           []string     `json:"TagUIDs"`
 	ConfiguredBy      string       `json:"ConfiguredBy"`
+	Nickname          string       `json:"Nickname"`
+	Notes             string       `json:"Notes"`
 }
 
 type NodeConfig struct {
@@ -80,23 +87,24 @@ type NodeConfig struct {
 }
 
 type User struct {
-	ID     string
-	UserID string `json:"UserID"`
-	Name   string `json:"Name"`
-	Email  string `json:"Email"`
-	Role   string `json:"Role"`
-	Tags   []Tag  `json:"Tags"`
+	ID      string   `json:"ID"`
+	UID     string   `json:"UID"`
+	UserID  string   `json:"UserID"`
+	Name    string   `json:"Name"`
+	Email   string   `json:"Email"`
+	Role    string   `json:"Role"`
+	TagUIDs []string `json:"TagUIDs"`
 }
 
 type Version struct {
-	ID          string
+	ID          string `json:"ID"`
 	Number      string `json:"Number"`
 	Description string `json:"Description"`
 }
 
 type SpeedTestNetServer struct {
-	ID          string
-	URL         string `xml:"url,attr" json:"URL""`
+	ID          string `json:"ID"`
+	URL         string `xml:"url,attr" json:"URL"`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
 	Name        string `xml:"name,attr" json:"Name"`
@@ -117,7 +125,7 @@ type STNetServerSettings struct {
 }
 
 type TaskLogEntry struct {
-	ID                 string
+	ID                 string  `json:"ID"`
 	Timestamp          int64   `json:"Timestamp"`
 	ExpirationTime     int64   `json:"ExpirationTime"`
 	MacAddr            string  `json:"MacAddr"`
@@ -204,14 +212,14 @@ func GetUrlForAgentVersion(version, os, arch string) string {
 
 // DoTagsOverlap returns true if there is a tag with the same name
 //  in both slices of tags.  Otherwise, returns false.
-func DoTagsOverlap(tags1, tags2 []Tag) bool {
+func DoTagsOverlap(tags1, tags2 []string) bool {
 	if len(tags1) == 0 || len(tags2) == 0 {
 		return false
 	}
 
 	for _, tag1 := range tags1 {
 		for _, tag2 := range tags2 {
-			if tag1.Name == tag2.Name {
+			if tag1 == tag2 {
 				return true
 			}
 		}
@@ -226,5 +234,56 @@ func CanUserUseNode(user User, node Node) bool {
 	if user.Role == UserRoleSuperAdmin {
 		return true
 	}
-	return DoTagsOverlap(user.Tags, node.Tags)
+	return DoTagsOverlap(user.TagUIDs, node.TagUIDs)
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const (
+	letterIdxBits = 6                    // 6 bits to represent a letter index
+	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
+	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
+)
+
+// GetRandString returns a random string of given length
+func GetRandString(length int) string {
+	var src = rand.NewSource(time.Now().UnixNano())
+	b := make([]byte, length)
+	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
+	for i, cache, remain := length-1, src.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = src.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+			b[i] = letterBytes[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
+	}
+
+	return string(b)
+}
+
+// This function will search element inside array with any type.
+// Will return boolean and index for matched element.
+// True and index more than 0 if element is exist.
+// needle is element to search, haystack is slice of value to be search.
+func InArray(needle interface{}, haystack interface{}) (exists bool, index int) {
+	exists = false
+	index = -1
+
+	switch reflect.TypeOf(haystack).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(haystack)
+
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(needle, s.Index(i).Interface()) == true {
+				index = i
+				exists = true
+				return
+			}
+		}
+	}
+
+	return
 }

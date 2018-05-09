@@ -29,7 +29,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -62,7 +62,7 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 }
 
 func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -100,7 +100,7 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -123,21 +123,35 @@ func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	var version domain.Version
 
+	// If {number} was provided in request, get existing record to update
+	if req.PathParameters["number"] != "" {
+		err := db.GetItem(domain.DataTable, "version", req.PathParameters["number"], &version)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+	}
+
 	// Get the version struct from the request body
-	err := json.Unmarshal([]byte(req.Body), &version)
+	var updatedVersion domain.Version
+	err := json.Unmarshal([]byte(req.Body), &updatedVersion)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	version.ID = "version-" + version.Number
+	if version.Number == "" {
+		version.Number = updatedVersion.Number
+	}
 
+	version.Description = updatedVersion.Description
+
+	version.ID = "version-" + version.Number
 	// Update the version in the database
 	err = db.PutItem(domain.DataTable, version)
 	if err != nil {

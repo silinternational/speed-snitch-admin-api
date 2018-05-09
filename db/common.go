@@ -343,7 +343,7 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 }
 
 // GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
-func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
+func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTagUIDs []string) (int, string) {
 	user, err := GetUserFromRequest(req)
 	if err != nil {
 		return http.StatusBadRequest, err.Error()
@@ -358,7 +358,7 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	}
 
 	if permissionType == domain.PermissionTagBased {
-		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
+		tagsOverlap := domain.DoTagsOverlap(user.TagUIDs, objectTagUIDs)
 		if tagsOverlap {
 			return 0, ""
 		}
@@ -367,4 +367,29 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	}
 
 	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
+}
+
+func AreTagsValid(tags []string) bool {
+	if len(tags) == 0 {
+		return true
+	}
+
+	allTags, err := ListTags()
+	if err != nil {
+		return false
+	}
+
+	allTagUIDs := []string{}
+	for _, tag := range allTags {
+		allTagUIDs = append(allTagUIDs, tag.UID)
+	}
+
+	for _, tag := range tags {
+		inArray, _ := domain.InArray(tag, allTagUIDs)
+		if !inArray {
+			return false
+		}
+	}
+
+	return true
 }

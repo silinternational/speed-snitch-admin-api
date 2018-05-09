@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -14,7 +15,7 @@ func main() {
 }
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, tagSpecified := req.PathParameters["name"]
+	_, tagSpecified := req.PathParameters["uid"]
 	switch req.HTTPMethod {
 	case "GET":
 		if tagSpecified {
@@ -33,13 +34,13 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	var tag domain.Tag
-	err := db.GetItem(domain.DataTable, "tag", req.PathParameters["name"], &tag)
+	err := db.GetItem(domain.DataTable, "tag", req.PathParameters["uid"], &tag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -65,7 +66,7 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 }
 
 func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -88,25 +89,55 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	var tag domain.Tag
-	err := json.Unmarshal([]byte(req.Body), &tag)
+
+	// If {uid} was provided in request, get existing record to update
+	if req.PathParameters["uid"] != "" {
+		err := db.GetItem(domain.DataTable, "tag", req.PathParameters["uid"], &tag)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+	}
+
+	// If UID is not set generate a UID
+	if tag.UID == "" {
+		tag.UID = domain.GetRandString(4)
+		tag.ID = "tag-" + tag.UID
+	}
+
+	// Parse request body for updated attributes
+	var updatedTag domain.Tag
+	err := json.Unmarshal([]byte(req.Body), &updatedTag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	if tag.Name == "" || tag.Description == "" {
+	if updatedTag.Name == "" || updatedTag.Description == "" {
 		return domain.ClientError(http.StatusUnprocessableEntity, "Name and Description are required")
 	}
 
-	tag.ID = "tag-" + tag.Name
+	// Make sure tag does not already exist with different UID
+	exists, err := tagAlreadyExists(tag.UID, updatedTag.Name)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+	if exists {
+		return domain.ClientError(http.StatusConflict, "A tag with this name already exists")
+	}
+
+	// Update tag record attributes for persistence
+	tag.Name = updatedTag.Name
+	tag.Description = updatedTag.Description
 
 	err = db.PutItem(domain.DataTable, tag)
 	if err != nil {
+		tagJson, _ := json.Marshal(tag)
+		return domain.ServerError(fmt.Errorf("%s", tagJson))
 		return domain.ServerError(err)
 	}
 
@@ -123,14 +154,14 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	name := req.PathParameters["name"]
+	UID := req.PathParameters["uid"]
 
-	deleted, err := db.DeleteItem(domain.DataTable, "tag", name)
+	deleted, err := db.DeleteItem(domain.DataTable, "tag", UID)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -148,4 +179,20 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		Body:       "",
 		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
+}
+
+// tagAlreadyExist returns true if a tag with the same name but different UID already exists
+func tagAlreadyExists(uid, name string) (bool, error) {
+	allTags, err := db.ListTags()
+	if err != nil {
+		return false, err
+	}
+
+	for _, tag := range allTags {
+		if tag.Name == name && tag.UID != uid {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
