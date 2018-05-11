@@ -117,6 +117,45 @@ func scanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeVal
 	return results, nil
 }
 
+func GetUserByUserID(userID string) (domain.User, error) {
+	tableName := domain.GetDbTableName(domain.DataTable)
+	filterExpression := "UserID = :userID"
+	input := &dynamodb.ScanInput{
+		TableName:        &tableName,
+		FilterExpression: &filterExpression,
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":userID": {
+				S: aws.String(userID),
+			},
+		},
+	}
+
+	var results []map[string]*dynamodb.AttributeValue
+	err := db.ScanPages(input,
+		func(page *dynamodb.ScanOutput, lastPage bool) bool {
+			results = append(results, page.Items...)
+			return !lastPage
+		})
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	if len(results) == 0 {
+		return domain.User{}, nil
+	}
+	if len(results) == 1 {
+		var user domain.User
+		err := dynamodbattribute.UnmarshalMap(results[0], &user)
+		if err != nil {
+			return domain.User{}, err
+		}
+
+		return user, nil
+	}
+
+	return domain.User{}, fmt.Errorf("More than one user found for UserID %s", userID)
+}
+
 func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
@@ -354,8 +393,7 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 	}
 
 	// Get the user
-	var user domain.User
-	err := GetItem(domain.DataTable, "user", userID, &user)
+	user, err := GetUserByUserID(userID)
 	if err != nil {
 		return domain.User{}, err
 	}

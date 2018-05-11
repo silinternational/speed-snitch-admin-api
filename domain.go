@@ -29,13 +29,7 @@ const ServerTypeCustom = "custom"
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
-// API call responses have to provide CORS headers manually
-var DefaultResponseCorsHeaders = map[string]string{
-	"Access-Control-Allow-Origin":      "*",
-	"Access-Control-Allow-Credentials": "true",
-}
-
-const UserReqHeaderID = "userID"
+const UserReqHeaderID = "x-user-id"
 const UserRoleSuperAdmin = "superAdmin"
 const UserRoleAdmin = "admin"
 
@@ -188,7 +182,6 @@ func ServerError(err error) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
 		Body:       http.StatusText(http.StatusInternalServerError),
-		Headers:    DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -197,7 +190,6 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       body,
-		Headers:    DefaultResponseCorsHeaders,
 	}, nil
 }
 

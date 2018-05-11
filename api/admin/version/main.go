@@ -52,14 +52,12 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "",
-			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -85,7 +83,6 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       http.StatusText(http.StatusNotFound),
-			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
@@ -97,7 +94,6 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -120,7 +116,6 @@ func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -169,7 +164,6 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 

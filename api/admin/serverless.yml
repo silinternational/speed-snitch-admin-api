@@ -22,7 +22,6 @@ provider:
       Action:
         - "dynamodb:DeleteItem"
         - "dynamodb:GetItem"
-        - "dynamodb:GetRecords"
         - "dynamodb:PutItem"
         - "dynamodb:Query"
         - "dynamodb:Scan"
@@ -61,27 +60,13 @@ functions:
         - http:
             path: node
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: /node/{macAddr}
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -89,15 +74,8 @@ functions:
         - http:
             path: /node/{macAddr}/tag
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -105,15 +83,8 @@ functions:
         - http:
             path: /node/{macAddr}
             method: PUT
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -121,15 +92,8 @@ functions:
         - http:
             path: /node/{macAddr}
             method: DELETE
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -140,39 +104,18 @@ functions:
         - http:
             path: tag
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: tag
             method: POST
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: /tag/{uid}
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -180,15 +123,8 @@ functions:
         - http:
             path: /tag/{uid}
             method: PUT
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -196,15 +132,8 @@ functions:
         - http:
             path: /tag/{uid}
             method: DELETE
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -282,55 +211,27 @@ functions:
         - http:
             path: user
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: user
             method: POST
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: /user/{uid}
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
                   uid: true
         - http:
-            path: /node/{uid}/tag
+            path: /user/{uid}/tag
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -338,15 +239,8 @@ functions:
         - http:
             path: /user/{uid}
             method: PUT
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -354,15 +248,8 @@ functions:
         - http:
             path: /user/{uid}
             method: DELETE
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -373,39 +260,18 @@ functions:
         - http:
             path: version
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: version
             method: POST
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
         - http:
             path: /version/{number}
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -413,15 +279,8 @@ functions:
         - http:
             path: /version/{number}
             method: PUT
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -429,15 +288,8 @@ functions:
         - http:
             path: /version/{number}
             method: DELETE
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
