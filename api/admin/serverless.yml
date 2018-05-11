@@ -209,6 +209,81 @@ functions:
               parameters:
                 paths:
                   uid: true
+  namedserver:
+      handler: bin/namedserver
+      events:
+        - http:
+            path: namedserver
+            method: GET
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+        - http:
+            path: namedserver
+            method: POST
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+        - http:
+            path: /namedserver/{id}
+            method: GET
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /namedserver/{id}
+            method: PUT
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /namedserver/{id}
+            method: DELETE
+            #private: true
+            cors:
+              origin: "*"
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - X-Api-Key
+                - X-Amz-User-Agent
+              allowCredentials: true
+            request:
+              parameters:
+                paths:
+                  id: true
   user:
       handler: bin/user
       events:

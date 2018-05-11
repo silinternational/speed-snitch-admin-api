@@ -17,7 +17,7 @@ import (
 const DataTable = "dataTable"
 const TaskLogTable = "taskLogTable"
 
-const SpeedTestNetServerURL = "http://c.speedtest.net/speedtest-servers-static.php?threads=1"
+const DataTypeNamedServer = "namedserver"
 
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
@@ -122,6 +122,15 @@ type STNetServerList struct {
 
 type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
+}
+
+type NamedServer struct {
+	ID                   string `json:"ID"`
+	SpeedTestNetServerID string `json:"SpeedTestNetServerID"`
+	Name                 string `json:"Name"`
+	Description          string `json:"Description"`
+	TargetRegion         string `json:"TargetRegion"`
+	Notes                string `json:"Notes"`
 }
 
 type TaskLogEntry struct {

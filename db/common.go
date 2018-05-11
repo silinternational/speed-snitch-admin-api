@@ -201,6 +201,27 @@ func ListUsers() ([]domain.User, error) {
 	return list, nil
 }
 
+func ListNamedServers() ([]domain.NamedServer, error) {
+
+	var list []domain.NamedServer
+
+	items, err := scanTable(domain.DataTable, domain.DataTypeNamedServer)
+	if err != nil {
+		return list, err
+	}
+
+	for _, item := range items {
+		var itemObj domain.NamedServer
+		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
+		if err != nil {
+			return []domain.NamedServer{}, err
+		}
+		list = append(list, itemObj)
+	}
+
+	return list, nil
+}
+
 func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 
 	var list []domain.SpeedTestNetServer
