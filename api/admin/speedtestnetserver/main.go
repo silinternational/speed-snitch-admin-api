@@ -9,6 +9,8 @@ import (
 	"net/http"
 )
 
+const SelfType = domain.DataTypeSpeedTestNetServer
+
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
@@ -36,7 +38,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	id := req.QueryStringParameters["id"]
 
-	success, err := db.DeleteItem(domain.DataTable, "speedtestnetserver", id)
+	success, err := db.DeleteItem(domain.DataTable, SelfType, id)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -66,7 +68,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	id := req.QueryStringParameters["id"]
 
 	var server domain.SpeedTestNetServer
-	err := db.GetItem(domain.DataTable, "speedtestnetserver", id, &server)
+	err := db.GetItem(domain.DataTable, SelfType, id, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -123,7 +125,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	if err != nil {
 		return domain.ServerError(err)
 	}
-	server.ID = "speedtestnetserver-" + server.ServerID
+	server.ID = SelfType + "-" + server.ServerID
 
 	// Update the speedtestnetserver in the database
 	err = db.PutItem(domain.DataTable, server)
