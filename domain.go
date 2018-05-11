@@ -3,7 +3,6 @@ package domain
 import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/silinternational/speed-snitch-agent"
 	"log"
 	"math/rand"
 	"net/http"
@@ -18,6 +17,10 @@ const DataTable = "dataTable"
 const TaskLogTable = "taskLogTable"
 
 const DataTypeNamedServer = "namedserver"
+const DataTypeSpeedTestNetServer = "speedtestnetserver"
+
+const ServerTypeSpeedTestNet = "speedTestNet"
+const ServerTypeCustom = "custom"
 
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
@@ -57,25 +60,25 @@ type Tag struct {
 }
 
 type Node struct {
-	ID                string       `json:"ID"`
-	MacAddr           string       `json:"MacAddr"`
-	OS                string       `json:"OS"`
-	Arch              string       `json:"Arch"`
-	RunningVersion    string       `json:"RunningVersion"`
-	ConfiguredVersion string       `json:"ConfiguredVersion"`
-	Uptime            int64        `json:"Uptime"`
-	LastSeen          string       `json:"LastSeen"`
-	FirstSeen         string       `json:"FirstSeen"`
-	Location          string       `json:"Location"`
-	Coordinates       string       `json:"Coordinates"`
-	Network           string       `json:"Network"`
-	IPAddress         string       `json:"IPAddress"`
-	Tasks             []agent.Task `json:"Tasks"`
-	Contacts          []Contact    `json:"Contacts"`
-	TagUIDs           []string     `json:"TagUIDs"`
-	ConfiguredBy      string       `json:"ConfiguredBy"`
-	Nickname          string       `json:"Nickname"`
-	Notes             string       `json:"Notes"`
+	ID                string    `json:"ID"`
+	MacAddr           string    `json:"MacAddr"`
+	OS                string    `json:"OS"`
+	Arch              string    `json:"Arch"`
+	RunningVersion    string    `json:"RunningVersion"`
+	ConfiguredVersion string    `json:"ConfiguredVersion"`
+	Uptime            int64     `json:"Uptime"`
+	LastSeen          string    `json:"LastSeen"`
+	FirstSeen         string    `json:"FirstSeen"`
+	Location          string    `json:"Location"`
+	Coordinates       string    `json:"Coordinates"`
+	Network           string    `json:"Network"`
+	IPAddress         string    `json:"IPAddress"`
+	Tasks             []Task    `json:"Tasks"`
+	Contacts          []Contact `json:"Contacts"`
+	TagUIDs           []string  `json:"TagUIDs"`
+	ConfiguredBy      string    `json:"ConfiguredBy"`
+	Nickname          string    `json:"Nickname"`
+	Notes             string    `json:"Notes"`
 }
 
 type NodeConfig struct {
@@ -83,7 +86,34 @@ type NodeConfig struct {
 		Number string
 		URL    string
 	}
-	Tasks []agent.Task
+	Tasks []Task
+}
+
+type Task struct {
+	Type                 string   `json:"Type"`
+	Schedule             string   `json:"Schedule"`
+	NamedServerID        string   `json:"NamedServerID"`
+	SpeedTestNetServerID string   `json:"SpeedTestNetServerID,omitempty"`
+	ServerHost           string   `json:"ServerHost,omitempty"`
+	Data                 TaskData `json:"Data"`
+}
+
+type TaskData struct {
+	StringValues map[string]string  `json:"StringValues"`
+	IntValues    map[string]int     `json:"IntValues"`
+	FloatValues  map[string]float64 `json:"FloatValues"`
+	IntSlices    map[string][]int   `json:"IntSlices"`
+}
+
+type NamedServer struct {
+	ID                   string `json:"ID"`
+	ServerType           string `json:"ServerType"`
+	SpeedTestNetServerID string `json:"SpeedTestNetServerID"` // Only needed if ServerType is SpeedTestNetServer
+	ServerHost           string `json:"ServerHost"`           // Needed for non-SpeedTestNetServers
+	Name                 string `json:"Name"`
+	Description          string `json:"Description"`
+	TargetRegion         string `json:"TargetRegion"`
+	Notes                string `json:"Notes"`
 }
 
 type User struct {
@@ -122,15 +152,6 @@ type STNetServerList struct {
 
 type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
-}
-
-type NamedServer struct {
-	ID                   string `json:"ID"`
-	SpeedTestNetServerID string `json:"SpeedTestNetServerID"`
-	Name                 string `json:"Name"`
-	Description          string `json:"Description"`
-	TargetRegion         string `json:"TargetRegion"`
-	Notes                string `json:"Notes"`
 }
 
 type TaskLogEntry struct {
