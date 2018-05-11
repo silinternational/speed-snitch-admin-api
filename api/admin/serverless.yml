@@ -228,14 +228,6 @@ functions:
             path: namedserver
             method: POST
             #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
         - http:
             path: /namedserver/{id}
             method: GET
