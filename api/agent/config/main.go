@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -33,10 +34,46 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			return domain.ServerError(err)
 		}
 		node.ConfiguredVersion = latestVersion.Number
-
 	}
 
 	downloadUrl := domain.GetUrlForAgentVersion(node.ConfiguredVersion, node.OS, node.Arch)
+
+	var newTasks []domain.Task
+
+	for _, oldTask := range node.Tasks {
+		// Only modify tasks that involve a NamedServer
+		if oldTask.NamedServerID == "" {
+			newTasks = append(newTasks, oldTask)
+			continue
+		}
+
+		var namedServer domain.NamedServer
+		err = db.GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServerID, &namedServer)
+		if err != nil {
+			return domain.ServerError(fmt.Errorf("Error getting NamedServer ... %s", err.Error()))
+		}
+
+		newTask := oldTask
+
+		// If it's not a SpeedTestNetServer, add the server info
+		if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+			newTask.SpeedTestNetServerID = ""
+			newTask.ServerHost = namedServer.ServerHost
+		} else {
+			// Use the NamedServer to get the SpeedTestNetServer's info
+			var speedtestnetserver domain.SpeedTestNetServer
+			err = db.GetItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, namedServer.SpeedTestNetServerID, &speedtestnetserver)
+			if err != nil {
+				return domain.ServerError(fmt.Errorf("Error getting SpeedTestNetServer from NamedServer ... %s", err.Error()))
+			}
+
+			newTask.SpeedTestNetServerID = speedtestnetserver.ServerID
+			newTask.ServerHost = speedtestnetserver.Host
+		}
+
+		newTasks = append(newTasks, newTask)
+	}
+
 	config := domain.NodeConfig{
 		Version: struct {
 			Number string
@@ -45,7 +82,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			Number: node.ConfiguredVersion,
 			URL:    downloadUrl,
 		},
-		Tasks: node.Tasks,
+		Tasks: newTasks,
 	}
 
 	js, err := json.Marshal(config)
