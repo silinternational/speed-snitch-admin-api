@@ -144,31 +144,16 @@ functions:
         - http:
             path: namedserver
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
         - http:
             path: namedserver
             method: POST
-            #private: true
+            private: true
         - http:
             path: /namedserver/{id}
             method: GET
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -176,15 +161,8 @@ functions:
         - http:
             path: /namedserver/{id}
             method: PUT
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
+
             request:
               parameters:
                 paths:
@@ -192,15 +170,7 @@ functions:
         - http:
             path: /namedserver/{id}
             method: DELETE
-            #private: true
-            cors:
-              origin: "*"
-              headers:
-                - Content-Type
-                - X-Amz-Date
-                - X-Api-Key
-                - X-Amz-User-Agent
-              allowCredentials: true
+            private: true
             request:
               parameters:
                 paths:
