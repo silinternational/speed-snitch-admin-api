@@ -54,14 +54,12 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "",
-			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -87,7 +85,6 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       http.StatusText(http.StatusNotFound),
-			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
@@ -99,7 +96,6 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -138,7 +134,6 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -161,7 +156,6 @@ func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -238,7 +232,6 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
-		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
