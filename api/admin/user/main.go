@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const SelfType = domain.DataTypeUser
+
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, userSpecified := req.PathParameters["user"]
 	switch req.HTTPMethod {
@@ -44,7 +46,7 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusBadRequest, "id param must be specified")
 	}
 
-	success, err := db.DeleteItem(domain.DataTable, "user", id)
+	success, err := db.DeleteItem(domain.DataTable, SelfType, id)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -78,7 +80,7 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	var user domain.User
-	err := db.GetItem(domain.DataTable, "user", uid, &user)
+	err := db.GetItem(domain.DataTable, SelfType, uid, &user)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -111,7 +113,7 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	}
 
 	var user domain.User
-	err := db.GetItem(domain.DataTable, "user", uid, &user)
+	err := db.GetItem(domain.DataTable, SelfType, uid, &user)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -175,7 +177,7 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, "user", req.PathParameters["uid"], &user)
+		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &user)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -185,7 +187,7 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if user.UID == "" {
 		user.UID = domain.GetRandString(4)
 	}
-	user.ID = "user" + "-" + user.UID
+	user.ID = SelfType + "-" + user.UID
 
 	// Get the user struct from the request body
 	var updatedUser domain.User

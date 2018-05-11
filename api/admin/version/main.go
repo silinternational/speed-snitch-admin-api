@@ -9,6 +9,8 @@ import (
 	"net/http"
 )
 
+const SelfType = domain.DataTypeVersion
+
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, versionSpecified := req.PathParameters["number"]
 	switch req.HTTPMethod {
@@ -40,7 +42,7 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(http.StatusBadRequest, "number param must be specified")
 	}
 
-	success, err := db.DeleteItem(domain.DataTable, "version", number)
+	success, err := db.DeleteItem(domain.DataTable, SelfType, number)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -74,7 +76,7 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	var version domain.Version
-	err := db.GetItem(domain.DataTable, "version", number, &version)
+	err := db.GetItem(domain.DataTable, SelfType, number, &version)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -132,7 +134,7 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 
 	// If {number} was provided in request, get existing record to update
 	if req.PathParameters["number"] != "" {
-		err := db.GetItem(domain.DataTable, "version", req.PathParameters["number"], &version)
+		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["number"], &version)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -151,7 +153,7 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 
 	version.Description = updatedVersion.Description
 
-	version.ID = "version-" + version.Number
+	version.ID = SelfType + "-" + version.Number
 	// Update the version in the database
 	err = db.PutItem(domain.DataTable, version)
 	if err != nil {

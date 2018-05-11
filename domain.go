@@ -17,7 +17,11 @@ const DataTable = "dataTable"
 const TaskLogTable = "taskLogTable"
 
 const DataTypeNamedServer = "namedserver"
+const DataTypeNode = "node"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
+const DataTypeTag = "tag"
+const DataTypeUser = "user"
+const DataTypeVersion = "version"
 
 const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"
