@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-var testTasks = map[string]agent.Task{
+var testTasks = map[string]domain.Task{
 	"111Ping": {
 		Type:     agent.TypePing,
 		Schedule: "*/11 * * * *",
-		Data: agent.TaskData{
+		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_LATENCY,
 				speedtestnet.CFG_SERVER_HOST: "host1.net:8080",
@@ -24,7 +24,7 @@ var testTasks = map[string]agent.Task{
 	"111SpeedTest": {
 		Type:     agent.TypeSpeedTest,
 		Schedule: "* 1 * * *",
-		Data: agent.TaskData{
+		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_ALL,
 				speedtestnet.CFG_SERVER_HOST: "host1.net:8080",
@@ -37,7 +37,7 @@ var testTasks = map[string]agent.Task{
 	"222Ping": {
 		Type:     agent.TypePing,
 		Schedule: "*/22 * * * *",
-		Data: agent.TaskData{
+		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_LATENCY,
 				speedtestnet.CFG_SERVER_HOST: "host2.net:8080",
@@ -50,7 +50,7 @@ var testTasks = map[string]agent.Task{
 	"222SpeedTest": {
 		Type:     agent.TypeSpeedTest,
 		Schedule: "* 2 * * *",
-		Data: agent.TaskData{
+		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_ALL,
 				speedtestnet.CFG_SERVER_HOST: "host2.net:8080",
@@ -76,7 +76,7 @@ var testNodes = map[string]domain.Node{
 		Location:          "Kenya, , Nairobi",
 		Coordinates:       "1Lat 1Lon",
 		IPAddress:         "1.1.1.1",
-		Tasks: []agent.Task{
+		Tasks: []domain.Task{
 			testTasks["111Ping"],
 			testTasks["111SpeedTest"],
 			testTasks["222Ping"],
@@ -106,7 +106,7 @@ var testNodes = map[string]domain.Node{
 		Location:          "Chad, , N'Djamena",
 		Coordinates:       "2Lat 2Lon",
 		IPAddress:         "2.2.2.2",
-		Tasks: []agent.Task{
+		Tasks: []domain.Task{
 			testTasks["222Ping"],
 			testTasks["222SpeedTest"],
 		},

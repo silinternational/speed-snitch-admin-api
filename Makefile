@@ -2,6 +2,7 @@ build: buildadmin buildagent
 
 buildadmin:
 	docker-compose run go go build -ldflags="-s -w" -o bin/tag                api/admin/tag/main.go
+	docker-compose run go go build -ldflags="-s -w" -o bin/namedserver        api/admin/namedserver/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/node               api/admin/node/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/speedtestnetserver api/admin/speedtestnetserver/main.go
 	docker-compose run go go build -ldflags="-s -w" -o bin/user               api/admin/user/main.go
