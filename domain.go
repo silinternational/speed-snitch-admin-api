@@ -104,7 +104,7 @@ type TaskData struct {
 }
 
 type NamedServer struct {
-	ID                   string `json:"ID"`
+	UID                  string `json:"UID"`
 	ServerType           string `json:"ServerType"`
 	SpeedTestNetServerID string `json:"SpeedTestNetServerID"` // Only needed if ServerType is SpeedTestNetServer
 	ServerHost           string `json:"ServerHost"`           // Needed for non-SpeedTestNetServers
