@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const SelfType = domain.DataTypeNode
+
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, nodeSpecified := req.PathParameters["macAddr"]
 	switch req.HTTPMethod {
@@ -42,7 +44,7 @@ func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	success, err := db.DeleteItem(domain.DataTable, "node", macAddr)
+	success, err := db.DeleteItem(domain.DataTable, SelfType, macAddr)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -68,7 +70,7 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	var node domain.Node
-	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	err = db.GetItem(domain.DataTable, SelfType, macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -104,7 +106,7 @@ func listNodeTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	}
 
 	var node domain.Node
-	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	err = db.GetItem(domain.DataTable, SelfType, macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -184,7 +186,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
-	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	err = db.GetItem(domain.DataTable, SelfType, macAddr, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -203,7 +205,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	// @todo do we need to check if user making api call can use the tags provided?
 
 	// Apply updates to node
-	node.ID = "node-" + macAddr
+	node.ID = SelfType + "-" + macAddr
 	node.ConfiguredVersion = updatedNode.ConfiguredVersion
 	node.Tasks = updatedNode.Tasks
 	node.Contacts = updatedNode.Contacts
@@ -213,7 +215,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// If node already exists, ensure user is authorized ...
 	var existingNode domain.Node
-	err = db.GetItem(domain.DataTable, "node", macAddr, &existingNode)
+	err = db.GetItem(domain.DataTable, SelfType, macAddr, &existingNode)
 	if err == nil {
 		statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, existingNode.TagUIDs)
 		if statusCode > 0 {

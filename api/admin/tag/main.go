@@ -10,6 +10,8 @@ import (
 	"net/http"
 )
 
+const SelfType = domain.DataTypeTag
+
 func main() {
 	lambda.Start(router)
 }
@@ -40,7 +42,7 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	var tag domain.Tag
-	err := db.GetItem(domain.DataTable, "tag", req.PathParameters["uid"], &tag)
+	err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &tag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -95,7 +97,7 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, "tag", req.PathParameters["uid"], &tag)
+		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &tag)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -104,7 +106,7 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	// If UID is not set generate a UID
 	if tag.UID == "" {
 		tag.UID = domain.GetRandString(4)
-		tag.ID = "tag-" + tag.UID
+		tag.ID = SelfType + "-" + tag.UID
 	}
 
 	// Parse request body for updated attributes
@@ -157,7 +159,7 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	UID := req.PathParameters["uid"]
 
-	deleted, err := db.DeleteItem(domain.DataTable, "tag", UID)
+	deleted, err := db.DeleteItem(domain.DataTable, SelfType, UID)
 	if err != nil {
 		return domain.ServerError(err)
 	}

@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-const SelfType = domain.DataTypeSpeedTestNetServer
+const DataType = domain.DataTypeNamedServer
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["id"]
@@ -38,7 +38,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	id := req.QueryStringParameters["id"]
 
-	success, err := db.DeleteItem(domain.DataTable, SelfType, id)
+	success, err := db.DeleteItem(domain.DataTable, DataType, id)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -48,12 +48,14 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusNotFound,
 			Body:       "",
+			Headers:    domain.DefaultResponseCorsHeaders,
 		}, nil
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -65,13 +67,13 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	id := req.QueryStringParameters["id"]
 
-	var server domain.SpeedTestNetServer
-	err := db.GetItem(domain.DataTable, SelfType, id, &server)
+	var server domain.NamedServer
+	err := db.GetItem(domain.DataTable, DataType, id, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	if server.URL == "" {
+	if server.Name == "" {
 		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
@@ -83,6 +85,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -92,7 +95,7 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	servers, err := db.ListSpeedTestNetServers()
+	servers, err := db.ListNamedServers()
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -105,6 +108,7 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 
@@ -114,22 +118,22 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	var server domain.SpeedTestNetServer
+	var server domain.NamedServer
 
-	// Get the SpeedTestNetServer struct from the request body
+	// Get the NamedServer struct from the request body
 	err := json.Unmarshal([]byte(req.Body), &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
-	server.ID = SelfType + "-" + server.ServerID
+	server.ID = DataType + "-" + server.ID
 
-	// Update the speedtestnetserver in the database
+	// Update the namedserver in the database
 	err = db.PutItem(domain.DataTable, server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	// Return the updated speedtestnetserver as json
+	// Return the updated namedserver as json
 	js, err := json.Marshal(server)
 	if err != nil {
 		return domain.ServerError(err)
@@ -138,6 +142,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       string(js),
+		Headers:    domain.DefaultResponseCorsHeaders,
 	}, nil
 }
 

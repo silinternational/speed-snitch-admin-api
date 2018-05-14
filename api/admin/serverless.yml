@@ -138,6 +138,43 @@ functions:
               parameters:
                 paths:
                   uid: true
+  namedserver:
+      handler: bin/namedserver
+      events:
+        - http:
+            path: namedserver
+            method: GET
+            private: true
+        - http:
+            path: namedserver
+            method: POST
+            private: true
+        - http:
+            path: /namedserver/{uid}
+            method: GET
+            private: true
+
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /namedserver/{uid}
+            method: PUT
+            private: true
+
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /namedserver/{uid}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
   user:
       handler: bin/user
       events:
