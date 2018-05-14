@@ -66,7 +66,6 @@ functions:
             path: /node/{macAddr}
             method: GET
             private: true
-
             request:
               parameters:
                 paths:
@@ -75,7 +74,6 @@ functions:
             path: /node/{macAddr}/tag
             method: GET
             private: true
-
             request:
               parameters:
                 paths:
@@ -84,7 +82,6 @@ functions:
             path: /node/{macAddr}
             method: PUT
             private: true
-
             request:
               parameters:
                 paths:
@@ -93,7 +90,6 @@ functions:
             path: /node/{macAddr}
             method: DELETE
             private: true
-
             request:
               parameters:
                 paths:
@@ -115,7 +111,6 @@ functions:
             path: /tag/{uid}
             method: GET
             private: true
-
             request:
               parameters:
                 paths:
@@ -124,7 +119,6 @@ functions:
             path: /tag/{uid}
             method: PUT
             private: true
-
             request:
               parameters:
                 paths:
@@ -133,7 +127,6 @@ functions:
             path: /tag/{uid}
             method: DELETE
             private: true
-
             request:
               parameters:
                 paths:
@@ -153,7 +146,6 @@ functions:
             path: /namedserver/{uid}
             method: GET
             private: true
-
             request:
               parameters:
                 paths:
@@ -162,7 +154,6 @@ functions:
             path: /namedserver/{uid}
             method: PUT
             private: true
-
             request:
               parameters:
                 paths:
@@ -189,10 +180,14 @@ functions:
             private: true
 
         - http:
-            path: /user/{uid}
+            path: user/me
             method: GET
             private: true
 
+        - http:
+            path: /user/{uid}
+            method: GET
+            private: true
             request:
               parameters:
                 paths:
@@ -210,7 +205,6 @@ functions:
             path: /user/{uid}
             method: PUT
             private: true
-
             request:
               parameters:
                 paths:
@@ -219,7 +213,6 @@ functions:
             path: /user/{uid}
             method: DELETE
             private: true
-
             request:
               parameters:
                 paths:
@@ -241,7 +234,6 @@ functions:
             path: /version/{number}
             method: GET
             private: true
-
             request:
               parameters:
                 paths:
@@ -250,7 +242,6 @@ functions:
             path: /version/{number}
             method: PUT
             private: true
-
             request:
               parameters:
                 paths:
@@ -259,7 +250,6 @@ functions:
             path: /version/{number}
             method: DELETE
             private: true
-
             request:
               parameters:
                 paths:

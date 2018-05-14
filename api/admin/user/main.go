@@ -24,6 +24,9 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 			}
 			return viewUser(req)
 		}
+		if strings.HasSuffix(req.Path, "/me") {
+			return viewMe(req)
+		}
 		return listUsers(req)
 	case "POST":
 		return updateUser(req)
@@ -62,6 +65,23 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
+	}, nil
+}
+
+func viewMe(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	user, err := db.GetUserFromRequest(req)
+	if err != nil {
+		user = domain.User{}
+	}
+
+	js, err := json.Marshal(user)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(js),
 	}, nil
 }
 
