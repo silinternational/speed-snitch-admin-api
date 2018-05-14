@@ -116,12 +116,34 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	var server domain.NamedServer
 
+	// If {uid} was provided in request, get existing record to update
+	if req.PathParameters["uid"] != "" {
+		err := db.GetItem(domain.DataTable, DataType, req.PathParameters["uid"], &server)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+	}
+
+	// If UID is not set generate a UID
+	if server.UID == "" {
+		server.UID = domain.GetRandString(4)
+		server.ID = DataType + "-" + server.UID
+	}
+
 	// Get the NamedServer struct from the request body
-	err := json.Unmarshal([]byte(req.Body), &server)
+	var updatedServer domain.NamedServer
+	err := json.Unmarshal([]byte(req.Body), &updatedServer)
 	if err != nil {
 		return domain.ServerError(err)
 	}
-	server.UID = DataType + "-" + server.UID
+
+	server.ServerType = updatedServer.ServerType
+	server.SpeedTestNetServerID = updatedServer.SpeedTestNetServerID
+	server.ServerHost = updatedServer.ServerHost
+	server.Name = updatedServer.Name
+	server.Description = updatedServer.Description
+	server.TargetRegion = updatedServer.TargetRegion
+	server.Notes = updatedServer.Notes
 
 	// Update the namedserver in the database
 	err = db.PutItem(domain.DataTable, server)
