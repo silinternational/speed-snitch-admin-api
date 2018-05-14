@@ -12,7 +12,7 @@ import (
 const DataType = domain.DataTypeNamedServer
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, serverSpecified := req.PathParameters["id"]
+	_, serverSpecified := req.PathParameters["uid"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteServer(req)
@@ -36,9 +36,9 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	id := req.QueryStringParameters["id"]
+	uid := req.QueryStringParameters["uid"]
 
-	success, err := db.DeleteItem(domain.DataTable, DataType, id)
+	success, err := db.DeleteItem(domain.DataTable, DataType, uid)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -65,10 +65,10 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	id := req.QueryStringParameters["id"]
+	uid := req.QueryStringParameters["uid"]
 
 	var server domain.NamedServer
-	err := db.GetItem(domain.DataTable, DataType, id, &server)
+	err := db.GetItem(domain.DataTable, DataType, uid, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -125,7 +125,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	if err != nil {
 		return domain.ServerError(err)
 	}
-	server.ID = DataType + "-" + server.ID
+	server.UID = DataType + "-" + server.UID
 
 	// Update the namedserver in the database
 	err = db.PutItem(domain.DataTable, server)
