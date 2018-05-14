@@ -150,16 +150,16 @@ functions:
             method: POST
             private: true
         - http:
-            path: /namedserver/{id}
+            path: /namedserver/{uid}
             method: GET
             private: true
 
             request:
               parameters:
                 paths:
-                  id: true
+                  uid: true
         - http:
-            path: /namedserver/{id}
+            path: /namedserver/{uid}
             method: PUT
             private: true
 
@@ -168,13 +168,13 @@ functions:
                 paths:
                   uid: true
         - http:
-            path: /namedserver/{id}
+            path: /namedserver/{uid}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  id: true
+                  uid: true
   user:
       handler: bin/user
       events:
