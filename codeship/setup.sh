@@ -2,6 +2,7 @@
 
 # Exit script with error if any step fails.
 set -e
+set -x
 
 npm install -g serverless
 npm install
