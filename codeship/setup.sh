@@ -11,7 +11,7 @@ npm install
 export GO_VERSION=1.10.2
 wget https://raw.githubusercontent.com/codeship/scripts/master/languages/go.sh
 chmod +x go.sh
-./go.sh
+source go.sh
 
 go get -u github.com/golang/dep/cmd/dep
 dep ensure
