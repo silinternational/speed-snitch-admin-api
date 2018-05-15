@@ -8,7 +8,9 @@ npm install
 
 # Install newer Go
 export GO_VERSION=1.10.2
-source /dev/stdin <<< "$(curl -sSL https://raw.githubusercontent.com/codeship/scripts/master/languages/go.sh)"
+wget https://raw.githubusercontent.com/codeship/scripts/master/languages/go.sh
+chmod +x go.sh
+./go.sh
 
 go get -u github.com/golang/dep/cmd/dep
 dep ensure
