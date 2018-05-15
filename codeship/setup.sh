@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 
 # Exit script with error if any step fails.
-set -e
 set -x
 
 npm install -g serverless
+if [[ $? != 0 ]]; then
+  exit $?;
+fi
+
 npm install
+if [[ $? != 0 ]]; then
+  exit $?;
+fi
 
 # Install newer Go
 export GO_VERSION=1.10.2
