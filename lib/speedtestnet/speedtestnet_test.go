@@ -8,20 +8,24 @@ import (
 	"testing"
 )
 
+// See the host values on these (3333 is missing intentionally)
+const ServerListResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+<servers>
+ <speedtestnetserver url="http://88.84.191.230/speedtest/upload.php" lat="70.0733" lon="29.7497" name="Vadso" country="Norway" cc="NO" sponsor="Varanger KraftUtvikling AS" id="0000"  url2="http://speedmonster.varangerbynett.no/speedtest/upload.php" host="fine.host.com:8080" />
+ <speedtestnetserver url="http://speedtest.nornett.net/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Nornett AS" id="1111"  url2="http://speedtest2.nornett.net/speedtest/upload.php" host="outdated.host.com:8080" />
+ <speedtestnetserver url="http://speedo.eltele.no/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Eltele AS" id="2222"  host="good.host.com:8080" />
+ <speedtestnetserver url="http://tos.speedtest.as2116.net/speedtest/upload.php" lat="69.6492" lon="18.9553" name="Tromsø" country="Norway" cc="NO" sponsor="Broadnet" id="4444"  host="no.namedserver.com:8080" />
+</servers>
+</settings>`
+
 func TestGetSTNetServers(t *testing.T) {
 
 	mux := http.NewServeMux()
 
 	testServer := httptest.NewServer(mux)
 
-	respBody := `<?xml version="1.0" encoding="UTF-8"?>
-<settings>
-<servers><speedtestnetserver url="http://88.84.191.230/speedtest/upload.php" lat="70.0733" lon="29.7497" name="Vadso" country="Norway" cc="NO" sponsor="Varanger KraftUtvikling AS" id="4600"  url2="http://speedmonster.varangerbynett.no/speedtest/upload.php" host="88.84.191.230:8080" />
-<speedtestnetserver url="http://speedtest.nornett.net/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Nornett AS" id="4961"  url2="http://speedtest2.nornett.net/speedtest/upload.php" host="speedtest.nornett.net:8080" />
-<speedtestnetserver url="http://speedo.eltele.no/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Eltele AS" id="3433"  host="speedo.eltele.no:8080" />
-<speedtestnetserver url="http://tos.speedtest.as2116.net/speedtest/upload.php" lat="69.6492" lon="18.9553" name="Tromsø" country="Norway" cc="NO" sponsor="Broadnet" id="11786"  host="tos.speedtest.as2116.net:8080" />
-</servers>
-</settings>`
+	respBody := ServerListResponse
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-type", "test/xml")
@@ -42,7 +46,7 @@ func TestGetSTNetServers(t *testing.T) {
 		t.Fail()
 	}
 
-	expectedIDs := []string{"4600", "4961", "3433", "11786"}
+	expectedIDs := []string{"0000", "1111", "2222", "4444"}
 	for index, nextServer := range servers {
 		result := nextServer.ServerID
 		expected := expectedIDs[index]
@@ -290,15 +294,7 @@ func TestUpdateSTNetServers(t *testing.T) {
 	testServer := httptest.NewServer(mux)
 
 	// See the host values on these
-	respBody := `<?xml version="1.0" encoding="UTF-8"?>
-<settings>
-<servers>
- <speedtestnetserver url="http://88.84.191.230/speedtest/upload.php" lat="70.0733" lon="29.7497" name="Vadso" country="Norway" cc="NO" sponsor="Varanger KraftUtvikling AS" id="0000"  url2="http://speedmonster.varangerbynett.no/speedtest/upload.php" host="fine.host.com:8080" />
- <speedtestnetserver url="http://speedtest.nornett.net/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Nornett AS" id="1111"  url2="http://speedtest2.nornett.net/speedtest/upload.php" host="outdated.host.com:8080" />
- <speedtestnetserver url="http://speedo.eltele.no/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Eltele AS" id="2222"  host="good.host.com:8080" />
- <speedtestnetserver url="http://tos.speedtest.as2116.net/speedtest/upload.php" lat="69.6492" lon="18.9553" name="Tromsø" country="Norway" cc="NO" sponsor="Broadnet" id="4444"  host="no.namedserver.com:8080" />
-</servers>
-</settings>`
+	respBody := ServerListResponse
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-type", "test/xml")
