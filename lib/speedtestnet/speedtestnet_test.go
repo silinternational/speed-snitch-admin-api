@@ -208,7 +208,7 @@ func TestDeleteSTNetServersIfUnused(t *testing.T) {
 		return
 	}
 
-	namedServers, err := dbCl.ListNamedServers()
+	namedServers, err := getNamedServersInMap(dbCl)
 	if err != nil {
 		t.Errorf("Error getting NamedServer fixture: %s", err.Error())
 		return
@@ -244,22 +244,30 @@ func TestUpdateMatchingNamedServer(t *testing.T) {
 		return
 	}
 
-	namedServers, err := dbCl.ListNamedServers()
+	namedServers, err := getNamedServersInMap(dbCl)
 	if err != nil {
 		t.Errorf("Error getting NamedServer fixture: %s", err.Error())
 		return
 	}
 
+	// only get SpeedTestNet servers
+	mappedNamedServers := map[string]domain.NamedServer{}
+	for _, namedSrv := range namedServers {
+		if namedSrv.ServerType == domain.ServerTypeSpeedTestNet {
+			mappedNamedServers[namedSrv.SpeedTestNetServerID] = namedSrv
+		}
+	}
+
 	// Only one of the new speedtest.net servers has a matching NamedServer that needs to be updated.
 	expectedServers := []domain.NamedServer{
 		domain.NamedServer{},
-		namedServers[1],
+		namedServers["1111"],
 		domain.NamedServer{},
 		domain.NamedServer{},
 	}
 
 	for index, targetServer := range newServers[2:3] {
-		matchingNamedServer, err := updateMatchingNamedServer(targetServer, namedServers, dbCl)
+		matchingNamedServer, err := updateMatchingNamedServer(targetServer, mappedNamedServers, dbCl)
 		if err != nil {
 			t.Errorf("Did not expect an error but got: %s", err.Error())
 			return

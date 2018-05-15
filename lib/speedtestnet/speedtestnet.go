@@ -51,7 +51,7 @@ type dbClient interface {
 //   referenced by a NamedServer
 func deleteSTNetServersIfUnused(
 	oldServers, newServers []domain.SpeedTestNetServer,
-	namedServers []domain.NamedServer,
+	namedServers map[string]domain.NamedServer,
 	db dbClient,
 ) ([]string, error) {
 
@@ -71,20 +71,10 @@ func deleteSTNetServersIfUnused(
 			continue
 		}
 
-		inUse := false
-
-		// Found a deleted server, now check if it's in use
-		for _, namedServer := range namedServers {
-			// If there is a namedServer that refers to a deleted server, keep track of it.
-			if namedServer.ServerType == domain.ServerTypeSpeedTestNet && namedServer.SpeedTestNetServerID == oldServer.ServerID {
-				staleServerIDs = append(staleServerIDs, oldServer.ServerID)
-				inUse = true
-				break
-			}
-		}
-
-		// If there is no new server or namedServer that matches the old server, delete the old server from the db
-		if !inUse {
+		_, ok := namedServers[oldServer.ServerID]
+		if ok {
+			staleServerIDs = append(staleServerIDs, oldServer.ServerID)
+		} else {
 			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, oldServer.ServerID)
 
 			if err != nil {
@@ -109,30 +99,45 @@ func serverHasChanged(oldServer, newServer domain.SpeedTestNetServer) bool {
 		oldServer.URL2 != newServer.URL2)
 }
 
+func getNamedServersInMap(db dbClient) (map[string]domain.NamedServer, error) {
+	mappedNamedServers := map[string]domain.NamedServer{}
+	namedServers, err := db.ListNamedServers()
+	if err != nil {
+		return map[string]domain.NamedServer{}, err
+	}
+
+	for _, namedSrv := range namedServers {
+		if namedSrv.ServerType == domain.ServerTypeSpeedTestNet {
+			mappedNamedServers[namedSrv.SpeedTestNetServerID] = namedSrv
+		}
+	}
+
+	return mappedNamedServers, nil
+}
+
 func updateMatchingNamedServer(
 	newServer domain.SpeedTestNetServer,
-	namedServers []domain.NamedServer,
+	namedServers map[string]domain.NamedServer,
 	db dbClient,
 ) (domain.NamedServer, error) {
 
 	var updatedServer domain.NamedServer
-	for _, namedServer := range namedServers {
-		// Skip those that don't match
-		if namedServer.ServerType != domain.ServerTypeSpeedTestNet ||
-			namedServer.SpeedTestNetServerID != newServer.ServerID {
-			continue
-		}
 
-		// Found a match, so check if it needs to be modified
-		if namedServer.ServerHost != newServer.Host {
-			namedServer.ServerHost = newServer.Host
-			err := db.PutItem(domain.DataTable, &namedServer)
-			if err != nil {
-				return domain.NamedServer{}, fmt.Errorf("Error updating Named Server %s with new host: %s", namedServer.ID, err.Error())
-			}
-			updatedServer = namedServer
+	namedServer, ok := namedServers[newServer.ServerID]
+
+	// If no match found, nothing to do
+	if !ok {
+		return updatedServer, nil
+	}
+
+	// Found a match, so check if it needs to be modified
+	if namedServer.ServerHost != newServer.Host {
+		namedServer.ServerHost = newServer.Host
+		err := db.PutItem(domain.DataTable, &namedServer)
+		if err != nil {
+			return domain.NamedServer{}, fmt.Errorf("Error updating Named Server %s with new host: %s", namedServer.ID, err.Error())
 		}
-		break
+		updatedServer = namedServer
 	}
 	return updatedServer, nil
 }
@@ -156,26 +161,31 @@ func UpdateSTNetServers(serverURL string, db dbClient) ([]string, error) {
 		return []string{}, err
 	}
 
-	namedServers, err := db.ListNamedServers()
+	namedServers, err := getNamedServersInMap(db)
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting Named Servers from database: %s", err.Error())
 	}
 
 	staleServerIDs, err := deleteSTNetServersIfUnused(oldServers, newServers, namedServers, db)
 
-	for _, newServer := range newServers {
+	// Make a map of the Old Servers for quicker access and avoiding extra checks in a nested loop
+	mappedOldServers := map[string]domain.SpeedTestNetServer{}
+	for _, oldServer := range oldServers {
+		mappedOldServers[oldServer.ServerID] = oldServer
+	}
 
-		// Find a match in the database and update it as well as a matching NamedServer
-		for _, oldServer := range oldServers {
-			if newServer.ServerID != oldServer.ServerID {
-				continue
-			}
-			// If there are differences between old and new, update matching NamedServer
-			if serverHasChanged(oldServer, newServer) {
-				_, err := updateMatchingNamedServer(newServer, namedServers, db)
-				if err != nil {
-					return []string{}, err
-				}
+	for _, newServer := range newServers {
+		oldServer, ok := mappedOldServers[newServer.ServerID]
+		if !ok {
+			db.PutItem(domain.DataTable, newServer)
+			continue
+		}
+
+		// If there are differences between old and new, update matching NamedServer
+		if serverHasChanged(oldServer, newServer) {
+			_, err := updateMatchingNamedServer(newServer, namedServers, db)
+			if err != nil {
+				return []string{}, err
 			}
 		}
 	}
