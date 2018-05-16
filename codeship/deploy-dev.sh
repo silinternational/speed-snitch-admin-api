@@ -4,7 +4,8 @@
 set -e
 
 # Build binaries
-./build.sh
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+$DIR/build.sh
 
 cd api/admin
 serverless deploy -v --stage dev
