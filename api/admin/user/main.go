@@ -13,7 +13,7 @@ import (
 const SelfType = domain.DataTypeUser
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, userSpecified := req.PathParameters["user"]
+	_, userSpecified := req.PathParameters["uid"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteUser(req)
