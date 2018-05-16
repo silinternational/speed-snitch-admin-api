@@ -9,6 +9,8 @@ vendor
 
 # local creds and stuff
 aws.credentials
+aws.env
+*.aes
 
 # dev tools metadata
 .idea/

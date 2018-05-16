@@ -1,0 +1,23 @@
+- name: test
+  service: app
+  command: ./codeship/test.sh
+
+- name: build
+  service: app
+  tag: ^(master|develop)
+  command: ./codeship/build.sh
+
+- name: deploy_dev
+  service: app
+  tag: develop
+  command: ./codeship/deploy-dev.sh
+
+- name: deploy_prod
+  service: app
+  tag: master
+  command: ./codeship/deploy-prod.sh
+
+- name: track_deployment
+  service: tracker
+  tag: ^(master|develop)
+  command: "true"
