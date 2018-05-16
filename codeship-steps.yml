@@ -2,11 +2,6 @@
   service: app
   command: ./codeship/test.sh
 
-- name: build
-  service: app
-  tag: ^(master|develop)
-  command: ./codeship/build.sh
-
 - name: deploy_dev
   service: app
   tag: develop
