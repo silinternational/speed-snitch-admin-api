@@ -2,23 +2,14 @@ version: "3"
 
 services:
 
-  sls:
+  app:
     build:
       context: ./
-      dockerfile: Dockerfile-npm
+      dockerfile: Dockerfile
+    environment:
+      GOOS: linux
     volumes:
       - ./:/go/src/github.com/silinternational/speed-snitch-admin-api
       - ./aws.credentials:/root/.aws/credentials
     working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
     command: ["bash"]
-
-  go:
-    build:
-      context: ./
-      dockerfile: Dockerfile-go
-    environment:
-      GOOS: linux
-    volumes:
-      - ./:/go/src/github.com/silinternational/speed-snitch-admin-api
-    working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
-    command: ["ash"]
