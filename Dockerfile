@@ -10,3 +10,4 @@ RUN mkdir -p /go/src/github.com/silinternational/speed-snitch-admin-api
 COPY ./package.json /go/src/github.com/silinternational/speed-snitch-admin-api/
 WORKDIR /go/src/github.com/silinternational/speed-snitch-admin-api
 RUN npm install -g serverless && npm install
+COPY ./ /go/src/github.com/silinternational/speed-snitch-admin-api/
