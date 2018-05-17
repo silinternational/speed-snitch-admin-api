@@ -9,6 +9,7 @@ set -e
 # Export env vars
 export CUSTOM_DOMAIN_NAME="${PROD_DOMAIN_NAME}"
 export CERT_NAME="${PROD_CERT_NAME}"
+export DOWNLOAD_BASE_URL="${PROD_DOWNLOAD_BASE_URL}"
 
 cd api/admin
 serverless deploy -v --stage prod

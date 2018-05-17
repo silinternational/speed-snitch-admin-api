@@ -223,14 +223,15 @@ func CleanMACAddress(mAddr string) (string, error) {
 }
 
 // GetUrlForAgentVersion creates url to agent binary for given version, os, and arch
-func GetUrlForAgentVersion(version, os, arch string) string {
+func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
+	downloadBaseUrl := os.Getenv("DOWNLOAD_BASE_URL")
 	version = strings.ToLower(version)
-	os = strings.ToLower(os)
+	operatingsystem = strings.ToLower(operatingsystem)
 	arch = strings.ToLower(arch)
 	url := fmt.Sprintf(
-		"https://github.com/silinternational/speed-snitch-agent/raw/%s/dist/%s/%s/speedsnitch",
-		version, os, arch)
-	if os == "windows" {
+		"%s/%s/%s/%s/speedsnitch",
+		downloadBaseUrl, version, operatingsystem, arch)
+	if operatingsystem == "windows" {
 		url = url + ".exe"
 	}
 
