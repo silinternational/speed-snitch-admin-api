@@ -47,7 +47,14 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	// If node is new or IP address has changed, update ip address, location, and coordinates
-	reqSourceIP := req.RequestContext.Identity.SourceIP
+	var reqSourceIP string
+	_, ok := req.Headers["CF-Connecting-IP"]
+	if ok {
+		reqSourceIP = req.Headers["CF-Connecting-IP"]
+	} else {
+		reqSourceIP = req.RequestContext.Identity.SourceIP
+	}
+
 	if node.IPAddress != reqSourceIP {
 		node.IPAddress = reqSourceIP
 		ipDetails, err := ipinfo.GetIPInfo(reqSourceIP)

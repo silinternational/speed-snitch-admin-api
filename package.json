@@ -13,5 +13,7 @@
     "url": "https://github.com/silinternational/speed-snitch-admin-api"
   },
   "scripts": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "serverless-domain-manager": "^2.3.6"
+  }
 }

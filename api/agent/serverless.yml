@@ -55,11 +55,20 @@ provider:
     dataTable: ${self:custom.dataTable}
     taskLogTable: ${self:custom.taskLogTable}
 
+plugins:
+  - serverless-domain-manager
+
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
   dataTable: speedsnitch_${self:custom.stage}_data
   taskLogTable: speedsnitch_${self:custom.stage}_task_log
+  customDomain:
+    domainName: speedsnitch-agent-api.gtis.guru
+    basePath: ''
+    stage: ${self:provider.stage}
+    createRoute53Record: false
+    certificateName: "*.gtis.guru"
 
 package:
  exclude:
