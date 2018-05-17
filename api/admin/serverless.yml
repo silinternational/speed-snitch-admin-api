@@ -40,6 +40,7 @@ provider:
     namespace: ${self:custom.namespace}
     dataTable: ${self:custom.dataTable}
     taskLogTable: ${self:custom.taskLogTable}
+    downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
