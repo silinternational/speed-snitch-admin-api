@@ -6,6 +6,10 @@ set -e
 # Build binaries
 ./build.sh
 
+# Export env vars
+export CUSTOM_DOMAIN_NAME="${PROD_DOMAIN_NAME}"
+export CERT_NAME="${PROD_CERT_NAME}"
+
 cd api/admin
 serverless deploy -v --stage prod
 

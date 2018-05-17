@@ -64,11 +64,11 @@ custom:
   dataTable: speedsnitch_${self:custom.stage}_data
   taskLogTable: speedsnitch_${self:custom.stage}_task_log
   customDomain:
-    domainName: speedsnitch-agent-api.gtis.guru
+    domainName: ${env:CUSTOM_DOMAIN_NAME}
     basePath: ''
     stage: ${self:provider.stage}
     createRoute53Record: false
-    certificateName: "*.gtis.guru"
+    certificateName: ${env:CERT_NAME}
 
 package:
  exclude:
