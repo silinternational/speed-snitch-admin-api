@@ -12,10 +12,10 @@ import (
 const ServerListResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <settings>
 <servers>
- <speedtestnetserver url="http://88.84.191.230/speedtest/upload.php" lat="70.0733" lon="29.7497" name="Vadso" country="Norway" cc="NO" sponsor="Varanger KraftUtvikling AS" id="0000"  url2="http://speedmonster.varangerbynett.no/speedtest/upload.php" host="fine.host.com:8080" />
- <speedtestnetserver url="http://speedtest.nornett.net/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Nornett AS" id="1111"  url2="http://speedtest2.nornett.net/speedtest/upload.php" host="outdated.host.com:8080" />
- <speedtestnetserver url="http://speedo.eltele.no/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Eltele AS" id="2222"  host="good.host.com:8080" />
- <speedtestnetserver url="http://tos.speedtest.as2116.net/speedtest/upload.php" lat="69.6492" lon="18.9553" name="Tromsø" country="Norway" cc="NO" sponsor="Broadnet" id="4444"  host="no.namedserver.com:8080" />
+ <server url="http://88.84.191.230/speedtest/upload.php" lat="70.0733" lon="29.7497" name="Vadso" country="Norway" cc="NO" sponsor="Varanger KraftUtvikling AS" id="0000"  url2="http://speedmonster.varangerbynett.no/speedtest/upload.php" host="fine.host.com:8080" />
+ <server url="http://speedtest.nornett.net/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Nornett AS" id="1111"  url2="http://speedtest2.nornett.net/speedtest/upload.php" host="outdated.host.com:8080" />
+ <server url="http://speedo.eltele.no/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Eltele AS" id="2222"  host="good.host.com:8080" />
+ <server url="http://tos.speedtest.as2116.net/speedtest/upload.php" lat="69.6492" lon="18.9553" name="Tromsø" country="Norway" cc="NO" sponsor="Broadnet" id="4444"  host="no.namedserver.com:8080" />
 </servers>
 </settings>`
 
@@ -154,7 +154,7 @@ func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
 			ServerHost:           "outdated.host.com:8080",
 			Name:                 "Outdated Host",
 			Description:          "Needs to get its host updated",
-			TargetRegion:         "West Africa",
+			Country:              domain.Country{Code: "WA", Name: "West Africa"},
 			Notes:                "This named server should have its host value updated.",
 		},
 		{
@@ -165,7 +165,7 @@ func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
 			ServerHost:           "good.host.com:8080",
 			Name:                 "Good Host",
 			Description:          "No update needed",
-			TargetRegion:         "East Africa",
+			Country:              domain.Country{Code: "EA", Name: "East Africa"},
 			Notes:                "This named server should not need to be updated.",
 		},
 		{
@@ -176,7 +176,7 @@ func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
 			ServerHost:           "missing.server.com:8080",
 			Name:                 "Missing Server",
 			Description:          "Has gone stale",
-			TargetRegion:         "South Africa",
+			Country:              domain.Country{Code: "SA", Name: "South Africa"},
 			Notes:                "This named server has no new matching speedtest.net server",
 		},
 	}

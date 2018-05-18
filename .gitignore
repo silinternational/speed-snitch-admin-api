@@ -11,6 +11,7 @@ vendor
 aws.credentials
 aws.env
 *.aes
+local.env
 
 # dev tools metadata
 .idea/

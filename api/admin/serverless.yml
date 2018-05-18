@@ -10,6 +10,7 @@ service: speedsnitch
 provider:
   name: aws
   runtime: go1.x
+  timeout: 300
   apiKeys:
     - ${self:custom.namespace}-admin
 # you can overwrite defaults here
@@ -167,6 +168,32 @@ functions:
               parameters:
                 paths:
                   uid: true
+
+  speedtestnetserver:
+      handler: bin/speedtestnetserver
+      events:
+        - http:
+            path: speedtestnetserver
+            method: GET
+            private: true
+        - http:
+            path: speedtestnetserver/countries
+            method: GET
+            private: true
+        - http:
+            path: speedtestnetserver/{serverID}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  serverID: true
+
+  speedtestnetserverupdate:
+      handler: bin/speedtestnetserverupdate
+      events:
+        - schedule: rate(12 hours)
+
   user:
       handler: bin/user
       events:
@@ -269,8 +296,8 @@ resources:
           - AttributeName: ID
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2
     taskLogTable:
       Type: AWS::DynamoDB::Table
       Properties:

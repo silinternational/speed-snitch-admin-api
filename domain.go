@@ -26,6 +26,8 @@ const DataTypeVersion = "version"
 const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"
 
+const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
+
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
@@ -40,6 +42,11 @@ type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
 	Phone string `json:"Phone"`
+}
+
+type Country struct {
+	Code string `json:"Code"`
+	Name string `json:"Name"`
 }
 
 type HelloRequest struct {
@@ -104,15 +111,15 @@ type TaskData struct {
 }
 
 type NamedServer struct {
-	ID                   string `json:"ID"`
-	UID                  string `json:"UID"`
-	ServerType           string `json:"ServerType"`
-	SpeedTestNetServerID string `json:"SpeedTestNetServerID"` // Only needed if ServerType is SpeedTestNetServer
-	ServerHost           string `json:"ServerHost"`           // Needed for non-SpeedTestNetServers
-	Name                 string `json:"Name"`
-	Description          string `json:"Description"`
-	TargetRegion         string `json:"TargetRegion"`
-	Notes                string `json:"Notes"`
+	ID                   string  `json:"ID"`
+	UID                  string  `json:"UID"`
+	ServerType           string  `json:"ServerType"`
+	SpeedTestNetServerID string  `json:"SpeedTestNetServerID"` // Only needed if ServerType is SpeedTestNetServer
+	ServerHost           string  `json:"ServerHost"`           // Needed for non-SpeedTestNetServers
+	Name                 string  `json:"Name"`
+	Description          string  `json:"Description"`
+	Country              Country `json:"Country"`
+	Notes                string  `json:"Notes"`
 }
 
 type User struct {
@@ -140,13 +147,13 @@ type SpeedTestNetServer struct {
 	Country     string `xml:"country,attr" json:"Country"`
 	CountryCode string `xml:"cc,attr"  json:"CountryCode"`
 	Sponsor     string `xml:"sponsor,attr" json:"Sponsor"`
-	ServerID    string `xml:"id,attr" json:"ID"`
+	ServerID    string `xml:"id,attr" json:"ServerID"`
 	URL2        string `xml:"url2,attr" json:"URL2"`
 	Host        string `xml:"host,attr" json:"Host"`
 }
 
 type STNetServerList struct {
-	Servers []SpeedTestNetServer `xml:"speedtestnetserver"`
+	Servers []SpeedTestNetServer `xml:"server"`
 }
 
 type STNetServerSettings struct {

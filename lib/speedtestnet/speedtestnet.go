@@ -4,9 +4,29 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-admin-api/db"
 	"io/ioutil"
 	"net/http"
+	"os"
 )
+
+type Client struct{}
+
+func (c Client) DeleteItem(tableAlias, dataType, value string) (bool, error) {
+	return db.DeleteItem(tableAlias, dataType, value)
+}
+
+func (c Client) PutItem(tableAlias string, item interface{}) error {
+	return db.PutItem(tableAlias, item)
+}
+
+func (c Client) ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
+	return db.ListSpeedTestNetServers()
+}
+
+func (c Client) ListNamedServers() ([]domain.NamedServer, error) {
+	return db.ListNamedServers()
+}
 
 // GetSTNetServers requests the list of SpeedTestNet servers via http and returns them in a list of structs
 //  Normally use the domain.SpeedTestNetServerURL as the serverURL
@@ -155,18 +175,22 @@ func UpdateSTNetServers(serverURL string, db dbClient) ([]string, error) {
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting speedtest.net servers from database: %s", err.Error())
 	}
+	fmt.Fprintf(os.Stdout, "Found %v old servers", len(oldServers))
 
 	newServers, err := GetSTNetServers(serverURL)
 	if err != nil {
 		return []string{}, err
 	}
+	fmt.Fprintf(os.Stdout, "Found %v new servers", len(newServers))
 
 	namedServers, err := getNamedServersInMap(db)
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting Named Servers from database: %s", err.Error())
 	}
+	fmt.Fprintf(os.Stdout, "Found %v named servers", len(namedServers))
 
 	staleServerIDs, err := deleteSTNetServersIfUnused(oldServers, newServers, namedServers, db)
+	fmt.Fprintf(os.Stdout, "Found %v stale servers", len(staleServerIDs))
 
 	// Make a map of the Old Servers for quicker access and avoiding extra checks in a nested loop
 	mappedOldServers := map[string]domain.SpeedTestNetServer{}
@@ -177,7 +201,11 @@ func UpdateSTNetServers(serverURL string, db dbClient) ([]string, error) {
 	for _, newServer := range newServers {
 		oldServer, ok := mappedOldServers[newServer.ServerID]
 		if !ok {
-			db.PutItem(domain.DataTable, newServer)
+			newServer.ID = domain.DataTypeSpeedTestNetServer + "-" + newServer.ServerID
+			err = db.PutItem(domain.DataTable, newServer)
+			if err != nil {
+				return []string{}, fmt.Errorf("problem with server: %v, error: %s", newServer, err.Error())
+			}
 			continue
 		}
 
