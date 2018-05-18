@@ -10,6 +10,7 @@ service: speedsnitch
 provider:
   name: aws
   runtime: go1.x
+  timeout: 300
   apiKeys:
     - ${self:custom.namespace}-admin
 # you can overwrite defaults here
@@ -295,8 +296,8 @@ resources:
           - AttributeName: ID
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2
     taskLogTable:
       Type: AWS::DynamoDB::Table
       Properties:

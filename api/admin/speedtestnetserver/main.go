@@ -13,7 +13,7 @@ import (
 const SelfType = domain.DataTypeSpeedTestNetServer
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, serverSpecified := req.PathParameters["id"]
+	_, serverSpecified := req.PathParameters["serverID"]
 	switch req.HTTPMethod {
 	case "GET":
 		if serverSpecified {
@@ -34,10 +34,10 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	id := req.QueryStringParameters["id"]
+	serverID := req.PathParameters["serverID"]
 
 	var server domain.SpeedTestNetServer
-	err := db.GetItem(domain.DataTable, SelfType, id, &server)
+	err := db.GetItem(domain.DataTable, SelfType, serverID, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -68,7 +68,20 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ServerError(err)
 	}
 
-	js, err := json.Marshal(servers)
+	// If a specific country code was provided, limit results to just that country
+	var serverList []domain.SpeedTestNetServer
+	countryCode := req.QueryStringParameters["country"]
+	if countryCode != "" {
+		for _, server := range servers {
+			if server.CountryCode == countryCode {
+				serverList = append(serverList, server)
+			}
+		}
+	} else {
+		serverList = servers
+	}
+
+	js, err := json.Marshal(serverList)
 	if err != nil {
 		return domain.ServerError(err)
 	}
