@@ -167,6 +167,32 @@ functions:
               parameters:
                 paths:
                   uid: true
+
+  speedtestnetserver:
+      handler: bin/speedtestnetserver
+      events:
+        - http:
+            path: speedtestnetserver
+            method: GET
+            private: true
+        - http:
+            path: speedtestnetserver/countries
+            method: GET
+            private: true
+        - http:
+            path: speedtestnetserver/{serverID}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  serverID: true
+
+  speedtestnetserverupdate:
+      handler: bin/speedtestnetserverupdate
+      events:
+        - schedule: rate(12 hours)
+
   user:
       handler: bin/user
       events:

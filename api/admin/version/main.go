@@ -62,11 +62,6 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 }
 
 func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
 	number := req.PathParameters["number"]
 
 	if number == "" {
@@ -98,11 +93,6 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
 	versions, err := db.ListVersions()
 	if err != nil {
 		return domain.ServerError(err)

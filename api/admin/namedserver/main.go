@@ -142,7 +142,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	server.ServerHost = updatedServer.ServerHost
 	server.Name = updatedServer.Name
 	server.Description = updatedServer.Description
-	server.TargetRegion = updatedServer.TargetRegion
+	server.Country = updatedServer.Country
 	server.Notes = updatedServer.Notes
 
 	// Update the namedserver in the database

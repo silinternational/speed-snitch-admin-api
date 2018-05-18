@@ -11,10 +11,6 @@ slsdeployagent:
 
 deploy: build slsdeploy
 
-deployagent: buildagent slsdeployagent
-
-deployadmin: buildadmin slsdeployadmin
-
 dep:
 	docker-compose run app dep ensure
 
