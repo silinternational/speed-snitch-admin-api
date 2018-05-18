@@ -98,24 +98,22 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	var countries []domain.Country
+	countries := map[string]string{}
 	allServers, err := db.ListSpeedTestNetServers()
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	for _, server := range allServers {
-		country := domain.Country{
-			Code: server.CountryCode,
-			Name: server.Country,
-		}
-		inArray, _ := domain.InArray(country, countries)
-		if !inArray {
-			countries = append(countries, country)
-		}
+		countries[server.CountryCode] = server.Country
 	}
 
-	js, err := json.Marshal(countries)
+	var countryList []domain.Country
+	for code, name := range countries {
+		countryList = append(countryList, domain.Country{Code: code, Name: name})
+	}
+
+	js, err := json.Marshal(countryList)
 	if err != nil {
 		return domain.ServerError(err)
 	}
