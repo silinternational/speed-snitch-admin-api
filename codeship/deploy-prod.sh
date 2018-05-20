@@ -4,7 +4,8 @@
 set -e
 
 # Build binaries
-./build.sh
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+$DIR/build.sh
 
 # Export env vars
 export CUSTOM_DOMAIN_NAME="${PROD_DOMAIN_NAME}"
