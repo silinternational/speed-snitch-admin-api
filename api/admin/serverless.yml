@@ -1,0 +1,320 @@
+# For full config options, check the docs:
+#    docs.serverless.com
+
+service: speedsnitch
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+# frameworkVersion: "=X.X.X"
+
+provider:
+  name: aws
+  runtime: go1.x
+  timeout: 300
+  apiKeys:
+    - ${self:custom.namespace}-admin
+# you can overwrite defaults here
+#  stage: dev
+#  region: us-east-1
+
+  # you can add statements to the Lambda function's IAM Role here
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:DeleteItem"
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+        - "dynamodb:Query"
+        - "dynamodb:Scan"
+        - "dynamodb:UpdateItem"
+      Resource:
+        - Fn::GetAtt:
+          - dataTable
+          - Arn
+        - Fn::GetAtt:
+          - taskLogTable
+          - Arn
+
+  # you can define service wide environment variables here
+  environment:
+    stage: ${self:custom.stage}
+    namespace: ${self:custom.namespace}
+    dataTable: ${self:custom.dataTable}
+    taskLogTable: ${self:custom.taskLogTable}
+    downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  namespace: ${self:service}_${self:custom.stage}
+  dataTable: ${self:custom.namespace}_data
+  taskLogTable: speedsnitch_${self:custom.stage}_task_log
+
+package:
+ exclude:
+   - ./**
+ include:
+   - ../../bin/**
+
+functions:
+  node:
+      handler: bin/node
+      events:
+        - http:
+            path: node
+            method: GET
+            private: true
+
+        - http:
+            path: /node/{macAddr}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}/tag
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}
+            method: PUT
+            private: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+        - http:
+            path: /node/{macAddr}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+  tag:
+      handler: bin/tag
+      events:
+        - http:
+            path: tag
+            method: GET
+            private: true
+
+        - http:
+            path: tag
+            method: POST
+            private: true
+
+        - http:
+            path: /tag/{uid}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /tag/{uid}
+            method: PUT
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /tag/{uid}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+  namedserver:
+      handler: bin/namedserver
+      events:
+        - http:
+            path: namedserver
+            method: GET
+            private: true
+        - http:
+            path: namedserver
+            method: POST
+            private: true
+        - http:
+            path: /namedserver/{uid}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /namedserver/{uid}
+            method: PUT
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /namedserver/{uid}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+
+  speedtestnetserver:
+      handler: bin/speedtestnetserver
+      events:
+        - http:
+            path: speedtestnetserver
+            method: GET
+            private: true
+        - http:
+            path: speedtestnetserver/countries
+            method: GET
+            private: true
+        - http:
+            path: speedtestnetserver/{serverID}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  serverID: true
+
+  speedtestnetserverupdate:
+      handler: bin/speedtestnetserverupdate
+      events:
+        - schedule: rate(12 hours)
+
+  user:
+      handler: bin/user
+      events:
+        - http:
+            path: user
+            method: GET
+            private: true
+
+        - http:
+            path: user
+            method: POST
+            private: true
+
+        - http:
+            path: user/me
+            method: GET
+            private: true
+
+        - http:
+            path: /user/{uid}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /user/{uid}/tag
+            method: GET
+            private: true
+
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /user/{uid}
+            method: PUT
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+        - http:
+            path: /user/{uid}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  uid: true
+  version:
+      handler: bin/version
+      events:
+        - http:
+            path: version
+            method: GET
+            private: true
+
+        - http:
+            path: version
+            method: POST
+            private: true
+
+        - http:
+            path: /version/{number}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  number: true
+        - http:
+            path: /version/{number}
+            method: PUT
+            private: true
+            request:
+              parameters:
+                paths:
+                  number: true
+        - http:
+            path: /version/{number}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  number: true
+
+resources:
+  Resources:
+    dataTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: '${self:custom.dataTable}'
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 2
+          WriteCapacityUnits: 2
+    taskLogTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: '${self:custom.taskLogTable}'
+        AttributeDefinitions:
+          - AttributeName: ID
+            AttributeType: S
+          - AttributeName: Timestamp
+            AttributeType: N
+        KeySchema:
+          - AttributeName: ID
+            KeyType: HASH
+          - AttributeName: Timestamp
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TimeToLiveSpecification:
+          AttributeName: ExpirationTime
+          Enabled: true

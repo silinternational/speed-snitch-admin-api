@@ -9,8 +9,8 @@
     "lambda/messages",
     "lambdacontext"
   ]
-  revision = "6e2e37798efbb1dfd8e9c6681702e683a6046517"
-  version = "v1.0.1"
+  revision = "4d30d0ff60440c2d0480a15747c96ee71c3c53d4"
+  version = "v1.2.0"
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
@@ -49,6 +49,12 @@
   version = "v1.13.32"
 
 [[projects]]
+  name = "github.com/fillup/semver"
+  packages = ["."]
+  revision = "08201dc719617e5457b54d07b66988c422da44e6"
+  version = "0.1.0"
+
+[[projects]]
   name = "github.com/go-ini/ini"
   packages = ["."]
   revision = "ace140f73450505f33e8b8418216792275ae82a7"
@@ -62,12 +68,16 @@
 [[projects]]
   branch = "develop"
   name = "github.com/silinternational/speed-snitch-agent"
-  packages = ["."]
+  packages = [
+    ".",
+    "lib/httputils",
+    "lib/speedtestnet"
+  ]
   revision = "333470d211f0fedebd9dcad8e7209a8a248c5924"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "860e4d2eedba72b156343ff772d47a29946cdaa37415bb99d0825b5c449f9c85"
+  inputs-digest = "8453761856afd7c68ebdd29d8ee642e4bb87164d9db9a1a5000af6135be58eef"
   solver-name = "gps-cdcl"
   solver-version = 1

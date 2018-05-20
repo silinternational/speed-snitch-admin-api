@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
-	"github.com/aws/aws-lambda-go/events"
-	"net/http"
-	"encoding/json"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"github.com/silinternational/speed-snitch-admin-api/lib/ipinfo"
+	"net/http"
+	"time"
 )
 
 type Response struct {
@@ -20,7 +23,6 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	// Save changes
 	// Return 204
 
-
 	// Parse request body
 	var helloReq domain.HelloRequest
 	err := json.Unmarshal([]byte(req.Body), &helloReq)
@@ -29,26 +31,47 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	// Fetch existing node if exists
-	node, err := db.GetNode(helloReq.ID)
-	//err := db.GetItem(domain.NodeTable, "MacAddr", helloReq.ID, &domain.Node{})
+	var node domain.Node
+	err = db.GetItem(domain.DataTable, "node", helloReq.ID, &node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	if node == nil {
+	if node.MacAddr == "" {
 		// Initialize new node record
-		node = &domain.Node{}
+		node.ID = "node-" + helloReq.ID
 		node.MacAddr = helloReq.ID
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
+		node.FirstSeen = getTimeNow()
+	}
+
+	// If node is new or IP address has changed, update ip address, location, and coordinates
+	var reqSourceIP string
+	_, ok := req.Headers["CF-Connecting-IP"]
+	if ok {
+		reqSourceIP = req.Headers["CF-Connecting-IP"]
+	} else {
+		reqSourceIP = req.RequestContext.Identity.SourceIP
+	}
+
+	if node.IPAddress != reqSourceIP {
+		node.IPAddress = reqSourceIP
+		ipDetails, err := ipinfo.GetIPInfo(reqSourceIP)
+		if err != err {
+			return domain.ServerError(err)
+		}
+		node.Location = fmt.Sprintf("%s, %s, %s", ipDetails.Country, ipDetails.Region, ipDetails.City)
+		node.Coordinates = ipDetails.Loc
 	}
 
 	// Update transient fields
 	node.RunningVersion = helloReq.Version
 	node.Uptime = helloReq.Uptime
+	node.LastSeen = getTimeNow()
 
 	// Write to DB
-	err = db.PutItem(domain.NodeTable, node)
+	err = db.PutItem(domain.DataTable, node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -63,4 +86,9 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 func main() {
 	lambda.Start(Handler)
+}
+
+func getTimeNow() string {
+	t := time.Now().UTC()
+	return t.Format(time.RFC3339)
 }

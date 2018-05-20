@@ -1,8 +1,20 @@
 build:
-	docker-compose run go go build -ldflags="-s -w" -o bin/hello hello/main.go
+	docker-compose run app ./codeship/build.sh
 
-deploy: build
-	docker-compose run sls sls deploy
+slsdeploy: slsdeployadmin slsdeployagent
+
+slsdeployadmin:
+	docker-compose run app bash -c "cd api/admin && sls deploy"
+
+slsdeployagent:
+	docker-compose run app bash -c "cd api/agent && sls deploy"
+
+deploy: build slsdeploy
 
 dep:
-	docker-compose run go dep ensure
+	docker-compose run app dep ensure
+
+test:
+	docker-compose run app ./codeship/test.sh
+
+codeshipsetup: dep build
