@@ -231,7 +231,7 @@ func CleanMACAddress(mAddr string) (string, error) {
 
 // GetUrlForAgentVersion creates url to agent binary for given version, os, and arch
 func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
-	downloadBaseUrl := os.Getenv("DOWNLOAD_BASE_URL")
+	downloadBaseUrl := os.Getenv("downloadBaseUrl")
 	version = strings.ToLower(version)
 	operatingsystem = strings.ToLower(operatingsystem)
 	arch = strings.ToLower(arch)
