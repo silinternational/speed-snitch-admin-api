@@ -296,8 +296,8 @@ resources:
           - AttributeName: ID
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 2
-          WriteCapacityUnits: 2
+          ReadCapacityUnits: 4
+          WriteCapacityUnits: 4
     taskLogTable:
       Type: AWS::DynamoDB::Table
       Properties:
