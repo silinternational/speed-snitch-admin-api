@@ -2,14 +2,16 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"os"
 )
 
-const DataType = domain.DataTypeNamedServer
+const SelfType = domain.DataTypeNamedServer
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["uid"]
@@ -38,7 +40,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	uid := req.QueryStringParameters["uid"]
 
-	success, err := db.DeleteItem(domain.DataTable, DataType, uid)
+	success, err := db.DeleteItem(domain.DataTable, SelfType, uid)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -66,12 +68,14 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	uid := req.QueryStringParameters["uid"]
 
 	var server domain.NamedServer
-	err := db.GetItem(domain.DataTable, DataType, uid, &server)
+	err := db.GetItem(domain.DataTable, SelfType, uid, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	if server.Name == "" {
+
+		fmt.Fprintf(os.Stdout, "Didn't find namedserver: %v", server)
 		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
@@ -118,7 +122,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, DataType, req.PathParameters["uid"], &server)
+		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &server)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -127,7 +131,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	// If UID is not set generate a UID
 	if server.UID == "" {
 		server.UID = domain.GetRandString(4)
-		server.ID = DataType + "-" + server.UID
+		server.ID = SelfType + "-" + server.UID
 	}
 
 	// Get the NamedServer struct from the request body
