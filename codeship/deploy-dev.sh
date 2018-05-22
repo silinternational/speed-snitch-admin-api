@@ -11,6 +11,7 @@ $DIR/build.sh
 export CUSTOM_DOMAIN_NAME="${DEV_DOMAIN_NAME}"
 export CERT_NAME="${DEV_CERT_NAME}"
 export DOWNLOAD_BASE_URL="${DEV_DOWNLOAD_BASE_URL}"
+echo "DOWNLOAD_BASE_URL ... ${DOWNLOAD_BASE_URL} <<<"
 
 cd api/admin
 serverless deploy -v --stage dev
