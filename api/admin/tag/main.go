@@ -76,14 +76,14 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ServerError(err)
 	}
 
-	js, err := json.Marshal(tags)
+	jsBody, err := domain.GetJSONFromSlice(tags)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(js),
+		Body:       jsBody,
 	}, nil
 }
 

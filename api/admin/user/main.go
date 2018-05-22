@@ -148,14 +148,14 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		}
 	}
 
-	js, err := json.Marshal(userTags)
+	jsBody, err := domain.GetJSONFromSlice(userTags)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(js),
+		Body:       jsBody,
 	}, nil
 }
 
@@ -170,14 +170,14 @@ func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ServerError(err)
 	}
 
-	js, err := json.Marshal(users)
+	jsBody, err := domain.GetJSONFromSlice(users)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(js),
+		Body:       jsBody,
 	}, nil
 }
 

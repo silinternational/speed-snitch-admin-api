@@ -97,14 +97,14 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ServerError(err)
 	}
 
-	js, err := json.Marshal(servers)
+	jsBody, err := domain.GetJSONFromSlice(servers)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(js),
+		Body:       jsBody,
 	}, nil
 }
 
