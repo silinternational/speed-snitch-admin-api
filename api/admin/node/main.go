@@ -150,7 +150,7 @@ func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	var jsBody string
 
 	if user.Role == domain.UserRoleSuperAdmin {
-		jsBody, err := domain.GetJSONFromSlice(nodes)
+		jsBody, err = domain.GetJSONFromSlice(nodes)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -162,7 +162,7 @@ func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			}
 		}
 
-		jsBody, err := domain.GetJSONFromSlice(visibleNodes)
+		jsBody, err = domain.GetJSONFromSlice(visibleNodes)
 		if err != nil {
 			return domain.ServerError(err)
 		}
