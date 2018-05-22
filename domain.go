@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"log"
@@ -321,4 +322,25 @@ func InArray(needle interface{}, haystack interface{}) (exists bool, index int) 
 	}
 
 	return
+}
+
+// GetJSONFromSlice requires a slice. If the length is 0, returns "[]".
+//  Otherwise, returns the results of json.Marshal(s)
+func GetJSONFromSlice(v interface{}) (string, error) {
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(v)
+
+		if s.Len() == 0 {
+			return "[]", nil
+		}
+		js, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+
+		return string(js), nil
+	}
+
+	return "", fmt.Errorf("Expected a slice, but got %v.", v)
 }

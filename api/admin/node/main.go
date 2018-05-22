@@ -147,10 +147,10 @@ func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	var js []byte
+	var jsBody string
 
 	if user.Role == domain.UserRoleSuperAdmin {
-		js, err = json.Marshal(nodes)
+		jsBody, err = domain.GetJSONFromSlice(nodes)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -162,7 +162,7 @@ func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			}
 		}
 
-		js, err = json.Marshal(visibleNodes)
+		jsBody, err = domain.GetJSONFromSlice(visibleNodes)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -170,7 +170,7 @@ func listNodes(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(js),
+		Body:       jsBody,
 	}, nil
 }
 
