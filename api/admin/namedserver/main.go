@@ -2,13 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
-	"os"
 )
 
 const SelfType = domain.DataTypeNamedServer
@@ -38,7 +36,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	uid := req.QueryStringParameters["uid"]
+	uid := req.PathParameters["uid"]
 
 	success, err := db.DeleteItem(domain.DataTable, SelfType, uid)
 
@@ -65,7 +63,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	uid := req.QueryStringParameters["uid"]
+	uid := req.PathParameters["uid"]
 
 	var server domain.NamedServer
 	err := db.GetItem(domain.DataTable, SelfType, uid, &server)
@@ -74,8 +72,6 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	if server.Name == "" {
-
-		fmt.Fprintf(os.Stdout, "Didn't find namedserver: %v", server)
 		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
