@@ -140,14 +140,20 @@ func TestGetServerDataFromNode(t *testing.T) {
 		return
 	}
 
-	results = servers[0].ID
+	// We can't trust the order of the servers
+	lowestServer := servers[0]
+	if servers[1].ID < lowestServer.ID {
+		lowestServer = servers[1]
+	}
+
+	results = lowestServer.ID
 	expected = 111
 	if expected != results {
 		t.Errorf("Wrong server ID. Expected: %d. But got: %d", expected, results)
 		return
 	}
 
-	resultsHost := servers[0].Host
+	resultsHost := lowestServer.Host
 	expectedHost := "host1.net:8080"
 	if expectedHost != resultsHost {
 		t.Errorf("Wrong server Host. Expected: %s. But got: %s", expectedHost, resultsHost)
