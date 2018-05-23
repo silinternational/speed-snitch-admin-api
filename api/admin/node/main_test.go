@@ -190,7 +190,7 @@ func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 	}
 
 	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{"timeOut": DefaultPingTimeoutInSeconds}
+	expectedInts := map[string]int{TimeOutKey: DefaultPingTimeoutInSeconds}
 
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
@@ -223,7 +223,7 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 	}
 
 	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{"timeOut": DefaultPingTimeoutInSeconds}
+	expectedInts := map[string]int{TimeOutKey: DefaultPingTimeoutInSeconds}
 
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
@@ -322,14 +322,14 @@ func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
 	}
 	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{"timeOut": DefaultSpeedTestTimeoutInSeconds}
+	expectedInts := map[string]int{TimeOutKey: DefaultSpeedTestTimeoutInSeconds}
 
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
 	}
 
 	resultsFloats := resultsTask.Data.FloatValues
-	expectedFloats := map[string]float64{"maxSeconds": DefaultSpeedTestMaxSeconds}
+	expectedFloats := map[string]float64{MaxSecondsKey: DefaultSpeedTestMaxSeconds}
 
 	if !areFloatMapsEqual(expectedFloats, resultsFloats) {
 		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedFloats, resultsFloats)
@@ -337,8 +337,8 @@ func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 
 	resultsIntSlices := resultsTask.Data.IntSlices
 	expectedIntSlices := map[string][]int{
-		"downloadSizes": GetDefaultSpeedTestDownloadSizes(),
-		"uploadSizes":   GetDefaultSpeedTestUploadSizes(),
+		DownloadSizesKey: GetDefaultSpeedTestDownloadSizes(),
+		UploadSizesKey:   GetDefaultSpeedTestUploadSizes(),
 	}
 
 	if !areIntSliceMapsEqual(expectedIntSlices, resultsIntSlices) {
@@ -371,14 +371,14 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
 	}
 	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{"timeOut": DefaultSpeedTestTimeoutInSeconds}
+	expectedInts := map[string]int{TimeOutKey: DefaultSpeedTestTimeoutInSeconds}
 
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
 	}
 
 	resultsFloats := resultsTask.Data.FloatValues
-	expectedFloats := map[string]float64{"maxSeconds": DefaultSpeedTestMaxSeconds}
+	expectedFloats := map[string]float64{MaxSecondsKey: DefaultSpeedTestMaxSeconds}
 
 	if !areFloatMapsEqual(expectedFloats, resultsFloats) {
 		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedFloats, resultsFloats)
@@ -386,8 +386,8 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 
 	resultsIntSlices := resultsTask.Data.IntSlices
 	expectedIntSlices := map[string][]int{
-		"downloadSizes": GetDefaultSpeedTestDownloadSizes(),
-		"uploadSizes":   GetDefaultSpeedTestUploadSizes(),
+		DownloadSizesKey: GetDefaultSpeedTestDownloadSizes(),
+		UploadSizesKey:   GetDefaultSpeedTestUploadSizes(),
 	}
 
 	if !areIntSliceMapsEqual(expectedIntSlices, resultsIntSlices) {
@@ -420,14 +420,14 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
 	}
 	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{"timeOut": DefaultSpeedTestTimeoutInSeconds}
+	expectedInts := map[string]int{TimeOutKey: DefaultSpeedTestTimeoutInSeconds}
 
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
 	}
 
 	resultsFloats := resultsTask.Data.FloatValues
-	expectedFloats := map[string]float64{"maxSeconds": DefaultSpeedTestMaxSeconds}
+	expectedFloats := map[string]float64{MaxSecondsKey: DefaultSpeedTestMaxSeconds}
 
 	if !areFloatMapsEqual(expectedFloats, resultsFloats) {
 		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedFloats, resultsFloats)
@@ -435,8 +435,8 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 
 	resultsIntSlices := resultsTask.Data.IntSlices
 	expectedIntSlices := map[string][]int{
-		"downloadSizes": GetDefaultSpeedTestDownloadSizes(),
-		"uploadSizes":   GetDefaultSpeedTestUploadSizes(),
+		DownloadSizesKey: GetDefaultSpeedTestDownloadSizes(),
+		UploadSizesKey:   GetDefaultSpeedTestUploadSizes(),
 	}
 
 	if !areIntSliceMapsEqual(expectedIntSlices, resultsIntSlices) {

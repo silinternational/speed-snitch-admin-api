@@ -17,6 +17,11 @@ const DefaultPingTimeoutInSeconds = 5
 const DefaultSpeedTestTimeoutInSeconds = 300 // 5 minutes
 const DefaultSpeedTestMaxSeconds = 300.0     // 5 minutes
 
+const TimeOutKey = "timeOut"
+const DownloadSizesKey = "downloadSizes"
+const UploadSizesKey = "uploadSizes"
+const MaxSecondsKey = "maxSeconds"
+
 // This is need for testing
 type dbClient interface {
 	GetItem(string, string, string, interface{}) error
@@ -306,7 +311,7 @@ func updateTaskPing(task domain.Task, db dbClient) (domain.Task, error) {
 		intValues = task.Data.IntValues
 	}
 
-	intValues = setIntValueIfMissing(intValues, "timeOut", DefaultPingTimeoutInSeconds)
+	intValues = setIntValueIfMissing(intValues, TimeOutKey, DefaultPingTimeoutInSeconds)
 	task.Data.IntValues = intValues
 
 	stringValues, err := getPingStringValues(task, db)
@@ -352,7 +357,7 @@ func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
 		intValues = task.Data.IntValues
 	}
 
-	intValues = setIntValueIfMissing(intValues, "timeOut", DefaultSpeedTestTimeoutInSeconds)
+	intValues = setIntValueIfMissing(intValues, TimeOutKey, DefaultSpeedTestTimeoutInSeconds)
 	task.Data.IntValues = intValues
 
 	stringValues, err := getSpeedTestStringValues(task, db)
@@ -365,7 +370,7 @@ func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
 	if task.Data.IntSlices != nil {
 		intSlices = task.Data.IntSlices
 	}
-	intSlices = setIntSliceIfMissing(intSlices, "downloadSizes", GetDefaultSpeedTestDownloadSizes())
+	intSlices = setIntSliceIfMissing(intSlices, DownloadSizesKey, GetDefaultSpeedTestDownloadSizes())
 	intSlices = setIntSliceIfMissing(intSlices, "uploadSizes", GetDefaultSpeedTestUploadSizes())
 	task.Data.IntSlices = intSlices
 
@@ -373,7 +378,7 @@ func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
 	if task.Data.FloatValues != nil {
 		floatValues = task.Data.FloatValues
 	}
-	floatValues = setFloatValueIfMissing(floatValues, "maxSeconds", DefaultSpeedTestMaxSeconds)
+	floatValues = setFloatValueIfMissing(floatValues, MaxSecondsKey, DefaultSpeedTestMaxSeconds)
 	task.Data.FloatValues = floatValues
 
 	return task, nil
