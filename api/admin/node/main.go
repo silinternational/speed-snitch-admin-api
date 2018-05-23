@@ -17,10 +17,13 @@ const DefaultPingTimeoutInSeconds = 5
 const DefaultSpeedTestTimeoutInSeconds = 300 // 5 minutes
 const DefaultSpeedTestMaxSeconds = 300.0     // 5 minutes
 
+const ServerIDKey = "serverID"
+const ServerHostKey = "Host"
 const TimeOutKey = "timeOut"
 const DownloadSizesKey = "downloadSizes"
 const UploadSizesKey = "uploadSizes"
 const MaxSecondsKey = "maxSeconds"
+const TestTypeKey = "testType"
 
 // This is need for testing
 type dbClient interface {
@@ -329,12 +332,12 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 		stringValues = task.Data.StringValues
 	}
 
-	stringValues["testType"] = domain.TestConfigLatencyTest
+	stringValues[TestTypeKey] = domain.TestConfigLatencyTest
 
 	// If no NamedServerID, then use defaults
 	if task.NamedServerID == "" {
-		stringValues = setStringValueIfMissing(stringValues, "Host", domain.DefaultPingServerHost)
-		stringValues = setStringValueIfMissing(stringValues, "serverID", domain.DefaultPingServerID)
+		stringValues = setStringValueIfMissing(stringValues, ServerHostKey, domain.DefaultPingServerHost)
+		stringValues = setStringValueIfMissing(stringValues, ServerIDKey, domain.DefaultPingServerID)
 		return stringValues, nil
 	}
 
@@ -345,8 +348,8 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServerID, err.Error())
 	}
 
-	stringValues = setStringValueIfMissing(stringValues, "Host", namedServer.ServerHost)
-	stringValues = setStringValueIfMissing(stringValues, "serverID", namedServer.UID)
+	stringValues = setStringValueIfMissing(stringValues, ServerHostKey, namedServer.ServerHost)
+	stringValues = setStringValueIfMissing(stringValues, ServerIDKey, namedServer.UID)
 
 	return stringValues, nil
 }
@@ -390,12 +393,12 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 		stringValues = task.Data.StringValues
 	}
 
-	stringValues["testType"] = domain.TestConfigSpeedTest
+	stringValues[TestTypeKey] = domain.TestConfigSpeedTest
 
 	// If there is no NamedServerID, then use the defaults
 	if task.NamedServerID == "" {
-		stringValues = setStringValueIfMissing(stringValues, "Host", domain.DefaultSpeedTestNetServerHost)
-		stringValues = setStringValueIfMissing(stringValues, "serverID", domain.DefaultSpeedTestNetServerID)
+		stringValues = setStringValueIfMissing(stringValues, ServerHostKey, domain.DefaultSpeedTestNetServerHost)
+		stringValues = setStringValueIfMissing(stringValues, ServerIDKey, domain.DefaultSpeedTestNetServerID)
 		return stringValues, nil
 	}
 
@@ -408,8 +411,8 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 
 	// This does not refer to a SpeedTestNetServer
 	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
-		stringValues = setStringValueIfMissing(stringValues, "Host", namedServer.ServerHost)
-		stringValues = setStringValueIfMissing(stringValues, "serverID", namedServer.UID)
+		stringValues = setStringValueIfMissing(stringValues, ServerHostKey, namedServer.ServerHost)
+		stringValues = setStringValueIfMissing(stringValues, ServerIDKey, namedServer.UID)
 		return stringValues, nil
 	}
 
@@ -419,8 +422,8 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 		return stringValues, err
 	}
 
-	stringValues = setStringValueIfMissing(stringValues, "Host", stnServer.Host)
-	stringValues = setStringValueIfMissing(stringValues, "serverID", stnServer.ServerID)
+	stringValues = setStringValueIfMissing(stringValues, ServerHostKey, stnServer.Host)
+	stringValues = setStringValueIfMissing(stringValues, ServerIDKey, stnServer.ServerID)
 	return stringValues, nil
 }
 

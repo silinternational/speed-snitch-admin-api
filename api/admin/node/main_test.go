@@ -128,9 +128,9 @@ func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
 
 	results, err := getPingStringValues(task, DBClient{})
 	expected := map[string]string{
-		"testType": domain.TestConfigLatencyTest,
-		"Host":     domain.DefaultPingServerHost,
-		"serverID": domain.DefaultPingServerID,
+		TestTypeKey:   domain.TestConfigLatencyTest,
+		ServerHostKey: domain.DefaultPingServerHost,
+		ServerIDKey:   domain.DefaultPingServerID,
 	}
 
 	if err != nil {
@@ -152,9 +152,9 @@ func TestGetPingStringValuesWithNamedServer(t *testing.T) {
 
 	results, err := getPingStringValues(task, DBClient{})
 	expected := map[string]string{
-		"testType": domain.TestConfigLatencyTest,
-		"Host":     serverHost,
-		"serverID": uid,
+		TestTypeKey:   domain.TestConfigLatencyTest,
+		ServerHostKey: serverHost,
+		ServerIDKey:   uid,
 	}
 
 	if err != nil {
@@ -180,9 +180,9 @@ func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
-		"testType": domain.TestConfigLatencyTest,
-		"Host":     domain.DefaultPingServerHost,
-		"serverID": domain.DefaultPingServerID,
+		TestTypeKey:   domain.TestConfigLatencyTest,
+		ServerHostKey: domain.DefaultPingServerHost,
+		ServerIDKey:   domain.DefaultPingServerID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -213,9 +213,9 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
-		"testType": domain.TestConfigLatencyTest,
-		"Host":     serverHost,
-		"serverID": uid,
+		TestTypeKey:   domain.TestConfigLatencyTest,
+		ServerHostKey: serverHost,
+		ServerIDKey:   uid,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -236,9 +236,9 @@ func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 
 	results, err := getSpeedTestStringValues(task, DBClient{})
 	expected := map[string]string{
-		"testType": domain.TestConfigSpeedTest,
-		"Host":     domain.DefaultSpeedTestNetServerHost,
-		"serverID": domain.DefaultSpeedTestNetServerID,
+		TestTypeKey:   domain.TestConfigSpeedTest,
+		ServerHostKey: domain.DefaultSpeedTestNetServerHost,
+		ServerIDKey:   domain.DefaultSpeedTestNetServerID,
 	}
 
 	if err != nil {
@@ -260,9 +260,9 @@ func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
 
 	results, err := getSpeedTestStringValues(task, DBClient{})
 	expected := map[string]string{
-		"testType": domain.TestConfigSpeedTest,
-		"Host":     serverHost,
-		"serverID": uid,
+		TestTypeKey:   domain.TestConfigSpeedTest,
+		ServerHostKey: serverHost,
+		ServerIDKey:   uid,
 	}
 
 	if err != nil {
@@ -285,9 +285,9 @@ func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
 
 	results, err := getSpeedTestStringValues(task, DBClient{})
 	expected := map[string]string{
-		"testType": domain.TestConfigSpeedTest,
-		"Host":     TestHostForSpeedTestNet,
-		"serverID": TestServerIDForSpeedTestNet,
+		TestTypeKey:   domain.TestConfigSpeedTest,
+		ServerHostKey: TestHostForSpeedTestNet,
+		ServerIDKey:   TestServerIDForSpeedTestNet,
 	}
 
 	if err != nil {
@@ -313,9 +313,9 @@ func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
-		"testType": domain.TestConfigSpeedTest,
-		"Host":     domain.DefaultSpeedTestNetServerHost,
-		"serverID": domain.DefaultSpeedTestNetServerID,
+		TestTypeKey:   domain.TestConfigSpeedTest,
+		ServerHostKey: domain.DefaultSpeedTestNetServerHost,
+		ServerIDKey:   domain.DefaultSpeedTestNetServerID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -362,9 +362,9 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
-		"testType": domain.TestConfigSpeedTest,
-		"Host":     serverHost,
-		"serverID": uid,
+		TestTypeKey:   domain.TestConfigSpeedTest,
+		ServerHostKey: serverHost,
+		ServerIDKey:   uid,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -411,9 +411,9 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
-		"testType": domain.TestConfigSpeedTest,
-		"Host":     TestHostForSpeedTestNet,
-		"serverID": TestServerIDForSpeedTestNet,
+		TestTypeKey:   domain.TestConfigSpeedTest,
+		ServerHostKey: TestHostForSpeedTestNet,
+		ServerIDKey:   TestServerIDForSpeedTestNet,
 	}
 
 	if !areStringMapsEqual(expected, results) {
