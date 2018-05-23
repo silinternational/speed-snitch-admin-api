@@ -309,12 +309,7 @@ func updateNodeTasks(node domain.Node, db dbClient) (domain.Node, error) {
 }
 
 func updateTaskPing(task domain.Task, db dbClient) (domain.Task, error) {
-	intValues := map[string]int{}
-	if task.Data.IntValues != nil {
-		intValues = task.Data.IntValues
-	}
-
-	intValues = setIntValueIfMissing(intValues, TimeOutKey, DefaultPingTimeoutInSeconds)
+	intValues := setIntValueIfMissing(task.Data.IntValues, TimeOutKey, DefaultPingTimeoutInSeconds)
 	task.Data.IntValues = intValues
 
 	stringValues, err := getPingStringValues(task, db)
@@ -355,12 +350,7 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 }
 
 func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
-	intValues := map[string]int{}
-	if task.Data.IntValues != nil {
-		intValues = task.Data.IntValues
-	}
-
-	intValues = setIntValueIfMissing(intValues, TimeOutKey, DefaultSpeedTestTimeoutInSeconds)
+	intValues := setIntValueIfMissing(task.Data.IntValues, TimeOutKey, DefaultSpeedTestTimeoutInSeconds)
 	task.Data.IntValues = intValues
 
 	stringValues, err := getSpeedTestStringValues(task, db)
@@ -369,19 +359,11 @@ func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
 	}
 	task.Data.StringValues = stringValues
 
-	intSlices := map[string][]int{}
-	if task.Data.IntSlices != nil {
-		intSlices = task.Data.IntSlices
-	}
-	intSlices = setIntSliceIfMissing(intSlices, DownloadSizesKey, GetDefaultSpeedTestDownloadSizes())
+	intSlices := setIntSliceIfMissing(task.Data.IntSlices, DownloadSizesKey, GetDefaultSpeedTestDownloadSizes())
 	intSlices = setIntSliceIfMissing(intSlices, UploadSizesKey, GetDefaultSpeedTestUploadSizes())
 	task.Data.IntSlices = intSlices
 
-	floatValues := map[string]float64{}
-	if task.Data.FloatValues != nil {
-		floatValues = task.Data.FloatValues
-	}
-	floatValues = setFloatValueIfMissing(floatValues, MaxSecondsKey, DefaultSpeedTestMaxSeconds)
+	floatValues := setFloatValueIfMissing(task.Data.FloatValues, MaxSecondsKey, DefaultSpeedTestMaxSeconds)
 	task.Data.FloatValues = floatValues
 
 	return task, nil
@@ -428,6 +410,10 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 }
 
 func setIntValueIfMissing(intValues map[string]int, key string, value int) map[string]int {
+	if intValues == nil {
+		return map[string]int{key: value}
+	}
+
 	_, ok := intValues[key]
 	if !ok {
 		intValues[key] = value
@@ -436,6 +422,10 @@ func setIntValueIfMissing(intValues map[string]int, key string, value int) map[s
 }
 
 func setFloatValueIfMissing(floatValues map[string]float64, key string, value float64) map[string]float64 {
+	if floatValues == nil {
+		return map[string]float64{key: value}
+	}
+
 	_, ok := floatValues[key]
 	if !ok {
 		floatValues[key] = value
@@ -444,6 +434,10 @@ func setFloatValueIfMissing(floatValues map[string]float64, key string, value fl
 }
 
 func setIntSliceIfMissing(intSlices map[string][]int, key string, values []int) map[string][]int {
+	if intSlices == nil {
+		return map[string][]int{key: values}
+	}
+
 	_, ok := intSlices[key]
 	if !ok {
 		intSlices[key] = values
@@ -452,6 +446,10 @@ func setIntSliceIfMissing(intSlices map[string][]int, key string, values []int) 
 }
 
 func setStringValueIfMissing(stringValues map[string]string, key string, value string) map[string]string {
+	if stringValues == nil {
+		return map[string]string{key: value}
+	}
+
 	_, ok := stringValues[key]
 	if !ok {
 		stringValues[key] = value
