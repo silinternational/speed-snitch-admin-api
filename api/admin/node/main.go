@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -11,6 +12,35 @@ import (
 )
 
 const SelfType = domain.DataTypeNode
+
+const DefaultPingTimeoutInSeconds = 5
+const DefaultSpeedTestTimeoutInSeconds = 300 // 5 minutes
+const DefaultSpeedTestMaxSeconds = 300.0     // 5 minutes
+
+// This is need for testing
+type dbClient interface {
+	GetItem(string, string, string, interface{}) error
+	GetSpeedTestNetServerFromNamedServer(domain.NamedServer) (domain.SpeedTestNetServer, error)
+}
+
+// This is needed to allow for mock db result in the tests
+type Client struct{}
+
+func (c Client) GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
+	return db.GetItem(tableAlias, dataType, value, itemObj)
+}
+
+func (c Client) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
+	return db.GetSpeedTestNetServerFromNamedServer(namedServer)
+}
+
+func GetDefaultSpeedTestDownloadSizes() []int {
+	return []int{245388, 505544}
+}
+
+func GetDefaultSpeedTestUploadSizes() []int {
+	return []int{32768, 65536}
+}
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, nodeSpecified := req.PathParameters["macAddr"]
@@ -223,6 +253,11 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		}
 	}
 
+	node, err = updateNodeTasks(node, Client{})
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
 	// Update the node in the database
 	err = db.PutItem(domain.DataTable, node)
 	if err != nil {
@@ -239,6 +274,179 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		StatusCode: http.StatusOK,
 		Body:       string(js),
 	}, nil
+}
+
+func updateNodeTasks(node domain.Node, db dbClient) (domain.Node, error) {
+	newTasks := []domain.Task{}
+	for index, task := range node.Tasks {
+		if task.Type == domain.TaskTypePing {
+			newTask, err := updateTaskPing(task, db)
+			if err != nil {
+				return node, fmt.Errorf("Error updating task. Index: %d. Type: %s ... %s", index, task.Type, err.Error())
+			}
+			newTasks = append(newTasks, newTask)
+		} else if task.Type == domain.TaskTypeSpeedTest {
+			newTask, err := updateTaskSpeedTest(task, db)
+			if err != nil {
+				return node, fmt.Errorf("Error updating task. Index: %d. Type: %s ... %s", index, task.Type, err.Error())
+			}
+			newTasks = append(newTasks, newTask)
+		} else {
+			newTasks = append(newTasks, task)
+		}
+	}
+	return node, nil
+}
+
+func updateTaskPing(task domain.Task, db dbClient) (domain.Task, error) {
+	intValues := map[string]int{}
+	if task.Data.IntValues != nil {
+		intValues = task.Data.IntValues
+	}
+
+	intValues = setIntValueIfMissing(intValues, "timeOut", DefaultPingTimeoutInSeconds)
+	task.Data.IntValues = intValues
+
+	stringValues, err := getPingStringValues(task, db)
+	if err != nil {
+		return task, err
+	}
+	task.Data.StringValues = stringValues
+
+	return task, nil
+}
+
+func getPingStringValues(task domain.Task, db dbClient) (map[string]string, error) {
+	stringValues := map[string]string{}
+	if task.Data.StringValues != nil {
+		stringValues = task.Data.StringValues
+	}
+
+	stringValues["testType"] = domain.TestConfigLatencyTest
+
+	// If no NamedServerID, then use defaults
+	if task.NamedServerID == "" {
+		stringValues = setStringValueIfMissing(stringValues, "Host", domain.DefaultPingServerHost)
+		stringValues = setStringValueIfMissing(stringValues, "serverID", domain.DefaultPingServerID)
+		return stringValues, nil
+	}
+
+	// There is a NamedServerID but we're not checking if it's associated with a SpeedTestNetServer (for Pings)
+	var namedServer domain.NamedServer
+	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServerID, &namedServer)
+	if err != nil {
+		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServerID, err.Error())
+	}
+
+	stringValues = setStringValueIfMissing(stringValues, "Host", namedServer.ServerHost)
+	stringValues = setStringValueIfMissing(stringValues, "serverID", namedServer.UID)
+
+	return stringValues, nil
+}
+
+func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
+	intValues := map[string]int{}
+	if task.Data.IntValues != nil {
+		intValues = task.Data.IntValues
+	}
+
+	intValues = setIntValueIfMissing(intValues, "timeOut", DefaultSpeedTestTimeoutInSeconds)
+	task.Data.IntValues = intValues
+
+	stringValues, err := getSpeedTestStringValues(task, db)
+	if err != nil {
+		return task, err
+	}
+	task.Data.StringValues = stringValues
+
+	intSlices := map[string][]int{}
+	if task.Data.IntSlices != nil {
+		intSlices = task.Data.IntSlices
+	}
+	intSlices = setIntSliceIfMissing(intSlices, "downloadSizes", GetDefaultSpeedTestDownloadSizes())
+	intSlices = setIntSliceIfMissing(intSlices, "uploadSizes", GetDefaultSpeedTestUploadSizes())
+	task.Data.IntSlices = intSlices
+
+	floatValues := map[string]float64{}
+	if task.Data.FloatValues != nil {
+		floatValues = task.Data.FloatValues
+	}
+	floatValues = setFloatValueIfMissing(floatValues, "maxSeconds", DefaultSpeedTestMaxSeconds)
+	task.Data.FloatValues = floatValues
+
+	return task, nil
+}
+
+func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string, error) {
+	stringValues := map[string]string{}
+	if task.Data.StringValues != nil {
+		stringValues = task.Data.StringValues
+	}
+
+	stringValues["testType"] = domain.TestConfigSpeedTest
+
+	// If there is no NamedServerID, then use the defaults
+	if task.NamedServerID == "" {
+		stringValues = setStringValueIfMissing(stringValues, "Host", domain.DefaultSpeedTestNetServerHost)
+		stringValues = setStringValueIfMissing(stringValues, "serverID", domain.DefaultSpeedTestNetServerID)
+		return stringValues, nil
+	}
+
+	// There is a NamedServerID
+	var namedServer domain.NamedServer
+	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServerID, &namedServer)
+	if err != nil {
+		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServerID, err.Error())
+	}
+
+	// This does not refer to a SpeedTestNetServer
+	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+		stringValues = setStringValueIfMissing(stringValues, "Host", namedServer.ServerHost)
+		stringValues = setStringValueIfMissing(stringValues, "serverID", namedServer.UID)
+		return stringValues, nil
+	}
+
+	// This does refer to a SpeedTestNetServer, so use its info
+	stnServer, err := db.GetSpeedTestNetServerFromNamedServer(namedServer)
+	if err != nil {
+		return stringValues, err
+	}
+
+	stringValues = setStringValueIfMissing(stringValues, "Host", stnServer.Host)
+	stringValues = setStringValueIfMissing(stringValues, "serverID", stnServer.ServerID)
+	return stringValues, nil
+}
+
+func setIntValueIfMissing(intValues map[string]int, key string, value int) map[string]int {
+	_, ok := intValues[key]
+	if !ok {
+		intValues[key] = value
+	}
+	return intValues
+}
+
+func setFloatValueIfMissing(floatValues map[string]float64, key string, value float64) map[string]float64 {
+	_, ok := floatValues[key]
+	if !ok {
+		floatValues[key] = value
+	}
+	return floatValues
+}
+
+func setIntSliceIfMissing(intSlices map[string][]int, key string, values []int) map[string][]int {
+	_, ok := intSlices[key]
+	if !ok {
+		intSlices[key] = values
+	}
+	return intSlices
+}
+
+func setStringValueIfMissing(stringValues map[string]string, key string, value string) map[string]string {
+	_, ok := stringValues[key]
+	if !ok {
+		stringValues[key] = value
+	}
+	return stringValues
 }
 
 func main() {
