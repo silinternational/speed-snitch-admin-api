@@ -16,7 +16,6 @@ const TestServerIDForSpeedTestNet = "111"
 // For test fixtures, the value param is going to dictate the attribute values.
 //   The value should have this format ...
 //     UID|ServerType|ServerHost|SpeedTestNetServerID
-
 func (d DBClient) GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
 	desiredAttributes := map[string]string{}
 	fixtureValues := strings.Split(value, "|")
@@ -37,6 +36,7 @@ func (d DBClient) GetItem(tableAlias, dataType, value string, itemObj interface{
 	return nil
 }
 
+// Minimal test fixture
 func (d DBClient) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
 	stnServer := domain.SpeedTestNetServer{
 		ServerID: TestServerIDForSpeedTestNet,
