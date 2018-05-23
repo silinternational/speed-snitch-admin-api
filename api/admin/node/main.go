@@ -371,7 +371,7 @@ func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
 		intSlices = task.Data.IntSlices
 	}
 	intSlices = setIntSliceIfMissing(intSlices, DownloadSizesKey, GetDefaultSpeedTestDownloadSizes())
-	intSlices = setIntSliceIfMissing(intSlices, "uploadSizes", GetDefaultSpeedTestUploadSizes())
+	intSlices = setIntSliceIfMissing(intSlices, UploadSizesKey, GetDefaultSpeedTestUploadSizes())
 	task.Data.IntSlices = intSlices
 
 	floatValues := map[string]float64{}
