@@ -29,6 +29,18 @@ const ServerTypeCustom = "custom"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
 
+const TaskTypePing = "ping"
+const TaskTypeSpeedTest = "speedTest"
+
+const TestConfigSpeedTest = "speedTest"
+const TestConfigLatencyTest = "latencyTest"
+
+const DefaultPingServerID = "defaultPing"
+const DefaultPingServerHost = "wiki.insitehome.org"
+
+const DefaultSpeedTestNetServerID = "5559"
+const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
+
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
