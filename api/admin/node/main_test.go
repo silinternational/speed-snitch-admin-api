@@ -443,3 +443,37 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedIntSlices, resultsIntSlices)
 	}
 }
+
+func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
+	task := domain.Task{}
+	task.Type = domain.TaskTypePing
+	task.NamedServerID = ""
+	node := domain.Node{}
+
+	node.Tasks = []domain.Task{task}
+
+	resultsNode, err := updateNodeTasks(node, DBClient{})
+
+	if err != nil {
+		t.Errorf("Got an unexpected error: %s", err.Error())
+		return
+	}
+
+	results := resultsNode.Tasks[0].Data.StringValues
+	expected := map[string]string{
+		TestTypeKey:   domain.TestConfigLatencyTest,
+		ServerHostKey: domain.DefaultPingServerHost,
+		ServerIDKey:   domain.DefaultPingServerID,
+	}
+
+	if !areStringMapsEqual(expected, results) {
+		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
+	}
+
+	resultsInts := resultsNode.Tasks[0].Data.IntValues
+	expectedInts := map[string]int{TimeOutKey: DefaultPingTimeoutInSeconds}
+
+	if !areIntMapsEqual(expectedInts, resultsInts) {
+		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
+	}
+}

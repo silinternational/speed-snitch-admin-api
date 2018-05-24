@@ -305,6 +305,8 @@ func updateNodeTasks(node domain.Node, db dbClient) (domain.Node, error) {
 			newTasks = append(newTasks, task)
 		}
 	}
+
+	node.Tasks = newTasks
 	return node, nil
 }
 
