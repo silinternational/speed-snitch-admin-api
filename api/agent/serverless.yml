@@ -54,6 +54,7 @@ provider:
     namespace: ${self:custom.namespace}
     dataTable: ${self:custom.dataTable}
     taskLogTable: ${self:custom.taskLogTable}
+    downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
 
 plugins:
   - serverless-domain-manager
@@ -66,9 +67,10 @@ custom:
   customDomain:
     domainName: ${env:CUSTOM_DOMAIN_NAME}
     basePath: ''
-    stage: ${self:provider.stage}
+    stage: ${opt:stage, self:provider.stage}
     createRoute53Record: false
     certificateName: ${env:CERT_NAME}
+    enabled: true
 
 package:
  exclude:
