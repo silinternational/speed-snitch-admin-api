@@ -10,6 +10,53 @@ import (
 	"os"
 )
 
+type ServerKey struct {
+	ID        string
+	Timestamp int64
+}
+
+func getDeleteRequest(serverKey ServerKey) string {
+	return fmt.Sprintf(`
+  {
+    "DeleteRequest": {
+      "Key": {
+        "ID": {"S": "%s"},
+        "Timestamp": {"N": "%d"}
+      }
+    }
+  }`,
+		serverKey.ID,
+		serverKey.Timestamp,
+	)
+}
+
+// see https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchWriteItem.html
+func getBatchRequest(requests []string) string {
+	requestStart := fmt.Sprintf(`{
+  "RequestItems": {
+	"%s": [`,
+		domain.DataTypeSpeedTestNetServer,
+	)
+
+	wholeRequest := requestStart
+	lastIndex := len(requests) - 1
+
+	for index, request := range requests {
+		wholeRequest += request
+		if index < lastIndex {
+			wholeRequest += ","
+		}
+		wholeRequest += `
+`
+	}
+
+	wholeRequest += `
+    ]
+  }
+}`
+	return wholeRequest
+}
+
 type Client struct{}
 
 func (c Client) DeleteItem(tableAlias, dataType, value string) (bool, error) {
@@ -20,7 +67,7 @@ func (c Client) PutItem(tableAlias string, item interface{}) error {
 	return db.PutItem(tableAlias, item)
 }
 
-func (c Client) ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
+func (c Client) ListSpeedTestNetServers() ([]domain.STNetServerList, error) {
 	return db.ListSpeedTestNetServers()
 }
 
@@ -61,7 +108,7 @@ func GetSTNetServers(serverURL string) ([]domain.SpeedTestNetServer, error) {
 type dbClient interface {
 	DeleteItem(string, string, string) (bool, error)
 	PutItem(string, interface{}) error
-	ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error)
+	ListSpeedTestNetServers() ([]domain.STNetServerList, error)
 	ListNamedServers() ([]domain.NamedServer, error)
 }
 
@@ -76,6 +123,7 @@ func deleteSTNetServersIfUnused(
 ) ([]string, error) {
 
 	staleServerIDs := []string{}
+	serverIDsToDelete := []ServerKey{}
 
 	for _, oldServer := range oldServers {
 		foundMatch := false
@@ -95,11 +143,22 @@ func deleteSTNetServersIfUnused(
 		if ok {
 			staleServerIDs = append(staleServerIDs, oldServer.ServerID)
 		} else {
-			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, oldServer.ServerID)
+			serverIDsToDelete = append(
+				serverIDsToDelete,
+				ServerKey{ID: oldServer.ServerID, Timestamp: oldServer.Timestamp},
+			)
+			//_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, oldServer.ServerID)
+			//
+			//if err != nil {
+			//	return []string{}, fmt.Errorf("Error deleting old SpeedTestNetServer %s: %s", oldServer.ID, err.Error())
+			//}
+		}
+	}
 
-			if err != nil {
-				return []string{}, fmt.Errorf("Error deleting old SpeedTestNetServer %s: %s", oldServer.ID, err.Error())
-			}
+	for startIndex := 0; ; startIndex += 25 {
+		index := startIndex
+		if index >= len(serverIDsToDelete) {
+			break
 		}
 	}
 
@@ -114,9 +173,7 @@ func serverHasChanged(oldServer, newServer domain.SpeedTestNetServer) bool {
 		oldServer.Host != newServer.Host ||
 		oldServer.Country != newServer.Country ||
 		oldServer.CountryCode != newServer.CountryCode ||
-		oldServer.Sponsor != newServer.Sponsor ||
-		oldServer.URL != newServer.URL ||
-		oldServer.URL2 != newServer.URL2)
+		oldServer.Sponsor != newServer.Sponsor)
 }
 
 func getNamedServersInMap(db dbClient) (map[string]domain.NamedServer, error) {
@@ -171,11 +228,19 @@ func updateMatchingNamedServer(
 func UpdateSTNetServers(serverURL string, db dbClient) ([]string, error) {
 
 	// Figure out which speedtest.net servers have been deleted
-	oldServers, err := db.ListSpeedTestNetServers()
+	oldServerLists, err := db.ListSpeedTestNetServers()
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting speedtest.net servers from database: %s", err.Error())
 	}
-	fmt.Fprintf(os.Stdout, "Found %v old servers", len(oldServers))
+
+	oldServers := map[string]domain.SpeedTestNetServer{}
+	for _, serverList := range oldServerLists {
+		for _, server := range serverList.Servers {
+			oldServers[server.ServerID] = server
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "Found %v old servers", len(oldServerLists))
 
 	newServers, err := GetSTNetServers(serverURL)
 	if err != nil {
@@ -189,12 +254,12 @@ func UpdateSTNetServers(serverURL string, db dbClient) ([]string, error) {
 	}
 	fmt.Fprintf(os.Stdout, "Found %v named servers", len(namedServers))
 
-	staleServerIDs, err := deleteSTNetServersIfUnused(oldServers, newServers, namedServers, db)
+	staleServerIDs, err := deleteSTNetServersIfUnused(oldServerLists, newServers, namedServers, db)
 	fmt.Fprintf(os.Stdout, "Found %v stale servers", len(staleServerIDs))
 
 	// Make a map of the Old Servers for quicker access and avoiding extra checks in a nested loop
 	mappedOldServers := map[string]domain.SpeedTestNetServer{}
-	for _, oldServer := range oldServers {
+	for _, oldServer := range oldServerLists {
 		mappedOldServers[oldServer.ServerID] = oldServer
 	}
 

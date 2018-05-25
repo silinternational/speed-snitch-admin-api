@@ -261,9 +261,11 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 	return list, nil
 }
 
-func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
+// ListSpeedTestNetServers returns all the country-grouped rows of
+//  speedtest.net servers
+func ListSpeedTestNetServers() ([]domain.STNetServerList, error) {
 
-	var list []domain.SpeedTestNetServer
+	var list []domain.STNetServerList
 
 	items, err := scanTable(domain.DataTable, "speedtestnetserver")
 	if err != nil {
@@ -271,10 +273,10 @@ func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 	}
 
 	for _, item := range items {
-		var itemObj domain.SpeedTestNetServer
+		var itemObj domain.STNetServerList
 		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
 		if err != nil {
-			return []domain.SpeedTestNetServer{}, err
+			return []domain.STNetServerList{}, err
 		}
 		list = append(list, itemObj)
 	}

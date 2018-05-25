@@ -153,7 +153,6 @@ type Version struct {
 
 type SpeedTestNetServer struct {
 	ID          string `json:"ID"`
-	URL         string `xml:"url,attr" json:"URL"`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
 	Name        string `xml:"name,attr" json:"Name"`
@@ -161,11 +160,13 @@ type SpeedTestNetServer struct {
 	CountryCode string `xml:"cc,attr"  json:"CountryCode"`
 	Sponsor     string `xml:"sponsor,attr" json:"Sponsor"`
 	ServerID    string `xml:"id,attr" json:"ServerID"`
-	URL2        string `xml:"url2,attr" json:"URL2"`
 	Host        string `xml:"host,attr" json:"Host"`
+	Timestamp   int64
 }
 
 type STNetServerList struct {
+	ID      string               `json:"ID"`
+	Country Country              `json:"Country"`
 	Servers []SpeedTestNetServer `xml:"server"`
 }
 
