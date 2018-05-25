@@ -36,7 +36,7 @@ const TestConfigSpeedTest = "speedTest"
 const TestConfigLatencyTest = "latencyTest"
 
 const DefaultPingServerID = "defaultPing"
-const DefaultPingServerHost = "wiki.insitehome.org"
+const DefaultPingServerHost = "google.com"
 
 const DefaultSpeedTestNetServerID = "5559"
 const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
