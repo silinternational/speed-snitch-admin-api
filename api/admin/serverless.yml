@@ -192,7 +192,8 @@ functions:
   speedtestnetserverupdate:
       handler: bin/speedtestnetserverupdate
       events:
-        - schedule: rate(12 hours)
+          # cron(1 0 ? * SUN *) = Sunday at 00:01
+        - schedule: cron(1 0 ? * SUN *)
 
   user:
       handler: bin/user
@@ -296,8 +297,8 @@ resources:
           - AttributeName: ID
             KeyType: HASH
         ProvisionedThroughput:
-          ReadCapacityUnits: 2
-          WriteCapacityUnits: 2
+          ReadCapacityUnits: 8
+          WriteCapacityUnits: 8
     taskLogTable:
       Type: AWS::DynamoDB::Table
       Properties:

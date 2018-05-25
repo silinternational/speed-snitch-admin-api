@@ -282,6 +282,16 @@ func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 	return list, nil
 }
 
+func GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
+	var stnServer domain.SpeedTestNetServer
+	err := GetItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, namedServer.SpeedTestNetServerID, &stnServer)
+	if err != nil {
+		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting SpeedTestNetServer for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
+	}
+
+	return stnServer, nil
+}
+
 type ServerData struct {
 	ID   int
 	Host string

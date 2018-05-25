@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"log"
@@ -27,6 +28,18 @@ const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
+
+const TaskTypePing = "ping"
+const TaskTypeSpeedTest = "speedTest"
+
+const TestConfigSpeedTest = "speedTest"
+const TestConfigLatencyTest = "latencyTest"
+
+const DefaultPingServerID = "defaultPing"
+const DefaultPingServerHost = "google.com"
+
+const DefaultSpeedTestNetServerID = "5559"
+const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
 
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
@@ -170,7 +183,7 @@ type TaskLogEntry struct {
 	Latency            float64 `json:"Latency"`
 	ErrorCode          string  `json:"ErrorCode"`
 	ErrorMessage       string  `json:"ErrorMessage"`
-	ServerID           int64   `json:"ServerID"`
+	ServerID           string  `json:"ServerID"`
 	ServerCountry      string  `json:"ServerCountry"`
 	ServerCoordinates  string  `json:"ServerCoordinates"`
 	ServerSponsor      string  `json:"ServerSponsor"`
@@ -231,7 +244,7 @@ func CleanMACAddress(mAddr string) (string, error) {
 
 // GetUrlForAgentVersion creates url to agent binary for given version, os, and arch
 func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
-	downloadBaseUrl := os.Getenv("DOWNLOAD_BASE_URL")
+	downloadBaseUrl := os.Getenv("downloadBaseUrl")
 	version = strings.ToLower(version)
 	operatingsystem = strings.ToLower(operatingsystem)
 	arch = strings.ToLower(arch)
@@ -321,4 +334,25 @@ func InArray(needle interface{}, haystack interface{}) (exists bool, index int) 
 	}
 
 	return
+}
+
+// GetJSONFromSlice requires a slice. If the length is 0, returns "[]".
+//  Otherwise, returns the results of json.Marshal(s)
+func GetJSONFromSlice(v interface{}) (string, error) {
+	switch reflect.TypeOf(v).Kind() {
+	case reflect.Slice:
+		s := reflect.ValueOf(v)
+
+		if s.Len() == 0 {
+			return "[]", nil
+		}
+		js, err := json.Marshal(v)
+		if err != nil {
+			return "", err
+		}
+
+		return string(js), nil
+	}
+
+	return "", fmt.Errorf("Expected a slice, but got %v.", v)
 }

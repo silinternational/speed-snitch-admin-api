@@ -9,7 +9,7 @@ import (
 	"net/http"
 )
 
-const DataType = domain.DataTypeNamedServer
+const SelfType = domain.DataTypeNamedServer
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["uid"]
@@ -36,9 +36,9 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	uid := req.QueryStringParameters["uid"]
+	uid := req.PathParameters["uid"]
 
-	success, err := db.DeleteItem(domain.DataTable, DataType, uid)
+	success, err := db.DeleteItem(domain.DataTable, SelfType, uid)
 
 	if err != nil {
 		return domain.ServerError(err)
@@ -63,10 +63,10 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	uid := req.QueryStringParameters["uid"]
+	uid := req.PathParameters["uid"]
 
 	var server domain.NamedServer
-	err := db.GetItem(domain.DataTable, DataType, uid, &server)
+	err := db.GetItem(domain.DataTable, SelfType, uid, &server)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -97,14 +97,14 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ServerError(err)
 	}
 
-	js, err := json.Marshal(servers)
+	jsBody, err := domain.GetJSONFromSlice(servers)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(js),
+		Body:       jsBody,
 	}, nil
 }
 
@@ -118,7 +118,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, DataType, req.PathParameters["uid"], &server)
+		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &server)
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -127,7 +127,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	// If UID is not set generate a UID
 	if server.UID == "" {
 		server.UID = domain.GetRandString(4)
-		server.ID = DataType + "-" + server.UID
+		server.ID = SelfType + "-" + server.UID
 	}
 
 	// Get the NamedServer struct from the request body

@@ -183,3 +183,50 @@ func TestCanUserUseNode(t *testing.T) {
 		}
 	}
 }
+
+func TestGetJSONFromSliceEmpty(t *testing.T) {
+	testData := []Country{}
+	results, err := GetJSONFromSlice(testData)
+	expected := "[]"
+
+	if err != nil {
+		t.Errorf("Got an unexpected error: %s", err.Error())
+		return
+	}
+
+	if results != expected {
+		t.Errorf("Bad results. Expected: %s. But got: %s", expected, results)
+	}
+}
+
+func TestGetJSONFromSliceGood(t *testing.T) {
+	testData := []Country{{Code: "FR", Name: "France"}}
+	results, err := GetJSONFromSlice(testData)
+	expected := `[{"Code":"FR","Name":"France"}]`
+
+	if err != nil {
+		t.Errorf("Got an unexpected error: %s", err.Error())
+		return
+	}
+
+	if results != expected {
+		t.Errorf("Bad results. Expected: %s. But got: %s", expected, results)
+	}
+}
+
+func TestGetJSONFromError(t *testing.T) {
+	testData := map[string]string{"A": "aaa"}
+	_, err := GetJSONFromSlice(testData)
+
+	if err == nil {
+		t.Errorf("Expected an error, but didn't get one")
+		return
+	}
+
+	expected := "Expected a slice, but got map[A:aaa]."
+	results := err.Error()
+
+	if expected != results {
+		t.Errorf("Didn't get the expected error message. \nExpected: %s\n But got: %s", expected, results)
+	}
+}
