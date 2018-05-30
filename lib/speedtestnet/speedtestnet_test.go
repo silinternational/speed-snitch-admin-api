@@ -134,6 +134,50 @@ func TestGetSTNetServers(t *testing.T) {
 	}
 }
 
+func getNamedServerFixtures() []domain.NamedServer {
+	return []domain.NamedServer{
+		{
+			ID:         "namedserver-9999",
+			UID:        "9999",
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: "custom.server.org:8080",
+		},
+		{
+			ID:                   "namedserver-ns11",
+			UID:                  "ns11",
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServerID: "updating",
+			ServerHost:           "outdated.host.com:8080",
+			Name:                 "Outdated Host",
+			Description:          "Needs to get its host updated",
+			Country:              domain.Country{Code: "WA", Name: "West Africa"},
+			Notes:                "This named server should have its host value updated.",
+		},
+		{
+			ID:                   "namedserver-ns22",
+			UID:                  "ns22",
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServerID: "good",
+			ServerHost:           "good.host.com:8080",
+			Name:                 "Good Host",
+			Description:          "No update needed",
+			Country:              domain.Country{Code: "EA", Name: "East Africa"},
+			Notes:                "This named server should not need to be updated.",
+		},
+		{
+			ID:                   "namedserver-ns33",
+			UID:                  "ns33",
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServerID: "missing",
+			ServerHost:           "missing.server.com:8080",
+			Name:                 "Missing Server",
+			Description:          "Has gone stale",
+			Country:              domain.Country{Code: "SA", Name: "South Africa"},
+			Notes:                "This named server has no new matching speedtest.net server",
+		},
+	}
+}
+
 func getSTNetServerListFixtures() []domain.STNetServerList {
 
 	serverLists := []domain.STNetServerList{
@@ -188,50 +232,6 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 	}
 
 	return serverLists
-}
-
-func getNamedServerFixtures() []domain.NamedServer {
-	return []domain.NamedServer{
-		{
-			ID:         "namedserver-9999",
-			UID:        "9999",
-			ServerType: domain.ServerTypeCustom,
-			ServerHost: "custom.server.org:8080",
-		},
-		{
-			ID:                   "namedserver-ns11",
-			UID:                  "ns11",
-			ServerType:           domain.ServerTypeSpeedTestNet,
-			SpeedTestNetServerID: "updating",
-			ServerHost:           "outdated.host.com:8080",
-			Name:                 "Outdated Host",
-			Description:          "Needs to get its host updated",
-			Country:              domain.Country{Code: "WA", Name: "West Africa"},
-			Notes:                "This named server should have its host value updated.",
-		},
-		{
-			ID:                   "namedserver-ns22",
-			UID:                  "ns22",
-			ServerType:           domain.ServerTypeSpeedTestNet,
-			SpeedTestNetServerID: "good",
-			ServerHost:           "good.host.com:8080",
-			Name:                 "Good Host",
-			Description:          "No update needed",
-			Country:              domain.Country{Code: "EA", Name: "East Africa"},
-			Notes:                "This named server should not need to be updated.",
-		},
-		{
-			ID:                   "namedserver-ns33",
-			UID:                  "ns33",
-			ServerType:           domain.ServerTypeSpeedTestNet,
-			SpeedTestNetServerID: "missing",
-			ServerHost:           "missing.server.com:8080",
-			Name:                 "Missing Server",
-			Description:          "Has gone stale",
-			Country:              domain.Country{Code: "SA", Name: "South Africa"},
-			Notes:                "This named server has no new matching speedtest.net server",
-		},
-	}
 }
 
 func TestRefreshSTNetServersByCountry(t *testing.T) {
