@@ -12,9 +12,21 @@ import (
 	"github.com/silinternational/speed-snitch-agent"
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
 	"net/http"
+	"os"
 )
 
+const ENV_STAGE = "STAGE"
+
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
+
+func GetDb() *dynamodb.DynamoDB {
+	tier := os.Getenv(ENV_STAGE)
+	if tier == "local" {
+		return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint("http://dynamo:8000"))
+	}
+
+	return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
+}
 
 func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
 	// Prepare the input for the query.
@@ -26,6 +38,8 @@ func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
 			},
 		},
 	}
+
+	db := GetDb()
 
 	// Retrieve the item from DynamoDB. If no matching item is found
 	// return nil.
@@ -60,6 +74,7 @@ func PutItem(tableAlias string, item interface{}) error {
 		Item:      av,
 	}
 
+	db := GetDb()
 	_, err = db.PutItem(input)
 	return err
 }
@@ -76,6 +91,7 @@ func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 		},
 	}
 
+	db := GetDb()
 	// Delete the item from DynamoDB. I
 	_, err := db.DeleteItem(input)
 
@@ -103,6 +119,7 @@ func scanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeVal
 		},
 	}
 
+	db := GetDb()
 	var results []map[string]*dynamodb.AttributeValue
 	err := db.ScanPages(input,
 		func(page *dynamodb.ScanOutput, lastPage bool) bool {
@@ -267,7 +284,7 @@ func ListSpeedTestNetServers() ([]domain.STNetServerList, error) {
 
 	var list []domain.STNetServerList
 
-	items, err := scanTable(domain.DataTable, "speedtestnetserver")
+	items, err := scanTable(domain.DataTable, domain.DataTypeSpeedTestNetServerList)
 	if err != nil {
 		return list, err
 	}
