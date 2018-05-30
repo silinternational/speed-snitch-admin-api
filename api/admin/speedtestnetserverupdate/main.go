@@ -12,7 +12,7 @@ import (
 
 func handler(ctx context.Context, event events.CloudWatchEvent) error {
 	fmt.Fprintf(os.Stdout, "Starting update speedtestnetservers")
-	results, err := speedtestnet.UpdateSTNetServers(domain.SpeedTestNetServerList, speedtestnet.Client{})
+	results, err := speedtestnet.UpdateSTNetServers(domain.SpeedTestNetServerList)
 	if err != nil {
 		return err
 	}
