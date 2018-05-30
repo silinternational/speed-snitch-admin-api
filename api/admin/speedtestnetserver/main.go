@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const SelfType = domain.DataTypeSpeedTestNetServer
+const SelfType = domain.DataTypeSTNetServerList
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["serverID"]
