@@ -37,7 +37,7 @@ func deleteNamedServers(t *testing.T) {
 }
 
 func deleteSTNetServerLists(t *testing.T) {
-	items, err := db.ListSpeedTestNetServers()
+	items, err := db.ListSTNetServerLists()
 	if err != nil {
 		t.Errorf("Could not get list of SpeedTestNetServers for test preparations. Got error: %s", err.Error())
 		t.Fail()
@@ -138,7 +138,7 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 
 	serverLists := []domain.STNetServerList{
 		{
-			ID:      domain.DataTypeSpeedTestNetServerList + "-US",
+			ID:      domain.DataTypeSTNetServerList + "-US",
 			Country: domain.Country{Code: "US", Name: "United States"},
 			Servers: []domain.SpeedTestNetServer{
 				{
@@ -154,7 +154,7 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 			},
 		},
 		{
-			ID:      domain.DataTypeSpeedTestNetServerList + "-FR",
+			ID:      domain.DataTypeSTNetServerList + "-FR",
 			Country: domain.Country{Code: "FR", Name: "France"},
 			Servers: []domain.SpeedTestNetServer{
 				{
@@ -175,7 +175,7 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 			},
 		},
 		{
-			ID:      domain.DataTypeSpeedTestNetServerList + "-ZZ",
+			ID:      domain.DataTypeSTNetServerList + "-ZZ",
 			Country: domain.Country{Code: "ZZ", Name: "Annihilated"},
 			Servers: []domain.SpeedTestNetServer{
 				{
@@ -255,7 +255,7 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 		return
 	}
 
-	dbServers, err := db.ListSpeedTestNetServers()
+	dbServers, err := db.ListSTNetServerLists()
 	if err != nil {
 		t.Errorf("Unexpected error getting STNetServerLists: %s", err.Error())
 		return
@@ -478,7 +478,7 @@ func TestUpdateSTNetServers(t *testing.T) {
 		return
 	}
 
-	stNetServerLists, err := db.ListSpeedTestNetServers()
+	stNetServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		t.Errorf("Unexpected error getting STNetServerLists from db: %s", err.Error())
 		return

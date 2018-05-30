@@ -123,7 +123,7 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 		}
 	}
 
-	oldServers, err := db.ListSpeedTestNetServers()
+	oldServers, err := db.ListSTNetServerLists()
 	if err != nil {
 		return fmt.Errorf("Error trying to get the SpeedTestNetServerLists from the db: %s", err.Error())
 	}
@@ -132,14 +132,14 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 		newServerList, ok := groupedServers[serverList.Country.Code]
 		// If the country is still represented in the new data, update it
 		if ok {
-			newServerList.ID = domain.DataTypeSpeedTestNetServerList + "-" + serverList.Country.Code
+			newServerList.ID = domain.DataTypeSTNetServerList + "-" + serverList.Country.Code
 			err := db.PutItem(domain.DataTable, &newServerList)
 			if err != nil {
 				return fmt.Errorf("Error trying to update SpeedTestNetServerList, %s, in the db: %s", newServerList.ID, err.Error())
 			}
 			// If the country is no longer represented in the new data, delete it
 		} else {
-			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSpeedTestNetServerList, serverList.Country.Code)
+			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, serverList.Country.Code)
 			if err != nil {
 				return fmt.Errorf("Error trying to delete SpeedTestNetServerList, %s, from the db: %s", serverList.ID, err.Error())
 			}
@@ -206,7 +206,7 @@ func updateNamedServers(
 func UpdateSTNetServers(serverURL string) ([]string, error) {
 
 	// Figure out which speedtest.net servers from the database are no longer valid
-	oldServerLists, err := db.ListSpeedTestNetServers()
+	oldServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting speedtest.net servers from database: %s", err.Error())
 	}

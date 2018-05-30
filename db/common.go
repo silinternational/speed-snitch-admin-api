@@ -278,13 +278,13 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 	return list, nil
 }
 
-// ListSpeedTestNetServers returns all the country-grouped rows of
+// ListSTNetServerLists returns all the country-grouped rows of
 //  speedtest.net servers
-func ListSpeedTestNetServers() ([]domain.STNetServerList, error) {
+func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 
 	var list []domain.STNetServerList
 
-	items, err := scanTable(domain.DataTable, domain.DataTypeSpeedTestNetServerList)
+	items, err := scanTable(domain.DataTable, domain.DataTypeSTNetServerList)
 	if err != nil {
 		return list, err
 	}

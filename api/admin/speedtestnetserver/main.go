@@ -108,7 +108,7 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	allServerLists, err := db.ListSpeedTestNetServers()
+	allServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		return domain.ServerError(err)
 	}
