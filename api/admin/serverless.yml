@@ -173,7 +173,7 @@ functions:
       handler: bin/speedtestnetserver
       events:
         - http:
-            path: speedtestnetserver/country
+            path: speedtestnetserver
             method: GET
             private: true
         - http:
