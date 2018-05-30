@@ -10,33 +10,6 @@ import (
 	"os"
 )
 
-// see https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_BatchWriteItem.html
-func getBatchRequest(requests []string) string {
-	requestStart := fmt.Sprintf(`{
-  "RequestItems": {
-	"%s": [`,
-		domain.DataTypeSpeedTestNetServer,
-	)
-
-	wholeRequest := requestStart
-	lastIndex := len(requests) - 1
-
-	for index, request := range requests {
-		wholeRequest += request
-		if index < lastIndex {
-			wholeRequest += ","
-		}
-		wholeRequest += `
-`
-	}
-
-	wholeRequest += `
-    ]
-  }
-}`
-	return wholeRequest
-}
-
 // GetSTNetServers requests the list of SpeedTestNet servers via http and returns them in a map of structs
 //  with the ServerID's as keys
 func GetSTNetServers(serverURL string) (map[string]domain.SpeedTestNetServer, error) {
