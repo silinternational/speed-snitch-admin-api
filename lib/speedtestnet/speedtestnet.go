@@ -68,7 +68,7 @@ func GetSTNetServers(serverURL string) (map[string]domain.SpeedTestNetServer, er
 }
 
 // getSTNetServersToKeep ...
-//   - returns a map of Servers that are either still valid or are
+//   - returns a map of Servers that are either still valid (available as a speedtest.net server) or are
 //     not valid but are associated with a NamedServer.
 //   - returns a slice of the ServerIDs that are no longer valid but that
 //     are associated with a NamedServer
@@ -202,23 +202,19 @@ func updateNamedServers(
 //   but have a matching Named Server.  Also,
 //     -- it replaces (in the database) all SpeedTestNetServer entries with the new ones but keeps old
 //        ones that still are referenced by a NamedServer
-//     -- it updates NamedServers entries that match a new SpeedTestNetServer with a different HOST value.
+//     -- it updates NamedServers entries that match a new SpeedTestNetServer but have with a new Host value.
 func UpdateSTNetServers(serverURL string) ([]string, error) {
-
-	// Figure out which speedtest.net servers from the database are no longer valid
 	oldServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting speedtest.net servers from database: %s", err.Error())
 	}
 
-	oldServers := map[string]domain.SpeedTestNetServer{}
+	serverCount := 0
 	for _, serverList := range oldServerLists {
-		for _, server := range serverList.Servers {
-			oldServers[server.ServerID] = server
-		}
+		serverCount += len(serverList.Servers)
 	}
 
-	fmt.Fprintf(os.Stdout, "Found %v old servers\n", len(oldServers))
+	fmt.Fprintf(os.Stdout, "Found %v old server lists containing %v servers\n", len(oldServerLists), serverCount)
 
 	newServers, err := GetSTNetServers(serverURL)
 	if err != nil {
@@ -232,7 +228,7 @@ func UpdateSTNetServers(serverURL string) ([]string, error) {
 	}
 	fmt.Fprintf(os.Stdout, "Found %v named servers\n", len(namedServers))
 
-	// Get an updated set of SpeedTestNetServers
+	// Get an updated set of SpeedTestNetServers and a list of the NamedServers that don't have a match anymore
 	serversToKeep, staleServerIDs := getSTNetServersToKeep(oldServerLists, newServers, namedServers)
 	fmt.Fprintf(os.Stdout, "Found %v stale servers\n", len(staleServerIDs))
 
