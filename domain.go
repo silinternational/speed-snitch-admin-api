@@ -153,7 +153,6 @@ type Version struct {
 }
 
 type SpeedTestNetServer struct {
-	ID          string `json:"ID"`
 	Lat         string `xml:"lat,attr" json:"Lat"`
 	Lon         string `xml:"lon,attr" json:"Lon"`
 	Name        string `xml:"name,attr" json:"Name"`
