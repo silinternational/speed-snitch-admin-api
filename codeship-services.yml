@@ -4,6 +4,7 @@ app:
   encrypted_env_file: aws.env.encrypted
   links:
     - dynamo
+    - init-dynamo
   environment:
     - STAGE=local
     - dataTable=speedsnitch_local_data
