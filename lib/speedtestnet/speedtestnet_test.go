@@ -6,6 +6,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 )
 
@@ -92,7 +93,6 @@ func loadSTNetServerLists(stNetServerLists []domain.STNetServerList, t *testing.
 }
 
 func setUpMuxForServerList() *httptest.Server {
-
 	mux := http.NewServeMux()
 
 	testServer := httptest.NewServer(mux)
@@ -179,7 +179,6 @@ func getNamedServerFixtures() []domain.NamedServer {
 }
 
 func getSTNetServerListFixtures() []domain.STNetServerList {
-
 	serverLists := []domain.STNetServerList{
 		{
 			ID:      domain.DataTypeSTNetServerList + "-US",
@@ -234,6 +233,53 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 	return serverLists
 }
 
+func TestHasAHostChangedFalse(t *testing.T) {
+	oldList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	newList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	if hasAHostChanged(oldList, newList) {
+		t.Errorf("Didn't expect to see that a host had changed, but did.")
+	}
+}
+
+func TestHasAHostChangedTrue(t *testing.T) {
+	oldList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	newList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme-new.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	if !hasAHostChanged(oldList, newList) {
+		t.Errorf("Expected to see that a host had changed, but didn't.")
+	}
+}
+
+func TestHasAHostChangedTrueDifferentLengths(t *testing.T) {
+	oldList := []domain.SpeedTestNetServer{
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	newList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	if !hasAHostChanged(oldList, newList) {
+		t.Errorf("Expected to see that a host had changed, but didn't.")
+	}
+}
+
 func TestRefreshSTNetServersByCountry(t *testing.T) {
 	deleteSTNetServerLists(t)
 	oldServerLists := getSTNetServerListFixtures()
@@ -249,6 +295,7 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 		"no-named-server": oldServerLists[1].Servers[2],
 	}
 
+	// This changes the entries in the database
 	err := refreshSTNetServersByCountry(newServers)
 	if err != nil {
 		t.Errorf("Unexpected error: %s", err.Error())
@@ -268,10 +315,18 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 		return
 	}
 
+	// To facilitate checking the results, put them in a map and sort the servers by their Host values
 	results := map[string][]domain.SpeedTestNetServer{}
-	results[dbServers[0].Country.Code] = dbServers[0].Servers
-	results[dbServers[1].Country.Code] = dbServers[1].Servers
+	for _, server := range dbServers {
+		countryServers := server.Servers
 
+		sort.Slice(countryServers, func(i, j int) bool {
+			return countryServers[i].Host < countryServers[j].Host
+		})
+		results[server.Country.Code] = countryServers
+	}
+
+	// Just check the Host values
 	expected := map[string][]string{} // Host
 	expected["US"] = []string{oldServerLists[0].Servers[0].Host, updatedServer.Host}
 	expected["FR"] = []string{oldServerLists[1].Servers[0].Host, oldServerLists[1].Servers[2].Host}
@@ -334,9 +389,9 @@ func TestGetSTNetServersToKeep(t *testing.T) {
 	oldServerLists := getSTNetServerListFixtures()
 	oldServerLists = oldServerLists[0:2] // don't keep the last country (ZZ)
 
-	//	// Give one of the new servers a different host
+	// Give one of the new servers a different host
 	updatedServer := oldServerLists[0].Servers[1]
-	updatedServer.Host = "updated.host.com"
+	updatedServer.Host = "brand.new.host.com"
 
 	newServers := map[string]domain.SpeedTestNetServer{
 		"fine":            oldServerLists[0].Servers[0],
@@ -347,6 +402,7 @@ func TestGetSTNetServersToKeep(t *testing.T) {
 
 	serversToKeep, staleServerIDs := getSTNetServersToKeep(oldServerLists, newServers, namedServers)
 
+	// First check serversToKeep
 	expectedServers := map[string]domain.SpeedTestNetServer{
 		"fine":            oldServerLists[0].Servers[0],
 		"updating":        updatedServer,
@@ -376,11 +432,10 @@ func TestGetSTNetServersToKeep(t *testing.T) {
 		}
 	}
 
+	// Now check staleServerIDs
 	expectedIDs := []string{"missing"}
-	expectedLen = 1
-	resultsLen = len(staleServerIDs)
 
-	if expectedLen != resultsLen {
+	if len(staleServerIDs) != 1 {
 		t.Errorf("Bad staleServerIDs. Expected %v, but got %v.", expectedIDs, staleServerIDs)
 		return
 	}
@@ -394,6 +449,7 @@ func TestUpdateNamedServers(t *testing.T) {
 	deleteNamedServers(t)
 	namedServers := loadAndGetNamedServers(t)
 
+	// One Host is different (for "updating") and one is no longer there ("missing")
 	serversToKeep := map[string]domain.SpeedTestNetServer{
 		"fine":            {ServerID: "fine", Host: "fine.host.com:8080"},
 		"updating":        {ServerID: "updating", Host: "brand.new.host.com:8080"},
@@ -414,7 +470,7 @@ func TestUpdateNamedServers(t *testing.T) {
 	}
 
 	expected := map[string]string{
-		"updating": serversToKeep["updating"].Host,
+		"updating": serversToKeep["updating"].Host, // This is a change
 		"good":     serversToKeep["good"].Host,
 		"missing":  "missing.server.com:8080", // updateNamedServers does not delete any
 	}
@@ -438,6 +494,7 @@ func TestUpdateNamedServers(t *testing.T) {
 
 }
 
+// This test doesn't check the results in depth, since the other tests do that.
 func TestUpdateSTNetServers(t *testing.T) {
 	deleteNamedServers(t)
 	namedServers := getNamedServerFixtures()
@@ -454,6 +511,7 @@ func TestUpdateSTNetServers(t *testing.T) {
 		return
 	}
 
+	// First, check the staleServerIDs
 	lenResults := len(staleServerIDs)
 	if lenResults != 1 {
 		t.Errorf("Expected one stale Server ID but got: %d", lenResults)
@@ -467,6 +525,7 @@ func TestUpdateSTNetServers(t *testing.T) {
 		return
 	}
 
+	// Second, check the number of NamedServers in the database
 	dbNamedServers, err := db.ListNamedServers()
 	if err != nil {
 		t.Errorf("Unexpected error getting NamedServers from db: %s", err.Error())
@@ -478,6 +537,7 @@ func TestUpdateSTNetServers(t *testing.T) {
 		return
 	}
 
+	// Third, check the number of STNetServerLists in the database
 	stNetServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		t.Errorf("Unexpected error getting STNetServerLists from db: %s", err.Error())

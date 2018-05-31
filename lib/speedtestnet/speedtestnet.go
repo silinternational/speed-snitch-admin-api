@@ -75,6 +75,35 @@ func getSTNetServersToKeep(
 	return serversToKeep, staleServerIDs
 }
 
+// hasAHostChanged checks if
+//   -- the length of the two lists is different or
+//   -- if any of the old serverIDs are missing from the new servers or
+//   -- if any of the matching Host values are different
+func hasAHostChanged(oldServers, newServers []domain.SpeedTestNetServer) bool {
+	if len(oldServers) != len(newServers) {
+		return true
+	}
+
+	newHosts := map[string]string{}
+	for _, server := range newServers {
+		newHosts[server.ServerID] = server.Host
+	}
+
+	oldHosts := map[string]string{}
+	for _, server := range oldServers {
+		oldHosts[server.ServerID] = server.Host
+	}
+
+	for oldID, oldHost := range oldHosts {
+		newHost, ok := newHosts[oldID]
+		if !ok || oldHost != newHost {
+			return true
+		}
+	}
+
+	return false
+}
+
 // refreshSTNetServersByCountry takes the new SpeedTestNetServers and groups them by country.
 //  If any of the old country groupings are not represented in the new ones, it deletes them.
 //  It updates all the other country groupings of servers with the new data.
@@ -101,22 +130,24 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 		return fmt.Errorf("Error trying to get the SpeedTestNetServerLists from the db: %s", err.Error())
 	}
 
-	for _, serverList := range oldServers {
-		newServerList, ok := groupedServers[serverList.Country.Code]
-		// If the country is still represented in the new data, update it
+	for _, oldServerList := range oldServers {
+		newServerList, ok := groupedServers[oldServerList.Country.Code]
+		// If the country is still represented in the new data, and if it has a significant change, update it
 		if ok {
-			newServerList.ID = domain.DataTypeSTNetServerList + "-" + serverList.Country.Code
-			err := db.PutItem(domain.DataTable, &newServerList)
-			if err != nil {
-				return fmt.Errorf("Error trying to update SpeedTestNetServerList, %s, in the db: %s", newServerList.ID, err.Error())
+			if hasAHostChanged(oldServerList.Servers, newServerList.Servers) {
+				newServerList.ID = domain.DataTypeSTNetServerList + "-" + oldServerList.Country.Code
+				err := db.PutItem(domain.DataTable, &newServerList)
+				if err != nil {
+					return fmt.Errorf("Error trying to update SpeedTestNetServerList, %s, in the db: %s", newServerList.ID, err.Error())
+				}
 			}
 			// If the country is no longer represented in the new data, delete it
 		} else {
-			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, serverList.Country.Code)
+			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, oldServerList.Country.Code)
 			if err != nil {
-				return fmt.Errorf("Error trying to delete SpeedTestNetServerList, %s, from the db: %s", serverList.ID, err.Error())
+				return fmt.Errorf("Error trying to delete SpeedTestNetServerList, %s, from the db: %s", oldServerList.ID, err.Error())
 			}
-			fmt.Fprintf(os.Stdout, "Deleting SpeedTestNetServerList entry for country code %s\n", serverList.Country.Code)
+			fmt.Fprintf(os.Stdout, "Deleting SpeedTestNetServerList entry for country code %s\n", oldServerList.Country.Code)
 		}
 	}
 
