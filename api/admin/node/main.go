@@ -14,8 +14,8 @@ import (
 const SelfType = domain.DataTypeNode
 
 const DefaultPingTimeoutInSeconds = 5
-const DefaultSpeedTestTimeoutInSeconds = 300 // 5 minutes
-const DefaultSpeedTestMaxSeconds = 300.0     // 5 minutes
+const DefaultSpeedTestTimeoutInSeconds = 60 // 1 minute
+const DefaultSpeedTestMaxSeconds = 60.0     // 1 minute
 
 const ServerIDKey = "serverID"
 const ServerHostKey = "Host"
@@ -43,11 +43,11 @@ func (c Client) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedSer
 }
 
 func GetDefaultSpeedTestDownloadSizes() []int {
-	return []int{245388, 505544}
+	return []int{245388, 505544, 1118012, 1986284}
 }
 
 func GetDefaultSpeedTestUploadSizes() []int {
-	return []int{32768, 65536}
+	return []int{32768, 65536, 131072, 262144, 524288}
 }
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
