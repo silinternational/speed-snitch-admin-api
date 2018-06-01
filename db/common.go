@@ -15,17 +15,13 @@ import (
 	"os"
 )
 
-const ENV_STAGE = "STAGE"
+const ENV_DYNAMO_ENDPOINT = "AWS_DYNAMODB_ENDPOINT"
 
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
 
 func GetDb() *dynamodb.DynamoDB {
-	tier := os.Getenv(ENV_STAGE)
-	if tier == "local" {
-		return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint("http://dynamo:8000"))
-	}
-
-	return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
+	dynamoEndpoint := os.Getenv(ENV_DYNAMO_ENDPOINT)
+	return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint(dynamoEndpoint))
 }
 
 func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
