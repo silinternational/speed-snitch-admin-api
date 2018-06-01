@@ -109,6 +109,7 @@ func hasAHostChanged(oldServers, newServers []domain.SpeedTestNetServer) bool {
 //  It updates all the other country groupings of servers with the new data.
 func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) error {
 
+	// This just groups the new servers by country (based on country code)
 	groupedServers := map[string]domain.STNetServerList{}
 	for _, server := range servers {
 		_, ok := groupedServers[server.CountryCode]
@@ -125,12 +126,18 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 		}
 	}
 
+	// Delete or update the old server lists first
 	oldServers, err := db.ListSTNetServerLists()
 	if err != nil {
 		return fmt.Errorf("Error trying to get the SpeedTestNetServerLists from the db: %s", err.Error())
 	}
 
+	oldCountries := map[string]bool{}
+	countriesAdded := 0
+	countriesUpdated := 0
+
 	for _, oldServerList := range oldServers {
+		oldCountries[oldServerList.Country.Code] = true
 		newServerList, ok := groupedServers[oldServerList.Country.Code]
 		// If the country is still represented in the new data, and if it has a significant change, update it
 		if ok {
@@ -140,6 +147,7 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 				if err != nil {
 					return fmt.Errorf("Error trying to update SpeedTestNetServerList, %s, in the db: %s", newServerList.ID, err.Error())
 				}
+				countriesUpdated++
 			}
 			// If the country is no longer represented in the new data, delete it
 		} else {
@@ -151,6 +159,22 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 		}
 	}
 
+	fmt.Fprintf(os.Stdout, "Updated server lists for %d countries.\n", countriesUpdated)
+
+	// Now if there are new server lists that were not in the db add them.
+	for countryCode, newServerList := range groupedServers {
+		_, ok := oldCountries[countryCode]
+		if !ok {
+			newServerList.ID = domain.DataTypeSTNetServerList + "-" + countryCode
+			err := db.PutItem(domain.DataTable, &newServerList)
+			if err != nil {
+				return fmt.Errorf("Error trying to add SpeedTestNetServerList for %s, in the db: %s", countryCode, err.Error())
+			}
+			countriesAdded++
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "Added server lists for %d countries.\n", countriesAdded)
 	return nil
 }
 
