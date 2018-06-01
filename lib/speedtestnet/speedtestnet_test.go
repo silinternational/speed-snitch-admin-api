@@ -35,6 +35,17 @@ func deleteNamedServers(t *testing.T) {
 			t.Fail()
 		}
 	}
+
+	items, err = db.ListNamedServers()
+	if err != nil {
+		t.Errorf("Could not get list of NamedServers for test preparations. Got error: %s", err.Error())
+		t.Fail()
+	}
+
+	if len(items) > 0 {
+		t.Errorf("Did not succeed in deleting NamedServers for test preparations. Got %d items", len(items))
+		t.Fail()
+	}
 }
 
 func deleteSTNetServerLists(t *testing.T) {
@@ -45,11 +56,22 @@ func deleteSTNetServerLists(t *testing.T) {
 	}
 
 	for _, nextItem := range items {
-		success, err := db.DeleteItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, nextItem.Country.Code)
+		success, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, nextItem.Country.Code)
 		if err != nil || !success {
 			t.Errorf("Could not delete SpeedTestNetServers from db for test preparations.  Country Code: %s. %s", nextItem.Country.Code, err.Error())
 			t.Fail()
 		}
+	}
+
+	items, err = db.ListSTNetServerLists()
+	if err != nil {
+		t.Errorf("Could not get list of SpeedTestNetServers for test preparations. Got error: %s", err.Error())
+		t.Fail()
+	}
+
+	if len(items) > 0 {
+		t.Errorf("Did not succeed in deleting SpeedTestNetServers for test preparations. Got %d items", len(items))
+		t.Fail()
 	}
 }
 
@@ -348,7 +370,77 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 			}
 		}
 	}
+}
 
+func TestRefreshSTNetServersByCountryStartEmpty(t *testing.T) {
+	deleteSTNetServerLists(t)
+
+	// We're using the data but not loading them into the db
+	oldServerLists := getSTNetServerListFixtures()
+
+	updatedServer := oldServerLists[0].Servers[1]
+	updatedServer.Host = "updated.host.com"
+
+	newServers := map[string]domain.SpeedTestNetServer{
+		"fine":            oldServerLists[0].Servers[0],
+		"updating":        updatedServer,
+		"good":            oldServerLists[1].Servers[0],
+		"no-named-server": oldServerLists[1].Servers[2],
+	}
+
+	// This changes the entries in the database
+	err := refreshSTNetServersByCountry(newServers)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	dbServers, err := db.ListSTNetServerLists()
+	if err != nil {
+		t.Errorf("Unexpected error getting STNetServerLists: %s", err.Error())
+		return
+	}
+
+	expectedLen := 2
+	resultsLen := len(dbServers)
+	if expectedLen != resultsLen {
+		t.Errorf("Bad results. Expected list with %d elements.\n But got %d: %v", expectedLen, resultsLen, dbServers)
+		return
+	}
+
+	// To facilitate checking the results, put them in a map and sort the servers by their Host values
+	results := map[string][]domain.SpeedTestNetServer{}
+	for _, server := range dbServers {
+		countryServers := server.Servers
+
+		sort.Slice(countryServers, func(i, j int) bool {
+			return countryServers[i].Host < countryServers[j].Host
+		})
+		results[server.Country.Code] = countryServers
+	}
+
+	// Just check the Host values
+	expected := map[string][]string{} // Host
+	expected["US"] = []string{oldServerLists[0].Servers[0].Host, updatedServer.Host}
+	expected["FR"] = []string{oldServerLists[1].Servers[0].Host, oldServerLists[1].Servers[2].Host}
+
+	for id, serverList := range expected {
+		nextResults, ok := results[id]
+		if !ok {
+			t.Errorf("Missing entry with id: %s.\n%v", id, dbServers)
+			return
+		}
+		if len(nextResults) != len(serverList) {
+			t.Errorf("Bad list of servers for id: %s. Expected %v But got %v", id, serverList, nextResults)
+			return
+		}
+		for index := 0; index < len(serverList); index++ {
+			if serverList[index] != nextResults[index].Host {
+				t.Errorf("Bad list of servers for id: %s. Expected %v\n But got %v", id, serverList, nextResults)
+				return
+			}
+		}
+	}
 }
 
 func TestGetSTNetNamedServers(t *testing.T) {
@@ -491,7 +583,6 @@ func TestUpdateNamedServers(t *testing.T) {
 			t.Errorf("Bad Host for NamedServer: %s. Expected: %s, but got: %s", id, expectedHost, oneResult.ServerHost)
 		}
 	}
-
 }
 
 // This test doesn't check the results in depth, since the other tests do that.
