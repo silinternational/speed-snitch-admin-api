@@ -8,6 +8,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
 	"sort"
+	"strings"
 )
 
 const SelfType = domain.DataTypeSTNetServerList
@@ -17,13 +18,19 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 	_, countrySpecified := req.PathParameters["countryCode"]
 	switch req.HTTPMethod {
 	case "GET":
-		if serverSpecified {
+		if strings.HasSuffix(req.Path, "/country") {
+			return listCountries(req)
+		}
+		if countrySpecified && serverSpecified {
 			return viewServer(req)
 		}
 		if countrySpecified {
 			return listServersInCountry(req)
 		}
-		return listCountries(req)
+		return domain.ClientError(
+			http.StatusUnprocessableEntity,
+			`"/country/" is required - optionally followed by the country code param.`,
+		)
 	default:
 		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: "+req.HTTPMethod)
 	}
