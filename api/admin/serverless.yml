@@ -199,7 +199,7 @@ functions:
       events:
           # cron(1 0 ? * SUN *) = Sunday at 00:01
        # - schedule: cron(1 0 ? * SUN *)
-        - schedule: cron(55 * * * * *)
+        - schedule: cron(58 * * * ? *)
 
   user:
       handler: bin/user
