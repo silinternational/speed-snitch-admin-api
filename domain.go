@@ -158,7 +158,6 @@ type SpeedTestNetServer struct {
 	Name        string `xml:"name,attr" json:"Name"`
 	Country     string `xml:"country,attr" json:"Country"`
 	CountryCode string `xml:"cc,attr"  json:"CountryCode"`
-	Sponsor     string `xml:"sponsor,attr" json:"Sponsor"`
 	ServerID    string `xml:"id,attr" json:"ServerID"`
 	Host        string `xml:"host,attr" json:"Host"`
 	Timestamp   int64
