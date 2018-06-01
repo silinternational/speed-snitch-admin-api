@@ -197,9 +197,10 @@ functions:
   speedtestnetserverupdate:
       handler: bin/speedtestnetserverupdate
       events:
+        # - schedule: cron(10 * * * ? *)
+
           # cron(1 0 ? * SUN *) = Sunday at 00:01
-       # - schedule: cron(1 0 ? * SUN *)
-        - schedule: cron(10 * * * ? *)
+        - schedule: cron(1 0 ? * SUN *)
 
   user:
       handler: bin/user
