@@ -15,6 +15,6 @@ dep:
 	docker-compose run app dep ensure
 
 test:
-	docker-compose run app ./codeship/test.sh
+	docker-compose run test ./codeship/test.sh
 
 codeshipsetup: dep build
