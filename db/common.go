@@ -298,13 +298,20 @@ func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 }
 
 func GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	var stnServer domain.SpeedTestNetServer
-	err := GetItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, namedServer.SpeedTestNetServerID, &stnServer)
+	var stnServerList domain.STNetServerList
+	countryCode := namedServer.Country.Code
+	err := GetItem(domain.DataTable, domain.DataTypeSTNetServerList, countryCode, &stnServerList)
 	if err != nil {
-		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting SpeedTestNetServer for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
+		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting STNetServerList for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
 	}
 
-	return stnServer, nil
+	for _, server := range stnServerList.Servers {
+		if server.ServerID == namedServer.SpeedTestNetServerID {
+			return server, nil
+		}
+	}
+
+	return domain.SpeedTestNetServer{}, fmt.Errorf("Could not find matching SpeedTestNet Server with id %s.", namedServer.SpeedTestNetServerID)
 }
 
 type ServerData struct {

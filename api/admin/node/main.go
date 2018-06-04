@@ -333,8 +333,8 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 
 	// If no NamedServerID, then use defaults
 	if task.NamedServerID == "" {
-		stringValues = setStringValueIfMissing(stringValues, ServerHostKey, domain.DefaultPingServerHost)
-		stringValues = setStringValueIfMissing(stringValues, ServerIDKey, domain.DefaultPingServerID)
+		stringValues = setStringValue(stringValues, ServerHostKey, domain.DefaultPingServerHost)
+		stringValues = setStringValue(stringValues, ServerIDKey, domain.DefaultPingServerID)
 		return stringValues, nil
 	}
 
@@ -345,8 +345,8 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServerID, err.Error())
 	}
 
-	stringValues = setStringValueIfMissing(stringValues, ServerHostKey, namedServer.ServerHost)
-	stringValues = setStringValueIfMissing(stringValues, ServerIDKey, namedServer.UID)
+	stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
+	stringValues = setStringValue(stringValues, ServerIDKey, namedServer.UID)
 
 	return stringValues, nil
 }
@@ -381,8 +381,8 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 
 	// If there is no NamedServerID, then use the defaults
 	if task.NamedServerID == "" {
-		stringValues = setStringValueIfMissing(stringValues, ServerHostKey, domain.DefaultSpeedTestNetServerHost)
-		stringValues = setStringValueIfMissing(stringValues, ServerIDKey, domain.DefaultSpeedTestNetServerID)
+		stringValues = setStringValue(stringValues, ServerHostKey, domain.DefaultSpeedTestNetServerHost)
+		stringValues = setStringValue(stringValues, ServerIDKey, domain.DefaultSpeedTestNetServerID)
 		return stringValues, nil
 	}
 
@@ -395,8 +395,8 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 
 	// This does not refer to a SpeedTestNetServer
 	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
-		stringValues = setStringValueIfMissing(stringValues, ServerHostKey, namedServer.ServerHost)
-		stringValues = setStringValueIfMissing(stringValues, ServerIDKey, namedServer.UID)
+		stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
+		stringValues = setStringValue(stringValues, ServerIDKey, namedServer.UID)
 		return stringValues, nil
 	}
 
@@ -406,8 +406,8 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 		return stringValues, err
 	}
 
-	stringValues = setStringValueIfMissing(stringValues, ServerHostKey, stnServer.Host)
-	stringValues = setStringValueIfMissing(stringValues, ServerIDKey, stnServer.ServerID)
+	stringValues = setStringValue(stringValues, ServerHostKey, stnServer.Host)
+	stringValues = setStringValue(stringValues, ServerIDKey, stnServer.ServerID)
 	return stringValues, nil
 }
 
@@ -447,15 +447,12 @@ func setIntSliceIfMissing(intSlices map[string][]int, key string, values []int) 
 	return intSlices
 }
 
-func setStringValueIfMissing(stringValues map[string]string, key string, value string) map[string]string {
+func setStringValue(stringValues map[string]string, key string, value string) map[string]string {
 	if stringValues == nil {
 		return map[string]string{key: value}
 	}
 
-	_, ok := stringValues[key]
-	if !ok {
-		stringValues[key] = value
-	}
+	stringValues[key] = value
 	return stringValues
 }
 
