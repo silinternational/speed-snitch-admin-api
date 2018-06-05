@@ -149,6 +149,13 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 		// If the country is still represented in the new data, and if it has a significant change, update it
 		if ok {
 			if hasAHostChanged(oldServerList.Servers, newServerList.Servers) {
+				sortedServers := newServerList.Servers
+				// Sort ascending by country name
+				sort.Slice(sortedServers, func(i, j int) bool {
+					return sortedServers[i].Name < sortedServers[j].Name
+				})
+				newServerList.Servers = sortedServers
+
 				newServerList.ID = domain.DataTypeSTNetServerList + "-" + oldServerList.Country.Code
 				err := db.PutItem(domain.DataTable, &newServerList)
 				if err != nil {

@@ -211,12 +211,14 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 					CountryCode: "US",
 					Country:     "United States",
 					Host:        "fine.host.com:8080",
+					Name:        "New York",
 				},
 				{
 					ServerID:    "updating",
 					CountryCode: "US",
 					Country:     "United States",
 					Host:        "outdated.host.com:8080",
+					Name:        "Miami",
 				},
 			},
 		},
@@ -229,18 +231,21 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 					CountryCode: "FR",
 					Country:     "France",
 					Host:        "good.host.com:8080",
+					Name:        "Paris",
 				},
 				{
 					ServerID:    "missing",
 					CountryCode: "FR",
 					Country:     "France",
 					Host:        "missing.server.com:8080",
+					Name:        "Lyon",
 				},
 				{
 					ServerID:    "no-named-server",
 					CountryCode: "FR",
 					Country:     "France",
 					Host:        "no.namedserver.com:8080",
+					Name:        "Paris",
 				},
 			},
 		},
@@ -253,6 +258,7 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 					CountryCode: "ZZ",
 					Country:     "Zombieland",
 					Host:        "zombies.got.uscom:8080",
+					Name:        "Gotham",
 				},
 			},
 		},
@@ -343,20 +349,15 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 		return
 	}
 
-	// To facilitate checking the results, put them in a map and sort the servers by their Host values
+	// To facilitate checking the results, put them in a map (the servers should be sorted by their Name values)
 	results := map[string][]domain.SpeedTestNetServer{}
 	for _, server := range dbServers {
-		countryServers := server.Servers
-
-		sort.Slice(countryServers, func(i, j int) bool {
-			return countryServers[i].Host < countryServers[j].Host
-		})
-		results[server.Country.Code] = countryServers
+		results[server.Country.Code] = server.Servers
 	}
 
 	// Just check the Host values
 	expected := map[string][]string{} // Host
-	expected["US"] = []string{oldServerLists[0].Servers[0].Host, updatedServer.Host}
+	expected["US"] = []string{updatedServer.Host, oldServerLists[0].Servers[0].Host}
 	expected["FR"] = []string{oldServerLists[1].Servers[0].Host, oldServerLists[1].Servers[2].Host}
 
 	for id, serverList := range expected {
