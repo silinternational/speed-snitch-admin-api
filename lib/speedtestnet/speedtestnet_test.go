@@ -209,11 +209,13 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 				{
 					ServerID:    "fine",
 					CountryCode: "US",
+					Country:     "United States",
 					Host:        "fine.host.com:8080",
 				},
 				{
 					ServerID:    "updating",
 					CountryCode: "US",
+					Country:     "United States",
 					Host:        "outdated.host.com:8080",
 				},
 			},
@@ -225,16 +227,19 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 				{
 					ServerID:    "good",
 					CountryCode: "FR",
+					Country:     "France",
 					Host:        "good.host.com:8080",
 				},
 				{
 					ServerID:    "missing",
 					CountryCode: "FR",
+					Country:     "France",
 					Host:        "missing.server.com:8080",
 				},
 				{
 					ServerID:    "no-named-server",
 					CountryCode: "FR",
+					Country:     "France",
 					Host:        "no.namedserver.com:8080",
 				},
 			},
@@ -246,6 +251,7 @@ func getSTNetServerListFixtures() []domain.STNetServerList {
 				{
 					ServerID:    "zombies",
 					CountryCode: "ZZ",
+					Country:     "Zombieland",
 					Host:        "zombies.got.uscom:8080",
 				},
 			},
@@ -369,6 +375,26 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 				return
 			}
 		}
+	}
+
+	// Check that the list of countries got saved to the DB
+	countryList := domain.STNetCountryList{}
+	err = db.GetItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countryList)
+	if err != nil {
+		t.Errorf("Unexpected error retrieving country list for speedtest.net servers.\n%s", err.Error())
+		return
+	}
+	resultsList := countryList.Countries
+	expectedList := []domain.Country{{Code: "FR", Name: "France"}, {Code: "US", Name: "United States"}}
+
+	if len(resultsList) != len(expectedList) {
+		t.Errorf("Bad Country List. Expected: %v.\n\t But got: %v", expectedList, resultsList)
+		return
+	}
+
+	if expectedList[0] != resultsList[0] || expectedList[1] != resultsList[1] {
+		t.Errorf("Bad Country List. Expected: %v.\n\t But got: %v", expectedList, resultsList)
+		return
 	}
 }
 

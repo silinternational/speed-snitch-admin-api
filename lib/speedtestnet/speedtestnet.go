@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sort"
 )
 
 // GetSTNetServers requests the list of SpeedTestNet servers via http and returns them in a map of structs
@@ -107,15 +108,21 @@ func hasAHostChanged(oldServers, newServers []domain.SpeedTestNetServer) bool {
 // refreshSTNetServersByCountry takes the new SpeedTestNetServers and groups them by country.
 //  If any of the old country groupings are not represented in the new ones, it deletes them.
 //  It updates all the other country groupings of servers with the new data.
+//  *** It also saves a list of the countries as one row in the database
 func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) error {
+	countries := map[string]domain.Country{}
 
-	// This just groups the new servers by country (based on country code)
+	// This groups the new servers by country (based on country code)
+	// and builds a map of just the countries themselves
 	groupedServers := map[string]domain.STNetServerList{}
 	for _, server := range servers {
+		// Keep track of the countries separately
+		country := domain.Country{Code: server.CountryCode, Name: server.Country}
+		countries[country.Code] = country
 		_, ok := groupedServers[server.CountryCode]
 		if !ok {
 			groupedServers[server.CountryCode] = domain.STNetServerList{
-				Country: domain.Country{Code: server.CountryCode, Name: server.Country},
+				Country: country,
 				Servers: []domain.SpeedTestNetServer{server},
 			}
 		} else {
@@ -175,6 +182,26 @@ func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) 
 	}
 
 	fmt.Fprintf(os.Stdout, "Added server lists for %d countries.\n", countriesAdded)
+
+	countryList := []domain.Country{}
+	for _, country := range countries {
+		countryList = append(countryList, country)
+	}
+
+	// Sort ascending by country name
+	sort.Slice(countryList, func(i, j int) bool {
+		return countryList[i].Name < countryList[j].Name
+	})
+
+	stNetCountryList := domain.STNetCountryList{
+		ID:        domain.DataTypeSTNetCountryList + "-" + domain.STNetCountryListUID,
+		Countries: countryList,
+	}
+
+	err = db.PutItem(domain.DataTable, &stNetCountryList)
+	if err != nil {
+		return fmt.Errorf("Error trying to update the list of countries for speedtest.net servers.\n%s", err.Error())
+	}
 	return nil
 }
 

@@ -111,14 +111,22 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	allServerLists, err := db.ListSTNetServerLists()
-	if err != nil {
-		return domain.ServerError(err)
-	}
+	var countryList []domain.Country
+	countriesEntry := domain.STNetCountryList{}
 
-	countryList, err := getCountriesFromSTNetServerLists(allServerLists)
-	if err != nil {
-		return domain.ServerError(err)
+	err := db.GetItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countriesEntry)
+	if err == nil && len(countriesEntry.Countries) > 50 {
+		countryList = countriesEntry.Countries
+	} else {
+		allServerLists, err := db.ListSTNetServerLists()
+		if err != nil {
+			return domain.ServerError(err)
+		}
+
+		countryList, err = getCountriesFromSTNetServerLists(allServerLists)
+		if err != nil {
+			return domain.ServerError(err)
+		}
 	}
 
 	js, err := json.Marshal(countryList)

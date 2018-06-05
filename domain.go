@@ -21,6 +21,7 @@ const DataTypeNamedServer = "namedserver"
 const DataTypeNode = "node"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
 const DataTypeSTNetServerList = "stnetserverlist"
+const DataTypeSTNetCountryList = "stnetcountrylist"
 const DataTypeTag = "tag"
 const DataTypeUser = "user"
 const DataTypeVersion = "version"
@@ -30,6 +31,8 @@ const ServerTypeCustom = "custom"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
 
+const STNetCountryListUID = "1"
+
 const TaskTypePing = "ping"
 const TaskTypeSpeedTest = "speedTest"
 
@@ -37,7 +40,7 @@ const TestConfigSpeedTest = "speedTest"
 const TestConfigLatencyTest = "latencyTest"
 
 const DefaultPingServerID = "defaultPing"
-const DefaultPingServerHost = "google.com:8080"
+const DefaultPingServerHost = "paris1.speedtest.orange.fr:8080"
 
 const DefaultSpeedTestNetServerID = "5559"
 const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
@@ -167,6 +170,11 @@ type STNetServerList struct {
 	ID      string               `json:"ID"`
 	Country Country              `json:"Country"`
 	Servers []SpeedTestNetServer `xml:"server"`
+}
+
+type STNetCountryList struct {
+	ID        string    `json:"ID"`
+	Countries []Country `json:"Countries"`
 }
 
 type STNetServerSettings struct {
