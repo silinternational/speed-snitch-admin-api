@@ -3,24 +3,118 @@ package speedtestnet
 import (
 	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"testing"
 )
 
-// See the host values on these (3333 is missing intentionally)
+// See the host values on these ("missing" is missing intentionally)
 const ServerListResponse = `<?xml version="1.0" encoding="UTF-8"?>
 <settings>
 <servers>
- <server url="http://88.84.191.230/speedtest/upload.php" lat="70.0733" lon="29.7497" name="Vadso" country="Norway" cc="NO" sponsor="Varanger KraftUtvikling AS" id="0000"  url2="http://speedmonster.varangerbynett.no/speedtest/upload.php" host="fine.host.com:8080" />
- <server url="http://speedtest.nornett.net/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Nornett AS" id="1111"  url2="http://speedtest2.nornett.net/speedtest/upload.php" host="outdated.host.com:8080" />
- <server url="http://speedo.eltele.no/speedtest/upload.php" lat="69.9403" lon="23.3106" name="Alta" country="Norway" cc="NO" sponsor="Eltele AS" id="2222"  host="good.host.com:8080" />
- <server url="http://tos.speedtest.as2116.net/speedtest/upload.php" lat="69.6492" lon="18.9553" name="Tromsø" country="Norway" cc="NO" sponsor="Broadnet" id="4444"  host="no.namedserver.com:8080" />
+ <server lat="23.2559" lon="-80.9898" name="Miami" country="United States" cc="US" sponsor="STP" id="fine" host="fine.host.com:8080" />
+ <server lat="38.6266" lon="-106.6539" name="Denver" country="United States" cc="US" sponsor="Dial" id="updating" host="outdated.host.com:8080" />
+ <server lat="47.3472" lon="3.3851" name="Paris" country="France" cc="FR" sponsor="Eltele AS" id="good"  host="good.host.com:8080" />
+ <server lat="46.1428" lon="5.1430" name="Lyon" country="France" cc="FR" sponsor="Broadnet" id="no-named-server"  host="no.namedserver.com:8080" />
 </servers>
 </settings>`
 
-func TestGetSTNetServers(t *testing.T) {
+func deleteNamedServers(t *testing.T) {
+	items, err := db.ListNamedServers()
+	if err != nil {
+		t.Errorf("Could not get list of NamedServers for test preparations. Got error: %s", err.Error())
+		t.Fail()
+	}
 
+	for _, nextItem := range items {
+		success, err := db.DeleteItem(domain.DataTable, domain.DataTypeNamedServer, nextItem.UID)
+		if err != nil || !success {
+			t.Errorf("Could not delete NamedServer from db for test preparations.  UID: %s. %s", nextItem.UID, err.Error())
+			t.Fail()
+		}
+	}
+
+	items, err = db.ListNamedServers()
+	if err != nil {
+		t.Errorf("Could not get list of NamedServers for test preparations. Got error: %s", err.Error())
+		t.Fail()
+	}
+
+	if len(items) > 0 {
+		t.Errorf("Did not succeed in deleting NamedServers for test preparations. Got %d items", len(items))
+		t.Fail()
+	}
+}
+
+func deleteSTNetServerLists(t *testing.T) {
+	items, err := db.ListSTNetServerLists()
+	if err != nil {
+		t.Errorf("Could not get list of SpeedTestNetServers for test preparations. Got error: %s", err.Error())
+		t.Fail()
+	}
+
+	for _, nextItem := range items {
+		success, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, nextItem.Country.Code)
+		if err != nil || !success {
+			t.Errorf("Could not delete SpeedTestNetServers from db for test preparations.  Country Code: %s. %s", nextItem.Country.Code, err.Error())
+			t.Fail()
+		}
+	}
+
+	items, err = db.ListSTNetServerLists()
+	if err != nil {
+		t.Errorf("Could not get list of SpeedTestNetServers for test preparations. Got error: %s", err.Error())
+		t.Fail()
+	}
+
+	if len(items) > 0 {
+		t.Errorf("Did not succeed in deleting SpeedTestNetServers for test preparations. Got %d items", len(items))
+		t.Fail()
+	}
+}
+
+func loadNamedServers(namedServers []domain.NamedServer, t *testing.T) {
+	for _, namedServer := range namedServers {
+		err := db.PutItem(domain.DataTable, &namedServer)
+		if err != nil {
+			t.Errorf(
+				"Could not load NamedServer into db for test preparations. UID: %s. \nError: %s",
+				namedServer.UID,
+				err.Error(),
+			)
+			t.Fail()
+		}
+	}
+}
+
+func loadAndGetNamedServers(t *testing.T) map[string]domain.NamedServer {
+	loadNamedServers(getNamedServerFixtures(), t)
+	namedServers, err := getSTNetNamedServers()
+	if err != nil {
+		t.Errorf("Could not get NamedServers from the db to prepare for the test.\n%s", err.Error())
+		t.Fail()
+	}
+
+	return namedServers
+}
+
+func loadSTNetServerLists(stNetServerLists []domain.STNetServerList, t *testing.T) {
+	for _, server := range stNetServerLists {
+		err := db.PutItem(domain.DataTable, &server)
+		if err != nil {
+			t.Errorf(
+				"Could not load NamedServer into db for test preparations. ID: %s. \nError: %s",
+				server.ID,
+				err.Error(),
+			)
+			t.Fail()
+		}
+	}
+}
+
+func setUpMuxForServerList() *httptest.Server {
 	mux := http.NewServeMux()
 
 	testServer := httptest.NewServer(mux)
@@ -32,6 +126,12 @@ func TestGetSTNetServers(t *testing.T) {
 		w.WriteHeader(200)
 		fmt.Fprintf(w, respBody)
 	})
+
+	return testServer
+}
+
+func TestGetSTNetServers(t *testing.T) {
+	testServer := setUpMuxForServerList()
 
 	servers, err := GetSTNetServers(testServer.URL)
 	if err != nil {
@@ -46,112 +146,29 @@ func TestGetSTNetServers(t *testing.T) {
 		t.Fail()
 	}
 
-	expectedIDs := []string{"0000", "1111", "2222", "4444"}
-	for _, nextServer := range servers {
-		results := nextServer.ServerID
-		// We can't trust the order of the servers
-		wasExpected, _ := domain.InArray(results, expectedIDs)
-		if !wasExpected {
-			t.Errorf("Extra speedtestnetserver ID in results: %s", results)
-			t.Fail()
-			break
+	expectedIDs := []string{"fine", "updating", "good", "no-named-server"}
+	for _, nextID := range expectedIDs {
+		_, ok := servers[nextID]
+		if !ok {
+			t.Errorf("Results servers are missing a key: %s.\n Got: %v", nextID, servers)
+			return
 		}
 	}
 }
 
-func getSTNetServer(serverID string) domain.SpeedTestNetServer {
-	server := domain.SpeedTestNetServer{
-		ID:          domain.ServerTypeSpeedTestNet + "-" + serverID,
-		Host:        "test.url.com:8080",
-		Lat:         "11.1",
-		Lon:         "22.2",
-		Name:        "Sometown",
-		Country:     "Anyland",
-		CountryCode: "AL",
-		ServerID:    serverID,
-		Sponsor:     "GTIS",
-		URL:         "test.url.com",
-		URL2:        "test2.url.com",
-	}
-	return server
-}
-
-func TestServerHasChangedNoChange(t *testing.T) {
-	oldServer := getSTNetServer("1111")
-	newServer := getSTNetServer("1111")
-
-	results := serverHasChanged(oldServer, newServer)
-
-	if results {
-		t.Error("Expected serverHasChanged to say there was no change")
-	}
-}
-
-func TestServerHasChangedWithChange(t *testing.T) {
-	oldServer := getSTNetServer("1111")
-	newServer := getSTNetServer("1111")
-	newServer.URL2 = "test2b.url.com"
-
-	results := serverHasChanged(oldServer, newServer)
-
-	if !results {
-		t.Error("Expected serverHasChanged to say there was a change")
-	}
-}
-
-type DBClient struct{}
-
-func (d DBClient) DeleteItem(tableAlias, dataType, value string) (bool, error) {
-	return true, nil
-}
-
-func (d DBClient) PutItem(tableAlias string, item interface{}) error {
-	return nil
-}
-
-func (d DBClient) ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
-	servers := []domain.SpeedTestNetServer{
-		{
-			ID:       "speedtestnetserver-st00",
-			ServerID: "0000",
-			Host:     "fine.host.com:8080",
-		},
-		{
-			ID:       "speedtestnetserver-st11",
-			ServerID: "1111",
-			Host:     "outdated.host.com:8080",
-		},
-		{
-			ID:       "speedtestnetserver-st22",
-			ServerID: "2222",
-			Host:     "good.host.com:8080",
-		},
-		{
-			ID:       "speedtestnetserver-st33",
-			ServerID: "3333",
-			Host:     "missing.server.com:8080",
-		},
-		{
-			ID:       "speedtestnetserver-st44",
-			ServerID: "4444",
-			Host:     "no.namedserver.com:8080",
-		},
-	}
-	return servers, nil
-}
-
-func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
-	servers := []domain.NamedServer{
+func getNamedServerFixtures() []domain.NamedServer {
+	return []domain.NamedServer{
 		{
 			ID:         "namedserver-9999",
 			UID:        "9999",
 			ServerType: domain.ServerTypeCustom,
+			ServerHost: "custom.server.org:8080",
 		},
 		{
 			ID:                   "namedserver-ns11",
 			UID:                  "ns11",
 			ServerType:           domain.ServerTypeSpeedTestNet,
-			SpeedTestNetServerID: "1111",
+			SpeedTestNetServerID: "updating",
 			ServerHost:           "outdated.host.com:8080",
 			Name:                 "Outdated Host",
 			Description:          "Needs to get its host updated",
@@ -162,7 +179,7 @@ func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
 			ID:                   "namedserver-ns22",
 			UID:                  "ns22",
 			ServerType:           domain.ServerTypeSpeedTestNet,
-			SpeedTestNetServerID: "2222",
+			SpeedTestNetServerID: "good",
 			ServerHost:           "good.host.com:8080",
 			Name:                 "Good Host",
 			Description:          "No update needed",
@@ -173,7 +190,7 @@ func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
 			ID:                   "namedserver-ns33",
 			UID:                  "ns33",
 			ServerType:           domain.ServerTypeSpeedTestNet,
-			SpeedTestNetServerID: "3333",
+			SpeedTestNetServerID: "missing",
 			ServerHost:           "missing.server.com:8080",
 			Name:                 "Missing Server",
 			Description:          "Has gone stale",
@@ -181,153 +198,452 @@ func (d DBClient) ListNamedServers() ([]domain.NamedServer, error) {
 			Notes:                "This named server has no new matching speedtest.net server",
 		},
 	}
-	return servers, nil
 }
 
-func GetTestSTNetServers() ([]domain.SpeedTestNetServer, []domain.SpeedTestNetServer, error) {
-	dbCl := DBClient{}
-
-	oldServers, err := dbCl.ListSpeedTestNetServers()
-	if err != nil {
-		return []domain.SpeedTestNetServer{}, []domain.SpeedTestNetServer{}, err
+func getSTNetServerListFixtures() []domain.STNetServerList {
+	serverLists := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-US",
+			Country: domain.Country{Code: "US", Name: "United States"},
+			Servers: []domain.SpeedTestNetServer{
+				{
+					ServerID:    "fine",
+					CountryCode: "US",
+					Host:        "fine.host.com:8080",
+				},
+				{
+					ServerID:    "updating",
+					CountryCode: "US",
+					Host:        "outdated.host.com:8080",
+				},
+			},
+		},
+		{
+			ID:      domain.DataTypeSTNetServerList + "-FR",
+			Country: domain.Country{Code: "FR", Name: "France"},
+			Servers: []domain.SpeedTestNetServer{
+				{
+					ServerID:    "good",
+					CountryCode: "FR",
+					Host:        "good.host.com:8080",
+				},
+				{
+					ServerID:    "missing",
+					CountryCode: "FR",
+					Host:        "missing.server.com:8080",
+				},
+				{
+					ServerID:    "no-named-server",
+					CountryCode: "FR",
+					Host:        "no.namedserver.com:8080",
+				},
+			},
+		},
+		{
+			ID:      domain.DataTypeSTNetServerList + "-ZZ",
+			Country: domain.Country{Code: "ZZ", Name: "Annihilated"},
+			Servers: []domain.SpeedTestNetServer{
+				{
+					ServerID:    "zombies",
+					CountryCode: "ZZ",
+					Host:        "zombies.got.uscom:8080",
+				},
+			},
+		},
 	}
 
-	// Give one of the new servers a different host
-	updatedServer := oldServers[1]
+	return serverLists
+}
+
+func TestHasAHostChangedFalse(t *testing.T) {
+	oldList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	newList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	if hasAHostChanged(oldList, newList) {
+		t.Errorf("Didn't expect to see that a host had changed, but did.")
+	}
+}
+
+func TestHasAHostChangedTrue(t *testing.T) {
+	oldList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	newList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme-new.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	if !hasAHostChanged(oldList, newList) {
+		t.Errorf("Expected to see that a host had changed, but didn't.")
+	}
+}
+
+func TestHasAHostChangedTrueDifferentLengths(t *testing.T) {
+	oldList := []domain.SpeedTestNetServer{
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	newList := []domain.SpeedTestNetServer{
+		{ServerID: "0000", Host: "acme.com:8080"},
+		{ServerID: "1111", Host: "beta.com:8080"},
+	}
+
+	if !hasAHostChanged(oldList, newList) {
+		t.Errorf("Expected to see that a host had changed, but didn't.")
+	}
+}
+
+func TestRefreshSTNetServersByCountry(t *testing.T) {
+	deleteSTNetServerLists(t)
+	oldServerLists := getSTNetServerListFixtures()
+	loadSTNetServerLists(oldServerLists, t)
+
+	updatedServer := oldServerLists[0].Servers[1]
 	updatedServer.Host = "updated.host.com"
 
-	newServers := []domain.SpeedTestNetServer{oldServers[0], updatedServer, oldServers[2], oldServers[4]}
-	return oldServers, newServers, nil
-}
+	newServers := map[string]domain.SpeedTestNetServer{
+		"fine":            oldServerLists[0].Servers[0],
+		"updating":        updatedServer,
+		"good":            oldServerLists[1].Servers[0],
+		"no-named-server": oldServerLists[1].Servers[2],
+	}
 
-func TestDeleteSTNetServersIfUnused(t *testing.T) {
-	dbCl := DBClient{}
-
-	oldServers, newServers, err := GetTestSTNetServers()
+	// This changes the entries in the database
+	err := refreshSTNetServersByCountry(newServers)
 	if err != nil {
-		t.Errorf("Error getting Server fixture: %s", err.Error())
+		t.Errorf("Unexpected error: %s", err.Error())
 		return
 	}
 
-	namedServers, err := getNamedServersInMap(dbCl)
+	dbServers, err := db.ListSTNetServerLists()
 	if err != nil {
-		t.Errorf("Error getting NamedServer fixture: %s", err.Error())
+		t.Errorf("Unexpected error getting STNetServerLists: %s", err.Error())
 		return
 	}
 
-	staleServerIDs, err := deleteSTNetServersIfUnused(oldServers, newServers, namedServers, dbCl)
-	if err != nil {
-		t.Errorf("Did not expect an error but got: %s", err.Error())
+	expectedLen := 2
+	resultsLen := len(dbServers)
+	if expectedLen != resultsLen {
+		t.Errorf("Bad results. Expected list with %d elements.\n But got %d: %v", expectedLen, resultsLen, dbServers)
 		return
 	}
 
-	lenResults := len(staleServerIDs)
-	if lenResults != 1 {
-		t.Errorf("Expected only one stale Server ID but got: %d", lenResults)
-		return
+	// To facilitate checking the results, put them in a map and sort the servers by their Host values
+	results := map[string][]domain.SpeedTestNetServer{}
+	for _, server := range dbServers {
+		countryServers := server.Servers
+
+		sort.Slice(countryServers, func(i, j int) bool {
+			return countryServers[i].Host < countryServers[j].Host
+		})
+		results[server.Country.Code] = countryServers
 	}
 
-	results := staleServerIDs[0]
-	expected := "3333"
-	if results != expected {
-		t.Errorf("Got wrong stale ServerID. Expected %s, but got %s.", expected, results)
-		return
-	}
+	// Just check the Host values
+	expected := map[string][]string{} // Host
+	expected["US"] = []string{oldServerLists[0].Servers[0].Host, updatedServer.Host}
+	expected["FR"] = []string{oldServerLists[1].Servers[0].Host, oldServerLists[1].Servers[2].Host}
 
-}
-
-func TestUpdateMatchingNamedServer(t *testing.T) {
-	dbCl := DBClient{}
-
-	_, newServers, err := GetTestSTNetServers()
-	if err != nil {
-		t.Errorf("Error getting Server fixture: %s", err.Error())
-		return
-	}
-
-	namedServers, err := getNamedServersInMap(dbCl)
-	if err != nil {
-		t.Errorf("Error getting NamedServer fixture: %s", err.Error())
-		return
-	}
-
-	// only get SpeedTestNet servers
-	mappedNamedServers := map[string]domain.NamedServer{}
-	for _, namedSrv := range namedServers {
-		if namedSrv.ServerType == domain.ServerTypeSpeedTestNet {
-			mappedNamedServers[namedSrv.SpeedTestNetServerID] = namedSrv
-		}
-	}
-
-	// Only one of the new speedtest.net servers has a matching NamedServer that needs to be updated.
-	expectedServers := []domain.NamedServer{
-		domain.NamedServer{},
-		namedServers["1111"],
-		domain.NamedServer{},
-		domain.NamedServer{},
-	}
-
-	for index, targetServer := range newServers[2:3] {
-		matchingNamedServer, err := updateMatchingNamedServer(targetServer, mappedNamedServers, dbCl)
-		if err != nil {
-			t.Errorf("Did not expect an error but got: %s", err.Error())
+	for id, serverList := range expected {
+		nextResults, ok := results[id]
+		if !ok {
+			t.Errorf("Missing entry with id: %s.\n%v", id, dbServers)
 			return
 		}
-
-		expectedServer := expectedServers[index]
-		if expectedServer.ID == "" {
-			if matchingNamedServer.ID != "" {
-				t.Errorf("Did not expect to get a matching NamedServer, but got: %v", matchingNamedServer)
+		if len(nextResults) != len(serverList) {
+			t.Errorf("Bad list of servers for id: %s. Expected %v But got %v", id, serverList, nextResults)
+			return
+		}
+		for index := 0; index < len(serverList); index++ {
+			if serverList[index] != nextResults[index].Host {
+				t.Errorf("Bad list of servers for id: %s. Expected %v\n But got %v", id, serverList, nextResults)
 				return
-			} else {
-				continue
 			}
 		}
+	}
+}
 
-		results := matchingNamedServer.SpeedTestNetServerID
-		expected := expectedServer.SpeedTestNetServerID
-		if expected != results {
-			t.Errorf("Got wrong ServerID. Expected %s, but got %s.", expected, results)
+func TestRefreshSTNetServersByCountryStartEmpty(t *testing.T) {
+	deleteSTNetServerLists(t)
+
+	// We're using the data but not loading them into the db
+	oldServerLists := getSTNetServerListFixtures()
+
+	updatedServer := oldServerLists[0].Servers[1]
+	updatedServer.Host = "updated.host.com"
+
+	newServers := map[string]domain.SpeedTestNetServer{
+		"fine":            oldServerLists[0].Servers[0],
+		"updating":        updatedServer,
+		"good":            oldServerLists[1].Servers[0],
+		"no-named-server": oldServerLists[1].Servers[2],
+	}
+
+	// This changes the entries in the database
+	err := refreshSTNetServersByCountry(newServers)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	dbServers, err := db.ListSTNetServerLists()
+	if err != nil {
+		t.Errorf("Unexpected error getting STNetServerLists: %s", err.Error())
+		return
+	}
+
+	expectedLen := 2
+	resultsLen := len(dbServers)
+	if expectedLen != resultsLen {
+		t.Errorf("Bad results. Expected list with %d elements.\n But got %d: %v", expectedLen, resultsLen, dbServers)
+		return
+	}
+
+	// To facilitate checking the results, put them in a map and sort the servers by their Host values
+	results := map[string][]domain.SpeedTestNetServer{}
+	for _, server := range dbServers {
+		countryServers := server.Servers
+
+		sort.Slice(countryServers, func(i, j int) bool {
+			return countryServers[i].Host < countryServers[j].Host
+		})
+		results[server.Country.Code] = countryServers
+	}
+
+	// Just check the Host values
+	expected := map[string][]string{} // Host
+	expected["US"] = []string{oldServerLists[0].Servers[0].Host, updatedServer.Host}
+	expected["FR"] = []string{oldServerLists[1].Servers[0].Host, oldServerLists[1].Servers[2].Host}
+
+	for id, serverList := range expected {
+		nextResults, ok := results[id]
+		if !ok {
+			t.Errorf("Missing entry with id: %s.\n%v", id, dbServers)
+			return
+		}
+		if len(nextResults) != len(serverList) {
+			t.Errorf("Bad list of servers for id: %s. Expected %v But got %v", id, serverList, nextResults)
+			return
+		}
+		for index := 0; index < len(serverList); index++ {
+			if serverList[index] != nextResults[index].Host {
+				t.Errorf("Bad list of servers for id: %s. Expected %v\n But got %v", id, serverList, nextResults)
+				return
+			}
+		}
+	}
+}
+
+func TestGetSTNetNamedServers(t *testing.T) {
+	deleteNamedServers(t)
+	loadNamedServers(getNamedServerFixtures(), t)
+
+	allResults, err := getSTNetNamedServers()
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	results := len(allResults)
+	expected := 3
+	if results != expected {
+		t.Errorf("Bad results. Expected list with %d elements.\n But got %d: %v", expected, results, allResults)
+		return
+	}
+
+	expectedServerIDs := []string{"updating", "good", "missing"}
+
+	for _, expected := range expectedServerIDs {
+		_, ok := allResults[expected]
+		if !ok {
+			t.Errorf("Missing NamedServer entry with UID: %s. \n Got: %v", expected, allResults)
 			return
 		}
 	}
 
 }
 
+func TestGetSTNetServersToKeep(t *testing.T) {
+	deleteNamedServers(t)
+	deleteSTNetServerLists(t)
+
+	namedServers := loadAndGetNamedServers(t)
+
+	oldServerLists := getSTNetServerListFixtures()
+	oldServerLists = oldServerLists[0:2] // don't keep the last country (ZZ)
+
+	// Give one of the new servers a different host
+	updatedServer := oldServerLists[0].Servers[1]
+	updatedServer.Host = "brand.new.host.com"
+
+	newServers := map[string]domain.SpeedTestNetServer{
+		"fine":            oldServerLists[0].Servers[0],
+		"updating":        updatedServer,
+		"good":            oldServerLists[1].Servers[0],
+		"no-named-server": oldServerLists[1].Servers[2],
+	}
+
+	serversToKeep, staleServerIDs := getSTNetServersToKeep(oldServerLists, newServers, namedServers)
+
+	// First check serversToKeep
+	expectedServers := map[string]domain.SpeedTestNetServer{
+		"fine":            oldServerLists[0].Servers[0],
+		"updating":        updatedServer,
+		"good":            oldServerLists[1].Servers[0],
+		"missing":         oldServerLists[1].Servers[1],
+		"no-named-server": oldServerLists[1].Servers[2],
+	}
+
+	expectedLen := len(expectedServers)
+	resultsLen := len(serversToKeep)
+
+	if expectedLen != resultsLen {
+		t.Errorf("Bad serversToKeep length. Expected %d, but got %d.\n %v", expectedLen, resultsLen, serversToKeep)
+		return
+	}
+
+	for id, expected := range expectedServers {
+		oneResult, ok := serversToKeep[id]
+		if !ok {
+			t.Errorf("Bad serversToKeep. Missing entry for ID: %s.\n Got %v", id, serversToKeep)
+			return
+		}
+
+		if expected != oneResult {
+			t.Errorf("Bad serversToKeep. \n  Expected: %v\n  But got: %v", expectedServers, serversToKeep)
+			return
+		}
+	}
+
+	// Now check staleServerIDs
+	expectedIDs := []string{"missing"}
+
+	if len(staleServerIDs) != 1 {
+		t.Errorf("Bad staleServerIDs. Expected %v, but got %v.", expectedIDs, staleServerIDs)
+		return
+	}
+
+	if expectedIDs[0] != staleServerIDs[0] {
+		t.Errorf("Bad staleServerIDs. Expected %v, but got %v.", expectedIDs, staleServerIDs)
+	}
+}
+
+func TestUpdateNamedServers(t *testing.T) {
+	deleteNamedServers(t)
+	namedServers := loadAndGetNamedServers(t)
+
+	// One Host is different (for "updating") and one is no longer there ("missing")
+	serversToKeep := map[string]domain.SpeedTestNetServer{
+		"fine":            {ServerID: "fine", Host: "fine.host.com:8080"},
+		"updating":        {ServerID: "updating", Host: "brand.new.host.com:8080"},
+		"good":            {ServerID: "good", Host: "good.host.com:8080"},
+		"no-named-server": {ServerID: "no-named-server", Host: "no.namedserver.com:8080"},
+	}
+
+	err := updateNamedServers(serversToKeep, namedServers)
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	results, err := getSTNetNamedServers()
+	if err != nil {
+		t.Errorf("Unexpected error getting NamedServers out of the db: %s", err.Error())
+		return
+	}
+
+	expected := map[string]string{
+		"updating": serversToKeep["updating"].Host, // This is a change
+		"good":     serversToKeep["good"].Host,
+		"missing":  "missing.server.com:8080", // updateNamedServers does not delete any
+	}
+
+	if len(results) != len(expected) {
+		t.Errorf("Bad Results. Expected %d NamedServers from db,\n but got %d: %v", len(expected), len(results), results)
+		return
+	}
+
+	for id, expectedHost := range expected {
+		oneResult, ok := results[id]
+		if !ok {
+			t.Errorf("Bad Results. Missing entry for ID: %s.\n Got %v", id, results)
+			return
+		}
+
+		if expectedHost != oneResult.ServerHost {
+			t.Errorf("Bad Host for NamedServer: %s. Expected: %s, but got: %s", id, expectedHost, oneResult.ServerHost)
+		}
+	}
+}
+
+// This test doesn't check the results in depth, since the other tests do that.
 func TestUpdateSTNetServers(t *testing.T) {
+	deleteNamedServers(t)
+	namedServers := getNamedServerFixtures()
+	loadNamedServers(namedServers, t)
 
-	dbCl := DBClient{}
+	deleteSTNetServerLists(t)
+	loadSTNetServerLists(getSTNetServerListFixtures(), t)
 
-	mux := http.NewServeMux()
+	testServer := setUpMuxForServerList()
 
-	testServer := httptest.NewServer(mux)
-
-	// See the host values on these
-	respBody := ServerListResponse
-
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-type", "test/xml")
-		w.WriteHeader(200)
-		fmt.Fprintf(w, respBody)
-	})
-
-	staleServerIDs, err := UpdateSTNetServers(testServer.URL, dbCl)
+	staleServerIDs, err := UpdateSTNetServers(testServer.URL)
 	if err != nil {
 		t.Errorf("Did not expect an error but got: %s", err.Error())
 		return
 	}
 
+	// First, check the staleServerIDs
 	lenResults := len(staleServerIDs)
 	if lenResults != 1 {
-		t.Errorf("Expected only one stale Server ID but got: %d", lenResults)
+		t.Errorf("Expected one stale Server ID but got: %d", lenResults)
 		return
 	}
 
 	results := staleServerIDs[0]
-	expected := "3333"
+	expected := "missing"
 	if results != expected {
 		t.Errorf("Got wrong stale ServerID. Expected %s, but got %s.", expected, results)
 		return
 	}
 
+	// Second, check the number of NamedServers in the database
+	dbNamedServers, err := db.ListNamedServers()
+	if err != nil {
+		t.Errorf("Unexpected error getting NamedServers from db: %s", err.Error())
+		return
+	}
+
+	if len(namedServers) != len(dbNamedServers) {
+		t.Errorf("Bad Named Servers left in db. \n\tExpected: %v\n\t But got: %v", namedServers, dbNamedServers)
+		return
+	}
+
+	// Third, check the number of STNetServerLists in the database
+	stNetServerLists, err := db.ListSTNetServerLists()
+	if err != nil {
+		t.Errorf("Unexpected error getting STNetServerLists from db: %s", err.Error())
+		return
+	}
+
+	expectedLen := 2
+	resultsLen := len(stNetServerLists)
+
+	if expectedLen != resultsLen {
+		t.Errorf(
+			"Wrong number of STNetServerLists. Expected: %d, but got: %d.\n\t%v",
+			expectedLen,
+			resultsLen,
+			stNetServerLists,
+		)
+	}
 }

@@ -7,42 +7,63 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"sort"
 	"strings"
 )
 
-const SelfType = domain.DataTypeSpeedTestNetServer
+const SelfType = domain.DataTypeSTNetServerList
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["serverID"]
+	_, countrySpecified := req.PathParameters["countryCode"]
 	switch req.HTTPMethod {
 	case "GET":
-		if serverSpecified {
-			return viewServer(req)
-		}
-		if strings.HasSuffix(req.Path, "/countries") {
+		if strings.HasSuffix(req.Path, "/country") {
 			return listCountries(req)
 		}
-		return listServers(req)
+		if countrySpecified && serverSpecified {
+			return viewServer(req)
+		}
+		if countrySpecified {
+			return listServersInCountry(req)
+		}
+		return domain.ClientError(
+			http.StatusUnprocessableEntity,
+			`"/country/" is required - optionally followed by the country code param.`,
+		)
 	default:
 		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: "+req.HTTPMethod)
 	}
 }
 
+// viewServer requires a "countryCode" and a "serverID" path param.
+//  It gets the server row for that country code and extracts the server that
+//  matches that serverID.
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	serverID := req.PathParameters["serverID"]
-
-	var server domain.SpeedTestNetServer
-	err := db.GetItem(domain.DataTable, SelfType, serverID, &server)
+	countryCode := req.PathParameters["countryCode"]
+	var serversInCountry domain.STNetServerList
+	err := db.GetItem(domain.DataTable, SelfType, countryCode, &serversInCountry)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	if server.URL == "" {
+	serverID := req.PathParameters["serverID"]
+
+	var server domain.SpeedTestNetServer
+
+	for _, countryServer := range serversInCountry.Servers {
+		if countryServer.ServerID == serverID {
+			server = countryServer
+			break
+		}
+	}
+
+	if server.Host == "" {
 		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
@@ -57,31 +78,23 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}, nil
 }
 
-func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+// listServersInCountry requires a "countryCode" path param and returns the one row that has the
+//   list of servers for that country
+func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	servers, err := db.ListSpeedTestNetServers()
+	countryCode := req.PathParameters["countryCode"]
+
+	var serversInCountry domain.STNetServerList
+	err := db.GetItem(domain.DataTable, SelfType, countryCode, &serversInCountry)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	// If a specific country code was provided, limit results to just that country
-	var serverList []domain.SpeedTestNetServer
-	countryCode := req.QueryStringParameters["country"]
-	if countryCode != "" {
-		for _, server := range servers {
-			if server.CountryCode == countryCode {
-				serverList = append(serverList, server)
-			}
-		}
-	} else {
-		serverList = servers
-	}
-
-	js, err := json.Marshal(serverList)
+	js, err := json.Marshal(serversInCountry)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -98,19 +111,14 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	countries := map[string]string{}
-	allServers, err := db.ListSpeedTestNetServers()
+	allServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	for _, server := range allServers {
-		countries[server.CountryCode] = server.Country
-	}
-
-	var countryList []domain.Country
-	for code, name := range countries {
-		countryList = append(countryList, domain.Country{Code: code, Name: name})
+	countryList, err := getCountriesFromSTNetServerLists(allServerLists)
+	if err != nil {
+		return domain.ServerError(err)
 	}
 
 	js, err := json.Marshal(countryList)
@@ -122,6 +130,27 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		StatusCode: http.StatusOK,
 		Body:       string(js),
 	}, nil
+}
+
+func getCountriesFromSTNetServerLists(lists []domain.STNetServerList) ([]domain.Country, error) {
+	countries := map[string]string{}
+
+	for _, serverList := range lists {
+		countries[serverList.Country.Code] = serverList.Country.Name
+	}
+
+	var countryList []domain.Country
+
+	for code, name := range countries {
+		countryList = append(countryList, domain.Country{Code: code, Name: name})
+	}
+
+	// Sort ascending by country name
+	sort.Slice(countryList, func(i, j int) bool {
+		return countryList[i].Name < countryList[j].Name
+	})
+
+	return countryList, nil
 }
 
 func main() {

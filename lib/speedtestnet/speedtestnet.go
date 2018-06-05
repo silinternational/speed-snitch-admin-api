@@ -10,30 +10,12 @@ import (
 	"os"
 )
 
-type Client struct{}
-
-func (c Client) DeleteItem(tableAlias, dataType, value string) (bool, error) {
-	return db.DeleteItem(tableAlias, dataType, value)
-}
-
-func (c Client) PutItem(tableAlias string, item interface{}) error {
-	return db.PutItem(tableAlias, item)
-}
-
-func (c Client) ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
-	return db.ListSpeedTestNetServers()
-}
-
-func (c Client) ListNamedServers() ([]domain.NamedServer, error) {
-	return db.ListNamedServers()
-}
-
-// GetSTNetServers requests the list of SpeedTestNet servers via http and returns them in a list of structs
-//  Normally use the domain.SpeedTestNetServerURL as the serverURL
-func GetSTNetServers(serverURL string) ([]domain.SpeedTestNetServer, error) {
+// GetSTNetServers requests the list of SpeedTestNet servers via http and returns them in a map of structs
+//  with the ServerID's as keys
+func GetSTNetServers(serverURL string) (map[string]domain.SpeedTestNetServer, error) {
 	var settings domain.STNetServerSettings
 
-	var servers []domain.SpeedTestNetServer
+	servers := map[string]domain.SpeedTestNetServer{}
 
 	resp, err := http.Get(serverURL)
 	if err != nil {
@@ -51,75 +33,154 @@ func GetSTNetServers(serverURL string) ([]domain.SpeedTestNetServer, error) {
 
 	for _, nextServerList := range settings.ServerLists {
 		for _, nextServer := range nextServerList.Servers {
-			servers = append(servers, nextServer)
+			servers[nextServer.ServerID] = nextServer
 		}
 	}
 
 	return servers, nil
 }
 
-type dbClient interface {
-	DeleteItem(string, string, string) (bool, error)
-	PutItem(string, interface{}) error
-	ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error)
-	ListNamedServers() ([]domain.NamedServer, error)
-}
-
-// deleteSTNetServersIfUnused returns a list of the ServerIDs that are referenced by a NamedServer but which
-//   no longer appear in the new list of speedtest.net servers.  Also, it deletes (from the database) any old
-//   SpeedTestNetServers which do not match an entry in the list of new speedtest.net servers nor are
-//   referenced by a NamedServer
-func deleteSTNetServersIfUnused(
-	oldServers, newServers []domain.SpeedTestNetServer,
+// getSTNetServersToKeep ...
+//   - returns a map of Servers that are either still valid (available as a speedtest.net server) or are
+//     not valid but are associated with a NamedServer.
+//   - returns a slice of the ServerIDs that are no longer valid but that
+//     are associated with a NamedServer
+func getSTNetServersToKeep(
+	oldServerLists []domain.STNetServerList,
+	newServers map[string]domain.SpeedTestNetServer,
 	namedServers map[string]domain.NamedServer,
-	db dbClient,
-) ([]string, error) {
+) (map[string]domain.SpeedTestNetServer, []string) {
 
 	staleServerIDs := []string{}
+	serversToKeep := newServers
 
-	for _, oldServer := range oldServers {
-		foundMatch := false
-		for _, newServer := range newServers {
-			if oldServer.ServerID == newServer.ServerID {
-				foundMatch = true
-				break
+	for _, oldList := range oldServerLists {
+		for _, oldServer := range oldList.Servers {
+			_, oldServerHasANewCounterpart := newServers[oldServer.ServerID]
+			_, oldServerHasANamedServer := namedServers[oldServer.ServerID]
+
+			// if the old server has a new counterpart, it's already in the output map
+			// if the old server is not associated with a named server, do NOT add it back in
+			if oldServerHasANewCounterpart || !oldServerHasANamedServer {
+				continue
 			}
-		}
 
-		// If the old server matches a new server, ignore it - it hasn't been deleted
-		if foundMatch {
-			continue
-		}
-
-		_, ok := namedServers[oldServer.ServerID]
-		if ok {
+			// At this point, the old server does not have a new counterpart but it is
+			//  associated with a NamedServer
 			staleServerIDs = append(staleServerIDs, oldServer.ServerID)
-		} else {
-			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, oldServer.ServerID)
-
-			if err != nil {
-				return []string{}, fmt.Errorf("Error deleting old SpeedTestNetServer %s: %s", oldServer.ID, err.Error())
-			}
+			serversToKeep[oldServer.ServerID] = oldServer
 		}
 	}
 
-	return staleServerIDs, nil
+	return serversToKeep, staleServerIDs
 }
 
-func serverHasChanged(oldServer, newServer domain.SpeedTestNetServer) bool {
+// hasAHostChanged checks if
+//   -- the length of the two lists is different or
+//   -- if any of the old serverIDs are missing from the new servers or
+//   -- if any of the matching Host values are different
+func hasAHostChanged(oldServers, newServers []domain.SpeedTestNetServer) bool {
+	if len(oldServers) != len(newServers) {
+		return true
+	}
 
-	return (oldServer.Lat != newServer.Lat ||
-		oldServer.Lon != newServer.Lon ||
-		oldServer.Name != newServer.Name ||
-		oldServer.Host != newServer.Host ||
-		oldServer.Country != newServer.Country ||
-		oldServer.CountryCode != newServer.CountryCode ||
-		oldServer.Sponsor != newServer.Sponsor ||
-		oldServer.URL != newServer.URL ||
-		oldServer.URL2 != newServer.URL2)
+	newHosts := map[string]string{}
+	for _, server := range newServers {
+		newHosts[server.ServerID] = server.Host
+	}
+
+	oldHosts := map[string]string{}
+	for _, server := range oldServers {
+		oldHosts[server.ServerID] = server.Host
+	}
+
+	for oldID, oldHost := range oldHosts {
+		newHost, ok := newHosts[oldID]
+		if !ok || oldHost != newHost {
+			return true
+		}
+	}
+
+	return false
 }
 
-func getNamedServersInMap(db dbClient) (map[string]domain.NamedServer, error) {
+// refreshSTNetServersByCountry takes the new SpeedTestNetServers and groups them by country.
+//  If any of the old country groupings are not represented in the new ones, it deletes them.
+//  It updates all the other country groupings of servers with the new data.
+func refreshSTNetServersByCountry(servers map[string]domain.SpeedTestNetServer) error {
+
+	// This just groups the new servers by country (based on country code)
+	groupedServers := map[string]domain.STNetServerList{}
+	for _, server := range servers {
+		_, ok := groupedServers[server.CountryCode]
+		if !ok {
+			groupedServers[server.CountryCode] = domain.STNetServerList{
+				Country: domain.Country{Code: server.CountryCode, Name: server.Country},
+				Servers: []domain.SpeedTestNetServer{server},
+			}
+		} else {
+			// It appears that Go requires this extra processing to avoid compile errors
+			updatedEntry := groupedServers[server.CountryCode]
+			updatedEntry.Servers = append(updatedEntry.Servers, server)
+			groupedServers[server.CountryCode] = updatedEntry
+		}
+	}
+
+	// Delete or update the old server lists first
+	oldServers, err := db.ListSTNetServerLists()
+	if err != nil {
+		return fmt.Errorf("Error trying to get the SpeedTestNetServerLists from the db: %s", err.Error())
+	}
+
+	oldCountries := map[string]bool{}
+	countriesAdded := 0
+	countriesUpdated := 0
+
+	for _, oldServerList := range oldServers {
+		oldCountries[oldServerList.Country.Code] = true
+		newServerList, ok := groupedServers[oldServerList.Country.Code]
+		// If the country is still represented in the new data, and if it has a significant change, update it
+		if ok {
+			if hasAHostChanged(oldServerList.Servers, newServerList.Servers) {
+				newServerList.ID = domain.DataTypeSTNetServerList + "-" + oldServerList.Country.Code
+				err := db.PutItem(domain.DataTable, &newServerList)
+				if err != nil {
+					return fmt.Errorf("Error trying to update SpeedTestNetServerList, %s, in the db: %s", newServerList.ID, err.Error())
+				}
+				countriesUpdated++
+			}
+			// If the country is no longer represented in the new data, delete it
+		} else {
+			_, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, oldServerList.Country.Code)
+			if err != nil {
+				return fmt.Errorf("Error trying to delete SpeedTestNetServerList, %s, from the db: %s", oldServerList.ID, err.Error())
+			}
+			fmt.Fprintf(os.Stdout, "Deleting SpeedTestNetServerList entry for country code %s\n", oldServerList.Country.Code)
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "Updated server lists for %d countries.\n", countriesUpdated)
+
+	// Now if there are new server lists that were not in the db add them.
+	for countryCode, newServerList := range groupedServers {
+		_, ok := oldCountries[countryCode]
+		if !ok {
+			newServerList.ID = domain.DataTypeSTNetServerList + "-" + countryCode
+			err := db.PutItem(domain.DataTable, &newServerList)
+			if err != nil {
+				return fmt.Errorf("Error trying to add SpeedTestNetServerList for %s, in the db: %s", countryCode, err.Error())
+			}
+			countriesAdded++
+		}
+	}
+
+	fmt.Fprintf(os.Stdout, "Added server lists for %d countries.\n", countriesAdded)
+	return nil
+}
+
+// getSTNetNamedServers returns a map with the NamedServers in the database that
+// have a ServerType of speedtestnet.  The keys are the SpeedTestNet ServerID's.
+func getSTNetNamedServers() (map[string]domain.NamedServer, error) {
 	mappedNamedServers := map[string]domain.NamedServer{}
 	namedServers, err := db.ListNamedServers()
 	if err != nil {
@@ -135,88 +196,78 @@ func getNamedServersInMap(db dbClient) (map[string]domain.NamedServer, error) {
 	return mappedNamedServers, nil
 }
 
-func updateMatchingNamedServer(
-	newServer domain.SpeedTestNetServer,
+// updateNamedServers updates the NamedServer entries with a new Host value
+//  based on data from the new set of SpeedTestNetServers
+func updateNamedServers(
+	serversToKeep map[string]domain.SpeedTestNetServer,
 	namedServers map[string]domain.NamedServer,
-	db dbClient,
-) (domain.NamedServer, error) {
+) error {
 
-	var updatedServer domain.NamedServer
+	for id, namedServer := range namedServers {
+		newServer, ok := serversToKeep[id]
 
-	namedServer, ok := namedServers[newServer.ServerID]
-
-	// If no match found, nothing to do
-	if !ok {
-		return updatedServer, nil
-	}
-
-	// Found a match, so check if it needs to be modified
-	if namedServer.ServerHost != newServer.Host {
-		namedServer.ServerHost = newServer.Host
-		err := db.PutItem(domain.DataTable, &namedServer)
-		if err != nil {
-			return domain.NamedServer{}, fmt.Errorf("Error updating Named Server %s with new host: %s", namedServer.ID, err.Error())
+		if !ok {
+			continue
 		}
-		updatedServer = namedServer
+
+		// Found a match, so check if it needs to be modified
+		if namedServer.ServerHost != newServer.Host {
+			namedServer.ServerHost = newServer.Host
+			err := db.PutItem(domain.DataTable, &namedServer)
+			if err != nil {
+				return fmt.Errorf(
+					"Error updating Named Server %s with new host: %s",
+					namedServer.ID,
+					err.Error(),
+				)
+			}
+		}
 	}
-	return updatedServer, nil
+	return nil
 }
 
 // UpdateSTNetServers returns a list of the IDs of speedtest.net servers that are no longer available
-//   and have a matching Named Server.  Also,
-//     -- it deletes (from the database) any old SpeedTestNetServer entries which do not match an entry in
-//        the list of new speedtest.net servers nor are referenced by a NamedServer
-//     -- it updates old SpeedTestNetServer entries that do match an entry in the new list and updates the
-//        matching NamedServers.
-func UpdateSTNetServers(serverURL string, db dbClient) ([]string, error) {
-
-	// Figure out which speedtest.net servers have been deleted
-	oldServers, err := db.ListSpeedTestNetServers()
+//   but have a matching Named Server.  Also,
+//     -- it replaces (in the database) all SpeedTestNetServer entries with the new ones but keeps old
+//        ones that still are referenced by a NamedServer
+//     -- it updates NamedServers entries that match a new SpeedTestNetServer but have with a new Host value.
+func UpdateSTNetServers(serverURL string) ([]string, error) {
+	oldServerLists, err := db.ListSTNetServerLists()
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting speedtest.net servers from database: %s", err.Error())
 	}
-	fmt.Fprintf(os.Stdout, "Found %v old servers", len(oldServers))
+
+	serverCount := 0
+	for _, serverList := range oldServerLists {
+		serverCount += len(serverList.Servers)
+	}
+
+	fmt.Fprintf(os.Stdout, "Found %v old server lists containing %v servers\n", len(oldServerLists), serverCount)
 
 	newServers, err := GetSTNetServers(serverURL)
 	if err != nil {
 		return []string{}, err
 	}
-	fmt.Fprintf(os.Stdout, "Found %v new servers", len(newServers))
+	fmt.Fprintf(os.Stdout, "Found %v new servers\n", len(newServers))
 
-	namedServers, err := getNamedServersInMap(db)
+	namedServers, err := getSTNetNamedServers()
 	if err != nil {
 		return []string{}, fmt.Errorf("Error getting Named Servers from database: %s", err.Error())
 	}
-	fmt.Fprintf(os.Stdout, "Found %v named servers", len(namedServers))
+	fmt.Fprintf(os.Stdout, "Found %v named servers\n", len(namedServers))
 
-	staleServerIDs, err := deleteSTNetServersIfUnused(oldServers, newServers, namedServers, db)
-	fmt.Fprintf(os.Stdout, "Found %v stale servers", len(staleServerIDs))
+	// Get an updated set of SpeedTestNetServers and a list of the NamedServers that don't have a match anymore
+	serversToKeep, staleServerIDs := getSTNetServersToKeep(oldServerLists, newServers, namedServers)
+	fmt.Fprintf(os.Stdout, "Found %v stale servers\n", len(staleServerIDs))
 
-	// Make a map of the Old Servers for quicker access and avoiding extra checks in a nested loop
-	mappedOldServers := map[string]domain.SpeedTestNetServer{}
-	for _, oldServer := range oldServers {
-		mappedOldServers[oldServer.ServerID] = oldServer
+	// Where necessary, make the Named Servers' Host values match those in the corresponding new SpeedTestNetServers
+	err = updateNamedServers(serversToKeep, namedServers)
+	if err != nil {
+		return staleServerIDs, fmt.Errorf("Error getting Named Servers from database: %s", err.Error())
 	}
 
-	for _, newServer := range newServers {
-		oldServer, ok := mappedOldServers[newServer.ServerID]
-		if !ok {
-			newServer.ID = domain.DataTypeSpeedTestNetServer + "-" + newServer.ServerID
-			err = db.PutItem(domain.DataTable, newServer)
-			if err != nil {
-				return []string{}, fmt.Errorf("problem with server: %v, error: %s", newServer, err.Error())
-			}
-			continue
-		}
-
-		// If there are differences between old and new, update matching NamedServer
-		if serverHasChanged(oldServer, newServer) {
-			_, err := updateMatchingNamedServer(newServer, namedServers, db)
-			if err != nil {
-				return []string{}, err
-			}
-		}
-	}
+	// Save the new set of SpeedTestNetServers
+	err = refreshSTNetServersByCountry(serversToKeep)
 
 	return staleServerIDs, nil
 }

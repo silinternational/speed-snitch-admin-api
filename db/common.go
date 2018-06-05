@@ -12,9 +12,17 @@ import (
 	"github.com/silinternational/speed-snitch-agent"
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
 	"net/http"
+	"os"
 )
 
+const ENV_DYNAMO_ENDPOINT = "AWS_DYNAMODB_ENDPOINT"
+
 var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
+
+func GetDb() *dynamodb.DynamoDB {
+	dynamoEndpoint := os.Getenv(ENV_DYNAMO_ENDPOINT)
+	return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint(dynamoEndpoint))
+}
 
 func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
 	// Prepare the input for the query.
@@ -26,6 +34,8 @@ func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
 			},
 		},
 	}
+
+	db := GetDb()
 
 	// Retrieve the item from DynamoDB. If no matching item is found
 	// return nil.
@@ -60,6 +70,7 @@ func PutItem(tableAlias string, item interface{}) error {
 		Item:      av,
 	}
 
+	db := GetDb()
 	_, err = db.PutItem(input)
 	return err
 }
@@ -76,6 +87,7 @@ func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 		},
 	}
 
+	db := GetDb()
 	// Delete the item from DynamoDB. I
 	_, err := db.DeleteItem(input)
 
@@ -103,6 +115,7 @@ func scanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeVal
 		},
 	}
 
+	db := GetDb()
 	var results []map[string]*dynamodb.AttributeValue
 	err := db.ScanPages(input,
 		func(page *dynamodb.ScanOutput, lastPage bool) bool {
@@ -261,20 +274,22 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 	return list, nil
 }
 
-func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
+// ListSTNetServerLists returns all the country-grouped rows of
+//  speedtest.net servers
+func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 
-	var list []domain.SpeedTestNetServer
+	var list []domain.STNetServerList
 
-	items, err := scanTable(domain.DataTable, "speedtestnetserver")
+	items, err := scanTable(domain.DataTable, domain.DataTypeSTNetServerList)
 	if err != nil {
 		return list, err
 	}
 
 	for _, item := range items {
-		var itemObj domain.SpeedTestNetServer
+		var itemObj domain.STNetServerList
 		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
 		if err != nil {
-			return []domain.SpeedTestNetServer{}, err
+			return []domain.STNetServerList{}, err
 		}
 		list = append(list, itemObj)
 	}
@@ -283,13 +298,20 @@ func ListSpeedTestNetServers() ([]domain.SpeedTestNetServer, error) {
 }
 
 func GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	var stnServer domain.SpeedTestNetServer
-	err := GetItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, namedServer.SpeedTestNetServerID, &stnServer)
+	var stnServerList domain.STNetServerList
+	countryCode := namedServer.Country.Code
+	err := GetItem(domain.DataTable, domain.DataTypeSTNetServerList, countryCode, &stnServerList)
 	if err != nil {
-		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting SpeedTestNetServer for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
+		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting STNetServerList for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
 	}
 
-	return stnServer, nil
+	for _, server := range stnServerList.Servers {
+		if server.ServerID == namedServer.SpeedTestNetServerID {
+			return server, nil
+		}
+	}
+
+	return domain.SpeedTestNetServer{}, fmt.Errorf("Could not find matching SpeedTestNet Server with id %s.", namedServer.SpeedTestNetServerID)
 }
 
 type ServerData struct {
