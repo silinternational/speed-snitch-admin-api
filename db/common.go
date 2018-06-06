@@ -201,20 +201,6 @@ func scanTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeID
 		FilterExpression:          expr.Condition(),
 	}
 
-	//var results []domain.TaskLogEntry
-	//db := GetDb()
-	//err = db.ScanPages(input,
-	//	func(page *dynamodb.ScanOutput, lastPage bool) bool {
-	//		for _, entry := range page.Items {
-	//			var taskLogEntry domain.TaskLogEntry
-	//			err := dynamodbattribute.UnmarshalMap(entry, &taskLogEntry)
-	//			if err != nil {
-	//				return false
-	//			}
-	//			results = append(results, taskLogEntry)
-	//		}
-	//		return !lastPage
-	//	})
 	db := GetDb()
 	var results []map[string]*dynamodb.AttributeValue
 	err = db.ScanPages(input,

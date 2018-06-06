@@ -9,7 +9,7 @@ func TestGetStartEndTimestampsForDate(t *testing.T) {
 	dateString := "2018-May-6 16:23:13"
 	date, err := time.Parse(DateTimeLayout, dateString)
 	if err != nil {
-		t.Error("Unable to parse date %s", dateString)
+		t.Errorf("Unable to parse date %s", dateString)
 		t.Fail()
 	}
 	startTime, endTime, err := GetStartEndTimestampsForDate(date)
