@@ -56,6 +56,11 @@ package:
    - ../../bin/**
 
 functions:
+  dailysnapshot:
+      handler: bin/dailysnapshot
+      events:
+        - schedule: cron(0 1 * * * *) # every day at 1 AM UTC
+
   node:
       handler: bin/node
       events:
