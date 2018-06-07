@@ -204,6 +204,8 @@ func TestGetNodesForServers(t *testing.T) {
 }
 
 func TestGetTaskLogForRange(t *testing.T) {
+	FlushTables(t)
+
 	fixturesInRange := []domain.TaskLogEntry{
 		{
 			ID:        "speedTest-aa:bb:cc:dd:11:22",
@@ -260,7 +262,7 @@ func TestGetTaskLogForRange(t *testing.T) {
 		{
 			ID:        "speedTest-aa:bb:cc:dd:11:22",
 			MacAddr:   "aa:bb:cc:dd:11:22",
-			Timestamp: 1528145085,
+			Timestamp: 2528145085,
 			Upload:    10.0,
 			Download:  20.0,
 		},
@@ -284,7 +286,7 @@ func TestGetTaskLogForRange(t *testing.T) {
 	}
 
 	// Get just out of range fixtures
-	results, err = GetTaskLogForRange(1528145085, 1528145085, "", []string{domain.TaskTypePing, domain.TaskTypeSpeedTest})
+	results, err = GetTaskLogForRange(2528145085, 2528145085, "", []string{domain.TaskTypePing, domain.TaskTypeSpeedTest})
 	if err != nil {
 		t.Error(err)
 		t.Fail()

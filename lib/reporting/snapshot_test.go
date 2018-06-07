@@ -8,6 +8,7 @@ import (
 )
 
 func TestGenerateDailySnapshotsForDate(t *testing.T) {
+	db.FlushTables(t)
 	fixturesInRange := []domain.TaskLogEntry{
 		{
 			ID:        "speedTest-aa:aa:aa:aa:aa:aa",

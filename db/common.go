@@ -18,9 +18,15 @@ import (
 
 const ENV_DYNAMO_ENDPOINT = "AWS_DYNAMODB_ENDPOINT"
 
+var db *dynamodb.DynamoDB
+
 func GetDb() *dynamodb.DynamoDB {
-	dynamoEndpoint := os.Getenv(ENV_DYNAMO_ENDPOINT)
-	return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint(dynamoEndpoint))
+	if db == nil {
+		dynamoEndpoint := os.Getenv(ENV_DYNAMO_ENDPOINT)
+		fmt.Fprintf(os.Stdout, "dynamodb endpoint: %s\n", dynamoEndpoint)
+		db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint(dynamoEndpoint))
+	}
+	return db
 }
 
 func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
@@ -194,11 +200,13 @@ func scanTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeID
 		return []map[string]*dynamodb.AttributeValue{}, err
 	}
 
+	consistentRead := true
 	input := &dynamodb.ScanInput{
 		TableName:                 &tableName,
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Condition(),
+		ConsistentRead:            &consistentRead,
 	}
 
 	db := GetDb()

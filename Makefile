@@ -21,5 +21,5 @@ codeshipsetup: dep build
 
 dynamo:
 	docker-compose up -d dynamo
-	sleep 10
+	sleep 5
 	docker-compose run init-dynamo
