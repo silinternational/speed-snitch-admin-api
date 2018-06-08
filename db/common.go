@@ -277,6 +277,25 @@ func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
 	return newTags, nil
 }
 
+func updateTasks(oldTasks []domain.Task) ([]domain.Task, error) {
+	newTasks := []domain.Task{}
+	for _, oldTask := range oldTasks {
+		newTask := oldTask
+		if newTask.Type != domain.TaskTypePing || newTask.Type != domain.TaskTypeSpeedTest {
+			continue
+		}
+		namedServer := domain.NamedServer{}
+		err := GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServer.UID, &namedServer)
+		if err != nil {
+			return []domain.Task{}, fmt.Errorf("Error finding named server %s.\n%s", oldTask.NamedServer.UID, err.Error())
+		}
+
+		newTask.NamedServer = namedServer
+	}
+
+	return newTasks, nil
+}
+
 // GetNode gets the Node from the database and updates its tags to have the latest
 //  information from the database.
 //  Any tags that are no longer in the db will be dropped from the Node
@@ -292,8 +311,8 @@ func GetNode(macAddr string) (domain.Node, error) {
 	if err != nil {
 		return node, fmt.Errorf("Error updating tags for node %s.\n%s", node.MacAddr, err.Error())
 	}
-
 	node.Tags = newTags
+
 	return node, nil
 }
 
