@@ -135,6 +135,81 @@ var tagFixtures = []domain.Tag{
 	{ID: "tag-333", UID: "333", Name: "Test Tag 333"},
 }
 
+func TestUpdateTags(t *testing.T) {
+	FlushTables(t)
+	loadTagFixtures(tagFixtures, t)
+
+	oldTags := []domain.Tag{
+		{ID: "tag-000", UID: "000", Name: "Bad Name 000"},
+		tagFixtures[1],
+		{ID: "tag-999", UID: "999", Name: "Doesn't Exist"},
+	}
+
+	results, err := updateTags(oldTags)
+	if err != nil {
+		t.Errorf("Unexpected Error. \n%s", err.Error())
+		return
+	}
+
+	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
+
+	areTagsEqual(expected, results, t)
+}
+
+func TestGetNode(t *testing.T) {
+	FlushTables(t)
+	loadTagFixtures(tagFixtures, t)
+
+	dbNode := testNodes["11Kenya"]
+	err := PutItem(domain.DataTable, dbNode)
+	if err != nil {
+		t.Errorf("Error saving Node fixture to db.\n%s", err.Error())
+	}
+
+	node, err := GetNode(testNodes["11Kenya"].MacAddr)
+	if err != nil {
+		t.Errorf("Unexpected error from GetNode. %s", err.Error())
+	}
+
+	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
+	areTagsEqual(expected, node.Tags, t)
+}
+
+func TestGetUserByUserID(t *testing.T) {
+	FlushTables(t)
+	loadTagFixtures(tagFixtures, t)
+
+	oldTags := []domain.Tag{
+		{ID: "tag-000", UID: "000", Name: "Eastern Africa"},    // This name should change
+		{ID: "tag-111", UID: "111", Name: "Anglophone Africa"}, // This name should change
+		{ID: "tag-999", UID: "999", Name: "Not In DB"},         // This tag should get dropped
+	}
+
+	userID := "tommy_tester"
+	dbUser := domain.User{
+		ID:     "user-" + userID,
+		UserID: userID,
+		Tags:   oldTags,
+	}
+	err := PutItem(domain.DataTable, dbUser)
+	if err != nil {
+		t.Errorf("Error saving User fixture to db.\n%s", err.Error())
+		return
+	}
+
+	results, err := GetUserByUserID(userID)
+	if err != nil {
+		t.Errorf("Unexpected error getting user. %s", err.Error())
+		return
+	}
+	if results.UserID != userID {
+		t.Errorf("Got wrong user. Expected UserID: %s, \n but got %v", userID, results)
+		return
+	}
+	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
+	areTagsEqual(expected, results.Tags, t)
+}
+
 func TestGetServerDataFromNode(t *testing.T) {
 	node := testNodes["11Kenya"]
 

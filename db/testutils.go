@@ -1,8 +1,10 @@
 package db
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/silinternational/speed-snitch-admin-api"
 	"testing"
 )
 
@@ -59,4 +61,40 @@ func FlushTables(t *testing.T) {
 			}
 		}
 	}
+}
+
+func loadTagFixtures(tagFixtures []domain.Tag, t *testing.T) {
+	for _, tag := range tagFixtures {
+		err := PutItem(domain.DataTable, &tag)
+		if err != nil {
+			t.Errorf("Error loading tag fixture: %v\n%s", tag, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func areTagsEqual(expected, results []domain.Tag, t *testing.T) bool {
+	errMsg := fmt.Sprintf("Tag slices are not equal.\nExpected: %v\n But got: %v", expected, results)
+
+	if len(expected) != len(results) {
+		t.Errorf(errMsg)
+		return false
+	}
+
+	for _, nextExpected := range expected {
+		foundMatch := false
+		for _, nextResults := range results {
+			if nextExpected == nextResults {
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			t.Errorf(errMsg)
+			return false
+		}
+	}
+
+	return true
 }
