@@ -262,6 +262,38 @@ func GetDailySnapshotsForRange(startTime, endTime int64, nodeMacAddr string) ([]
 	return results, nil
 }
 
+func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
+	newTags := []domain.Tag{}
+	for _, oldTag := range oldTags {
+		newTag := domain.Tag{}
+		err := GetItem(domain.DataTable, domain.DataTypeTag, oldTag.UID, &newTag)
+		if err != nil {
+			return []domain.Tag{}, fmt.Errorf("Error finding tag %s.\n%s", oldTag.UID, err.Error())
+		}
+		if newTag.UID != "" {
+			newTags = append(newTags, newTag)
+		}
+	}
+	return newTags, nil
+}
+
+func GetNode(macAddr string) (domain.Node, error) {
+	node := domain.Node{}
+	err := GetItem(domain.DataTable, domain.DataTypeNode, macAddr, &node)
+
+	if err != nil {
+		return node, err
+	}
+
+	newTags, err := updateTags(node.Tags)
+	if err != nil {
+		return node, fmt.Errorf("Error updating tags for node %s.\n%s", node.MacAddr, err.Error())
+	}
+
+	node.Tags = newTags
+	return node, nil
+}
+
 func GetUserByUserID(userID string) (domain.User, error) {
 	tableName := domain.GetDbTableName(domain.DataTable)
 	filterExpression := "UserID = :userID"
@@ -289,17 +321,23 @@ func GetUserByUserID(userID string) (domain.User, error) {
 	if len(results) == 0 {
 		return domain.User{}, nil
 	}
-	if len(results) == 1 {
-		var user domain.User
-		err := dynamodbattribute.UnmarshalMap(results[0], &user)
-		if err != nil {
-			return domain.User{}, err
-		}
-
-		return user, nil
+	if len(results) > 1 {
+		return domain.User{}, fmt.Errorf("More than one user found for UserID %s", userID)
 	}
 
-	return domain.User{}, fmt.Errorf("More than one user found for UserID %s", userID)
+	var user domain.User
+	err = dynamodbattribute.UnmarshalMap(results[0], &user)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	newTags, err := updateTags(user.Tags)
+	if err != nil {
+		return user, fmt.Errorf("Error updating tags for user %s.\n%s", userID, err.Error())
+	}
+
+	user.Tags = newTags
+	return user, nil
 }
 
 func ListTags() ([]domain.Tag, error) {
@@ -327,7 +365,7 @@ func ListNodes() ([]domain.Node, error) {
 
 	var list []domain.Node
 
-	items, err := ScanTable(domain.DataTable, "node")
+	items, err := ScanTable(domain.DataTable, domain.DataTypeNode)
 	if err != nil {
 		return list, err
 	}
@@ -348,7 +386,7 @@ func ListVersions() ([]domain.Version, error) {
 
 	var list []domain.Version
 
-	items, err := ScanTable(domain.DataTable, "version")
+	items, err := ScanTable(domain.DataTable, domain.DataTypeVersion)
 	if err != nil {
 		return list, err
 	}
@@ -369,7 +407,7 @@ func ListUsers() ([]domain.User, error) {
 
 	var list []domain.User
 
-	items, err := ScanTable(domain.DataTable, "user")
+	items, err := ScanTable(domain.DataTable, domain.DataTypeUser)
 	if err != nil {
 		return list, err
 	}
@@ -567,7 +605,7 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 }
 
 // GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
-func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTagUIDs []string) (int, string) {
+func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
 	user, err := GetUserFromRequest(req)
 	if err != nil {
 		return http.StatusBadRequest, err.Error()
@@ -582,7 +620,7 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	}
 
 	if permissionType == domain.PermissionTagBased {
-		tagsOverlap := domain.DoTagsOverlap(user.TagUIDs, objectTagUIDs)
+		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
 		if tagsOverlap {
 			return 0, ""
 		}
@@ -593,7 +631,12 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
 }
 
-func AreTagsValid(tags []string) bool {
+// AreTagsValid returns a bool based on this ...
+//  - if the input is empty, then true
+//  - if there is an error getting the tags from the database, then false
+//  - if any of the tags do not have a UID that matches one that's in the db, then false
+//  - if all of the tags have a UID that matches one that's in the db, then true
+func AreTagsValid(tags []domain.Tag) bool {
 	if len(tags) == 0 {
 		return true
 	}
@@ -609,7 +652,7 @@ func AreTagsValid(tags []string) bool {
 	}
 
 	for _, tag := range tags {
-		inArray, _ := domain.InArray(tag, allTagUIDs)
+		inArray, _ := domain.InArray(tag.UID, allTagUIDs)
 		if !inArray {
 			return false
 		}

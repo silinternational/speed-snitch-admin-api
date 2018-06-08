@@ -97,7 +97,7 @@ type Node struct {
 	IPAddress         string    `json:"IPAddress"`
 	Tasks             []Task    `json:"Tasks"`
 	Contacts          []Contact `json:"Contacts"`
-	TagUIDs           []string  `json:"TagUIDs"`
+	Tags              []Tag     `json:"Tags"`
 	ConfiguredBy      string    `json:"ConfiguredBy"`
 	Nickname          string    `json:"Nickname"`
 	Notes             string    `json:"Notes"`
@@ -140,13 +140,13 @@ type NamedServer struct {
 }
 
 type User struct {
-	ID      string   `json:"ID"`
-	UID     string   `json:"UID"`
-	UserID  string   `json:"UserID"`
-	Name    string   `json:"Name"`
-	Email   string   `json:"Email"`
-	Role    string   `json:"Role"`
-	TagUIDs []string `json:"TagUIDs"`
+	ID     string `json:"ID"`
+	UID    string `json:"UID"`
+	UserID string `json:"UserID"`
+	Name   string `json:"Name"`
+	Email  string `json:"Email"`
+	Role   string `json:"Role"`
+	Tags   []Tag  `json:"Tags"`
 }
 
 type Version struct {
@@ -292,16 +292,16 @@ func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
 	return url
 }
 
-// DoTagsOverlap returns true if there is a tag with the same name
+// DoTagsOverlap returns true if there is a tag with the same UID
 //  in both slices of tags.  Otherwise, returns false.
-func DoTagsOverlap(tags1, tags2 []string) bool {
+func DoTagsOverlap(tags1, tags2 []Tag) bool {
 	if len(tags1) == 0 || len(tags2) == 0 {
 		return false
 	}
 
 	for _, tag1 := range tags1 {
 		for _, tag2 := range tags2 {
-			if tag1 == tag2 {
+			if tag1.UID == tag2.UID {
 				return true
 			}
 		}
@@ -316,7 +316,7 @@ func CanUserUseNode(user User, node Node) bool {
 	if user.Role == UserRoleSuperAdmin {
 		return true
 	}
-	return DoTagsOverlap(user.TagUIDs, node.TagUIDs)
+	return DoTagsOverlap(user.Tags, node.Tags)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
