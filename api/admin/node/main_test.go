@@ -124,8 +124,7 @@ func areFloatMapsEqual(expected, results map[string]float64) bool {
 
 func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
-
+	task.NamedServer = domain.NamedServer{}
 	results, err := getPingStringValues(task, DBClient{})
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
@@ -148,7 +147,7 @@ func TestGetPingStringValuesWithNamedServer(t *testing.T) {
 	uid := "NSTest1"
 	serverType := domain.ServerTypeCustom
 	serverHost := "PingTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
 
 	results, err := getPingStringValues(task, DBClient{})
 	expected := map[string]string{
@@ -169,7 +168,7 @@ func TestGetPingStringValuesWithNamedServer(t *testing.T) {
 
 func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 
 	resultsTask, err := updateTaskPing(task, DBClient{})
 
@@ -202,7 +201,7 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 	uid := "NSTest1"
 	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
 
 	resultsTask, err := updateTaskPing(task, DBClient{})
 
@@ -232,7 +231,7 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 
 func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 
 	results, err := getSpeedTestStringValues(task, DBClient{})
 	expected := map[string]string{
@@ -256,7 +255,7 @@ func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
 	uid := "NSTest2"
 	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
 
 	results, err := getSpeedTestStringValues(task, DBClient{})
 	expected := map[string]string{
@@ -281,7 +280,7 @@ func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
 	serverType := domain.ServerTypeSpeedTestNet
 	serverHost := "SpeedTestNetHost"
 	speedTestNetServerID := TestServerIDForSpeedTestNet
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|" + speedTestNetServerID
+	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|" + speedTestNetServerID}
 
 	results, err := getSpeedTestStringValues(task, DBClient{})
 	expected := map[string]string{
@@ -302,7 +301,7 @@ func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
 
 func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 
 	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
 
@@ -351,7 +350,7 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 	uid := "NSTest2"
 	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
 
 	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
 
@@ -400,7 +399,7 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 	uid := "NSTest3"
 	serverType := domain.ServerTypeSpeedTestNet
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
 
 	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
 
@@ -447,7 +446,7 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.Type = domain.TaskTypePing
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 	node := domain.Node{}
 
 	node.Tasks = []domain.Task{task}

@@ -42,13 +42,13 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	for _, oldTask := range node.Tasks {
 		// Only modify tasks that involve a NamedServer
-		if oldTask.NamedServerID == "" {
+		if oldTask.NamedServer.ID == "" {
 			newTasks = append(newTasks, oldTask)
 			continue
 		}
 
 		var namedServer domain.NamedServer
-		err = db.GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServerID, &namedServer)
+		err = db.GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServer.ID, &namedServer)
 		if err != nil {
 			return domain.ServerError(fmt.Errorf("Error getting NamedServer ... %s", err.Error()))
 		}

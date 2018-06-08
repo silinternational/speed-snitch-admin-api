@@ -112,12 +112,12 @@ type NodeConfig struct {
 }
 
 type Task struct {
-	Type                 string   `json:"Type"`
-	Schedule             string   `json:"Schedule"`
-	NamedServerID        string   `json:"NamedServerID"`
-	SpeedTestNetServerID string   `json:"SpeedTestNetServerID,omitempty"`
-	ServerHost           string   `json:"ServerHost,omitempty"`
-	Data                 TaskData `json:"Data"`
+	Type                 string      `json:"Type"`
+	Schedule             string      `json:"Schedule"`
+	NamedServer          NamedServer `json:"NamedServer"`
+	SpeedTestNetServerID string      `json:"SpeedTestNetServerID,omitempty"`
+	ServerHost           string      `json:"ServerHost,omitempty"`
+	Data                 TaskData    `json:"Data"`
 }
 
 type TaskData struct {

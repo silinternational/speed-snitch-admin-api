@@ -107,8 +107,7 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, SelfType, macAddr, &node)
+	node, err := db.GetNode(macAddr)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -317,7 +316,7 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 	stringValues[TestTypeKey] = domain.TestConfigLatencyTest
 
 	// If no NamedServerID, then use defaults
-	if task.NamedServerID == "" {
+	if task.NamedServer.ID == "" {
 		stringValues = setStringValue(stringValues, ServerHostKey, domain.DefaultPingServerHost)
 		stringValues = setStringValue(stringValues, ServerIDKey, domain.DefaultPingServerID)
 		return stringValues, nil
@@ -325,9 +324,9 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 
 	// There is a NamedServerID but we're not checking if it's associated with a SpeedTestNetServer (for Pings)
 	var namedServer domain.NamedServer
-	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServerID, &namedServer)
+	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServer.ID, &namedServer)
 	if err != nil {
-		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServerID, err.Error())
+		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.ID, err.Error())
 	}
 
 	stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
@@ -365,7 +364,7 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 	stringValues[TestTypeKey] = domain.TestConfigSpeedTest
 
 	// If there is no NamedServerID, then use the defaults
-	if task.NamedServerID == "" {
+	if task.NamedServer.ID == "" {
 		stringValues = setStringValue(stringValues, ServerHostKey, domain.DefaultSpeedTestNetServerHost)
 		stringValues = setStringValue(stringValues, ServerIDKey, domain.DefaultSpeedTestNetServerID)
 		return stringValues, nil
@@ -373,9 +372,9 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 
 	// There is a NamedServerID
 	var namedServer domain.NamedServer
-	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServerID, &namedServer)
+	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServer.ID, &namedServer)
 	if err != nil {
-		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServerID, err.Error())
+		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.ID, err.Error())
 	}
 
 	// This does not refer to a SpeedTestNetServer
