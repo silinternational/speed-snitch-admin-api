@@ -63,11 +63,22 @@ func FlushTables(t *testing.T) {
 	}
 }
 
-func loadTagFixtures(tagFixtures []domain.Tag, t *testing.T) {
-	for _, tag := range tagFixtures {
+func loadTagFixtures(fixtures []domain.Tag, t *testing.T) {
+	for _, tag := range fixtures {
 		err := PutItem(domain.DataTable, &tag)
 		if err != nil {
 			t.Errorf("Error loading tag fixture: %v\n%s", tag, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func loadNamedServerFixtures(fixtures []domain.NamedServer, t *testing.T) {
+	for _, namedServer := range fixtures {
+		err := PutItem(domain.DataTable, &namedServer)
+		if err != nil {
+			t.Errorf("Error loading tag fixture: %v\n%s", namedServer, err.Error())
 			t.Fail()
 			return
 		}
