@@ -12,6 +12,11 @@ var testTasks = map[string]domain.Task{
 	"111Ping": {
 		Type:     agent.TypePing,
 		Schedule: "*/11 * * * *",
+		NamedServer: domain.NamedServer{
+			ID:   "namedserver-000",
+			UID:  "000",
+			Name: "Outdated NamedServer",
+		},
 		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_LATENCY,
@@ -25,6 +30,11 @@ var testTasks = map[string]domain.Task{
 	"111SpeedTest": {
 		Type:     agent.TypeSpeedTest,
 		Schedule: "* 1 * * *",
+		NamedServer: domain.NamedServer{
+			ID:   "namedserver-999",
+			UID:  "999",
+			Name: "Deleted NamedServer",
+		},
 		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_ALL,
@@ -135,6 +145,10 @@ var tagFixtures = []domain.Tag{
 	{ID: "tag-333", UID: "333", Name: "Test Tag 333"},
 }
 
+var namedServerFixtures = []domain.NamedServer{
+	{ID: "namedserver-000", UID: "000", Name: "New Name"},
+}
+
 func TestUpdateTags(t *testing.T) {
 	FlushTables(t)
 	loadTagFixtures(tagFixtures, t)
@@ -159,6 +173,7 @@ func TestUpdateTags(t *testing.T) {
 func TestGetNode(t *testing.T) {
 	FlushTables(t)
 	loadTagFixtures(tagFixtures, t)
+	loadNamedServerFixtures(namedServerFixtures, t)
 
 	dbNode := testNodes["11Kenya"]
 	err := PutItem(domain.DataTable, dbNode)
@@ -172,7 +187,21 @@ func TestGetNode(t *testing.T) {
 	}
 
 	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
-	areTagsEqual(expected, node.Tags, t)
+	if !areTagsEqual(expected, node.Tags, t) {
+		return
+	}
+
+	expectedNS := namedServerFixtures[0]
+	namedServer := node.Tasks[0].NamedServer // domain.NamedServer{}
+
+	if namedServer.Name != expectedNS.Name {
+		t.Errorf(
+			"Mismatching Named Server for first Task. Expected Name: %s. But got Name: %s",
+			expectedNS.Name,
+			namedServer.Name,
+		)
+	}
+
 }
 
 func TestGetUserByUserID(t *testing.T) {

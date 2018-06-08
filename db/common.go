@@ -262,6 +262,7 @@ func GetDailySnapshotsForRange(startTime, endTime int64, nodeMacAddr string) ([]
 	return results, nil
 }
 
+// updateTags makes sure a Node's Tag objects have the latest information from the db
 func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
 	newTags := []domain.Tag{}
 	for _, oldTag := range oldTags {
@@ -277,11 +278,14 @@ func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
 	return newTags, nil
 }
 
+// updateTasks makes sure the NamedServer object of a Node's Tasks has the latest information from the db.
+// This is just for Ping and SpeedTest tasks.
 func updateTasks(oldTasks []domain.Task) ([]domain.Task, error) {
 	newTasks := []domain.Task{}
 	for _, oldTask := range oldTasks {
 		newTask := oldTask
-		if newTask.Type != domain.TaskTypePing || newTask.Type != domain.TaskTypeSpeedTest {
+
+		if newTask.Type != domain.TaskTypePing && newTask.Type != domain.TaskTypeSpeedTest {
 			continue
 		}
 		namedServer := domain.NamedServer{}
@@ -291,6 +295,7 @@ func updateTasks(oldTasks []domain.Task) ([]domain.Task, error) {
 		}
 
 		newTask.NamedServer = namedServer
+		newTasks = append(newTasks, newTask)
 	}
 
 	return newTasks, nil
@@ -312,6 +317,12 @@ func GetNode(macAddr string) (domain.Node, error) {
 		return node, fmt.Errorf("Error updating tags for node %s.\n%s", node.MacAddr, err.Error())
 	}
 	node.Tags = newTags
+
+	newTasks, err := updateTasks(node.Tasks)
+	if err != nil {
+		return node, fmt.Errorf("Error updating tasks for node %s.\n%s", node.MacAddr, err.Error())
+	}
+	node.Tasks = newTasks
 
 	return node, nil
 }
