@@ -18,3 +18,8 @@ test:
 	docker-compose run test ./codeship/test.sh
 
 codeshipsetup: dep build
+
+dynamo:
+	docker-compose up -d dynamo
+	sleep 5
+	docker-compose run init-dynamo
