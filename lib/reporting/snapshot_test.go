@@ -91,12 +91,12 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 
 	// Get snapshot for MacAddr aa:aa:aa:aa:aa:aa and make sure averages are right
 	startTime, endTime, err := GetStartEndTimestampsForDate(date)
-	results, err := db.GetDailySnapshotsForRange(startTime, endTime, "")
+	results, err := db.GetSnapshotsForRange("daily", "aa:aa:aa:aa:aa:aa", startTime, endTime)
 	if err != nil {
 		t.Error(err)
 		t.Fail()
 	}
-	if len(results) != 2 {
+	if len(results) != 1 {
 		t.Error("Not enough results returned, got ", len(results), "expected 2")
 	}
 
