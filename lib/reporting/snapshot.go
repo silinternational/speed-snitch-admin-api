@@ -15,12 +15,12 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 		return 0, err
 	}
 
-	dailySnapshots := map[string]domain.DailySnapshot{}
+	dailySnapshots := map[string]domain.ReportingSnapshot{}
 
 	for _, entry := range taskLog {
 		nodeEntry, exists := dailySnapshots[entry.MacAddr]
 		if !exists {
-			nodeEntry = domain.DailySnapshot{
+			nodeEntry = domain.ReportingSnapshot{
 				ID:                  "daily-" + entry.MacAddr,
 				Timestamp:           startTime,
 				ExpirationTime:      startTime + 31557600, // expire one year after log entry was created

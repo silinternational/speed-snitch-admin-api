@@ -101,6 +101,19 @@ functions:
               parameters:
                 paths:
                   macAddr: true
+
+  report:
+      handler: bin/report
+      events:
+        - http:
+            path: /node/{macAddr}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  macAddr: true
+
   tag:
       handler: bin/tag
       events:

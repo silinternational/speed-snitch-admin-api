@@ -2,6 +2,7 @@ package reporting
 
 import (
 	"fmt"
+	"github.com/silinternational/speed-snitch-admin-api"
 	"time"
 )
 
@@ -42,4 +43,10 @@ func GetHigherFloat(first, second float64) float64 {
 		return first
 	}
 	return second
+}
+
+func IsValidReportingInterval(needle string) bool {
+	haystack := []string{domain.ReportingIntervalDaily, domain.ReportingIntervalWeekly, domain.ReportingIntervalMonthly}
+	isValid, _ := domain.InArray(needle, haystack)
+	return isValid
 }

@@ -55,6 +55,10 @@ const UserRoleAdmin = "admin"
 const PermissionSuperAdmin = "superAdmin"
 const PermissionTagBased = "tagBased"
 
+const ReportingIntervalDaily = "daily"
+const ReportingIntervalWeekly = "weekly"
+const ReportingIntervalMonthly = "monthly"
+
 type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
@@ -202,7 +206,7 @@ type TaskLogEntry struct {
 	NodeRunningVersion string  `json:"RunningVersion"`
 }
 
-type DailySnapshot struct {
+type ReportingSnapshot struct {
 	ID                  string  `json:"ID"`
 	Timestamp           int64   `json:"Timestamp"`
 	ExpirationTime      int64   `json:"ExpirationTime"`

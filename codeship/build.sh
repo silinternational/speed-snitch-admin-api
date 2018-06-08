@@ -12,6 +12,7 @@ go build -ldflags="-s -w" -o bin/hello                      api/agent/hello/main
 go build -ldflags="-s -w" -o bin/tag                        api/admin/tag/main.go
 go build -ldflags="-s -w" -o bin/namedserver                api/admin/namedserver/main.go
 go build -ldflags="-s -w" -o bin/node                       api/admin/node/main.go
+go build -ldflags="-s -w" -o bin/report                     api/admin/report/main.go
 go build -ldflags="-s -w" -o bin/speedtestnetserver         api/admin/speedtestnetserver/main.go
 go build -ldflags="-s -w" -o bin/speedtestnetserverupdate   cron/speedtestnetserverupdate/main.go
 go build -ldflags="-s -w" -o bin/dailysnapshot              cron/dailysnapshot/main.go
