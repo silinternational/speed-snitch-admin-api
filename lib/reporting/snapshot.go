@@ -47,47 +47,33 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 			nodeEntry.LatencyDataPoints++
 
 			// Update update max/min
-			if entry.Latency > nodeEntry.LatencyMax {
-				nodeEntry.LatencyMax = entry.Latency
-			}
-			if entry.Latency < nodeEntry.LatencyMin {
-				nodeEntry.LatencyMin = entry.Latency
-			}
+			nodeEntry.LatencyMax = GetHigherFloat(entry.Latency, nodeEntry.LatencyMax)
+			nodeEntry.LatencyMin = GetLowerFloat(entry.Latency, nodeEntry.LatencyMin)
 
 			// Increment totals
 			nodeEntry.LatencyTotal += entry.Latency
 
 			// Calculate average
-			if nodeEntry.LatencyAvg > 0 {
-				nodeEntry.LatencyAvg = nodeEntry.LatencyTotal / float64(nodeEntry.LatencyDataPoints)
-			}
+			nodeEntry.LatencyAvg = nodeEntry.LatencyTotal / float64(nodeEntry.LatencyDataPoints)
+
 		} else if strings.HasPrefix(entry.ID, domain.TaskTypeSpeedTest) {
 			// Increment counts and update max/min
 			nodeEntry.SpeedTestDataPoints++
 
 			// Update update max/min
-			if entry.Upload > nodeEntry.UploadMax {
-				nodeEntry.UploadMax = entry.Upload
-			}
-			if entry.Upload < nodeEntry.UploadMin {
-				nodeEntry.UploadMin = entry.Upload
-			}
-			if entry.Download > nodeEntry.DownloadMax {
-				nodeEntry.DownloadMax = entry.Download
-			}
-			if entry.Download < nodeEntry.DownloadMin {
-				nodeEntry.DownloadMin = entry.Download
-			}
+			nodeEntry.UploadMax = GetHigherFloat(entry.Upload, nodeEntry.UploadMax)
+			nodeEntry.UploadMin = GetLowerFloat(entry.Upload, nodeEntry.UploadMin)
+			nodeEntry.DownloadMax = GetHigherFloat(entry.Download, nodeEntry.DownloadMax)
+			nodeEntry.DownloadMin = GetLowerFloat(entry.Download, nodeEntry.DownloadMin)
 
 			// Increment totals
 			nodeEntry.UploadTotal += entry.Upload
 			nodeEntry.DownloadTotal += entry.Download
 
 			// Calculate average
-			if nodeEntry.SpeedTestDataPoints > 0 {
-				nodeEntry.UploadAvg = nodeEntry.UploadTotal / float64(nodeEntry.SpeedTestDataPoints)
-				nodeEntry.DownloadAvg = nodeEntry.DownloadTotal / float64(nodeEntry.SpeedTestDataPoints)
-			}
+			nodeEntry.UploadAvg = nodeEntry.UploadTotal / float64(nodeEntry.SpeedTestDataPoints)
+			nodeEntry.DownloadAvg = nodeEntry.DownloadTotal / float64(nodeEntry.SpeedTestDataPoints)
+
 		}
 
 		// Update map

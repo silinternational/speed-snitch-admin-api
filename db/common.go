@@ -165,28 +165,26 @@ func scanTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeID
 	//}
 
 	prefixCount := len(logTypeIDPrefixes)
-	if prefixCount > 0 {
-		if prefixCount == 1 {
-			queryCondition = expression.And(timeCondition, expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]))
-		} else if prefixCount == 2 {
-			orCondition := expression.Or(
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]))
-			queryCondition = expression.And(timeCondition, orCondition)
-		} else if prefixCount == 3 {
-			orCondition := expression.Or(
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]),
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[2]))
-			queryCondition = expression.And(timeCondition, orCondition)
-		} else if prefixCount == 4 {
-			orCondition := expression.Or(
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]),
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[2]),
-				expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[3]))
-			queryCondition = expression.And(timeCondition, orCondition)
-		}
+	if prefixCount == 1 {
+		queryCondition = expression.And(timeCondition, expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]))
+	} else if prefixCount == 2 {
+		orCondition := expression.Or(
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]))
+		queryCondition = expression.And(timeCondition, orCondition)
+	} else if prefixCount == 3 {
+		orCondition := expression.Or(
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[2]))
+		queryCondition = expression.And(timeCondition, orCondition)
+	} else if prefixCount == 4 {
+		orCondition := expression.Or(
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[2]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[3]))
+		queryCondition = expression.And(timeCondition, orCondition)
 	}
 
 	// conditional macAddr condition

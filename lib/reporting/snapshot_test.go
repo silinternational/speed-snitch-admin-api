@@ -114,6 +114,7 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 				t.Errorf("Daily upload max not as expected (40.0), got: %v", snap.UploadMax)
 				t.Fail()
 			}
+			break
 		}
 	}
 }

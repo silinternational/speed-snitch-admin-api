@@ -29,3 +29,17 @@ func GetStartEndTimestampsForDate(date time.Time) (int64, int64, error) {
 
 	return startTimestamp, endTimestamp, nil
 }
+
+func GetLowerFloat(first, second float64) float64 {
+	if first < second {
+		return first
+	}
+	return second
+}
+
+func GetHigherFloat(first, second float64) float64 {
+	if first > second {
+		return first
+	}
+	return second
+}
