@@ -106,7 +106,7 @@ functions:
       handler: bin/report
       events:
         - http:
-            path: /node/{macAddr}
+            path: /report/node/{macAddr}
             method: GET
             private: true
             request:
