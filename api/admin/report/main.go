@@ -54,7 +54,7 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	}
 
 	// Ensure user is authorized ...
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.TagUIDs)
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
