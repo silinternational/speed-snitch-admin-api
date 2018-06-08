@@ -65,7 +65,7 @@ var testTasks = map[string]domain.Task{
 
 var testNodes = map[string]domain.Node{
 	"11Kenya": {
-		ID:                "node-1111",
+		ID:                "node-11:11:11:11:11:11",
 		MacAddr:           "11:11:11:11:11:11",
 		OS:                "linux",
 		Arch:              "amd",
@@ -89,13 +89,16 @@ var testNodes = map[string]domain.Node{
 				Phone: "100-123-4567",
 			},
 		},
-		TagUIDs:      []string{"000", "111"},
+		Tags: []domain.Tag{
+			{ID: "tag-000", UID: "000", Name: "Eastern Africa"},
+			{ID: "tag-111", UID: "111", Name: "Anglophone Africa"},
+		},
 		ConfiguredBy: "John Doe",
 		Nickname:     "Nairobi RaspberryPi",
 		Notes:        "",
 	},
 	"22Chad": {
-		ID:                "2222",
+		ID:                "node-22:22:22:22:22:22",
 		MacAddr:           "22:22:22:22:22:22",
 		OS:                "linux",
 		Arch:              "amd",
@@ -118,11 +121,18 @@ var testNodes = map[string]domain.Node{
 				Phone: "100-123-4567",
 			},
 		},
-		TagUIDs:      []string{"222", "333"},
+		Tags:         []domain.Tag{{ID: "tag-222", UID: "222"}, {ID: "tag-333", UID: "333"}},
 		ConfiguredBy: "John Doe",
 		Nickname:     "Chad Windoze server",
 		Notes:        "",
 	},
+}
+
+var tagFixtures = []domain.Tag{
+	{ID: "tag-000", UID: "000", Name: "Test Tag 000"},
+	{ID: "tag-111", UID: "111", Name: "Test Tag 111"},
+	{ID: "tag-222", UID: "222", Name: "Test Tag 222"},
+	{ID: "tag-333", UID: "333", Name: "Test Tag 333"},
 }
 
 func TestGetServerDataFromNode(t *testing.T) {
