@@ -230,33 +230,9 @@ func GetTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeIDP
 		return results, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.TaskLogEntry
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.TaskLogEntry{}, err
-		}
-		results = append(results, itemObj)
-	}
-
-	return results, nil
-}
-
-func GetDailySnapshotsForRange(startTime, endTime int64, nodeMacAddr string) ([]domain.DailySnapshot, error) {
-	var results []domain.DailySnapshot
-
-	items, err := scanTaskLogForRange(startTime, endTime, nodeMacAddr, []string{"daily"})
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &results)
 	if err != nil {
-		return results, err
-	}
-
-	for _, item := range items {
-		var itemObj domain.DailySnapshot
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.DailySnapshot{}, err
-		}
-		results = append(results, itemObj)
+		return []domain.TaskLogEntry{}, err
 	}
 
 	return results, nil
@@ -311,13 +287,9 @@ func ListTags() ([]domain.Tag, error) {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.Tag
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.Tag{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.Tag{}, err
 	}
 
 	return list, nil
@@ -332,13 +304,9 @@ func ListNodes() ([]domain.Node, error) {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.Node
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.Node{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.Node{}, err
 	}
 
 	return list, nil
@@ -353,13 +321,9 @@ func ListVersions() ([]domain.Version, error) {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.Version
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.Version{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.Version{}, err
 	}
 
 	return list, nil
@@ -374,13 +338,9 @@ func ListUsers() ([]domain.User, error) {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.User
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.User{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.User{}, err
 	}
 
 	return list, nil
@@ -395,13 +355,9 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.NamedServer
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.NamedServer{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.NamedServer{}, err
 	}
 
 	return list, nil
@@ -418,13 +374,9 @@ func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.STNetServerList
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.STNetServerList{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.STNetServerList{}, err
 	}
 
 	return list, nil
@@ -616,4 +568,45 @@ func AreTagsValid(tags []string) bool {
 	}
 
 	return true
+}
+
+func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int64) ([]domain.ReportingSnapshot, error) {
+	tableName := domain.GetDbTableName(domain.TaskLogTable)
+	taskLogID := fmt.Sprintf("%s-%s", interval, nodeMacAddr)
+
+	rangeExpression := expression.KeyBetween(expression.Key("Timestamp"), expression.Value(rangeStart), expression.Value(rangeEnd))
+	keyExpression := expression.Key("ID").Equal(expression.Value(taskLogID)).And(rangeExpression)
+
+	cond, err := expression.NewBuilder().WithKeyCondition(keyExpression).Build()
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	input := &dynamodb.QueryInput{
+		TableName:                 &tableName,
+		KeyConditionExpression:    cond.KeyCondition(),
+		ExpressionAttributeNames:  cond.Names(),
+		ExpressionAttributeValues: cond.Values(),
+	}
+
+	db := GetDb()
+	var results []domain.ReportingSnapshot
+	err = db.QueryPages(input,
+		func(page *dynamodb.QueryOutput, lastPage bool) bool {
+			var pageResults []domain.ReportingSnapshot
+			err := dynamodbattribute.UnmarshalListOfMaps(page.Items, &pageResults)
+			if err != nil {
+				fmt.Fprintln(os.Stdout, "Unable to unmarshal results into list of ReportingSnapshots")
+				return false
+			}
+
+			results = append(results, pageResults...)
+			return !lastPage
+		})
+
+	if err != nil {
+		return results, err
+	}
+
+	return results, nil
 }

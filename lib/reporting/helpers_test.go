@@ -1,6 +1,7 @@
 package reporting
 
 import (
+	"github.com/silinternational/speed-snitch-admin-api"
 	"testing"
 	"time"
 )
@@ -82,6 +83,38 @@ func TestGetLowerFloat(t *testing.T) {
 		result := GetLowerFloat(fix.first, fix.second)
 		if result != fix.lower {
 			t.Error("GetLowerFloat did not return expected winner. Got", result, "expected", fix.lower)
+			t.Fail()
+		}
+	}
+}
+
+func TestIsValidReportingInterval(t *testing.T) {
+	tests := []struct {
+		value   string
+		success bool
+	}{
+		{
+			value:   domain.ReportingIntervalDaily,
+			success: true,
+		},
+		{
+			value:   domain.ReportingIntervalWeekly,
+			success: true,
+		},
+		{
+			value:   domain.ReportingIntervalMonthly,
+			success: true,
+		},
+		{
+			value:   "day",
+			success: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := IsValidReportingInterval(test.value)
+		if result != test.success {
+			t.Error("Error validating interval for interval value", test.value)
 			t.Fail()
 		}
 	}
