@@ -40,7 +40,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 //  It gets the server row for that country code and extracts the server that
 //  matches that serverID.
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -81,7 +81,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 // listServersInCountry requires a "countryCode" path param and returns the one row that has the
 //   list of servers for that country
 func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -106,7 +106,7 @@ func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayP
 }
 
 func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}

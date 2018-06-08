@@ -277,6 +277,9 @@ func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
 	return newTags, nil
 }
 
+// GetNode gets the Node from the database and updates its tags to have the latest
+//  information from the database.
+//  Any tags that are no longer in the db will be dropped from the Node
 func GetNode(macAddr string) (domain.Node, error) {
 	node := domain.Node{}
 	err := GetItem(domain.DataTable, domain.DataTypeNode, macAddr, &node)

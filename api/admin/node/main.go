@@ -71,7 +71,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -121,7 +121,7 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	// Ensure user is authorized ...
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.TagUIDs)
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -143,27 +143,12 @@ func listNodeTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, SelfType, macAddr, &node)
+	node, err := db.GetNode(macAddr)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	allTags, err := db.ListTags()
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	var nodeTags []domain.Tag
-
-	for _, tag := range allTags {
-		inArray, _ := domain.InArray(tag.UID, node.TagUIDs)
-		if inArray {
-			nodeTags = append(nodeTags, tag)
-		}
-	}
-
-	js, err := json.Marshal(nodeTags)
+	js, err := json.Marshal(node.Tags)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -237,7 +222,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Make sure tags are valid and user calling api is allowed to use them
-	if !db.AreTagsValid(updatedNode.TagUIDs) {
+	if !db.AreTagsValid(updatedNode.Tags) {
 		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
 	}
 	// @todo do we need to check if user making api call can use the tags provided?
@@ -247,7 +232,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	node.ConfiguredVersion = updatedNode.ConfiguredVersion
 	node.Tasks = updatedNode.Tasks
 	node.Contacts = updatedNode.Contacts
-	node.TagUIDs = updatedNode.TagUIDs
+	node.Tags = updatedNode.Tags
 	node.Nickname = updatedNode.Nickname
 	node.Notes = updatedNode.Notes
 
@@ -255,7 +240,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	var existingNode domain.Node
 	err = db.GetItem(domain.DataTable, SelfType, macAddr, &existingNode)
 	if err == nil {
-		statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, existingNode.TagUIDs)
+		statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, existingNode.Tags)
 		if statusCode > 0 {
 			return domain.ClientError(statusCode, errMsg)
 		}
