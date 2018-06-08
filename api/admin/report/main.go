@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -31,28 +32,12 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 		return domain.ClientError(http.StatusBadRequest, "Invalid interval specified")
 	}
 
-	periodStart := req.QueryStringParameters["start"]
-	if periodStart == "" {
-		return domain.ClientError(http.StatusBadRequest, "Parameter start is required and should be format YYYY-MM-DD")
-	}
-	periodStartTime, err := time.Parse(PeriodTimeFormat, periodStart)
-	if err != nil {
-		return domain.ClientError(http.StatusBadRequest, err.Error())
-	}
-	periodStartTimestamp, _, err := reporting.GetStartEndTimestampsForDate(periodStartTime)
+	periodStartTimestamp, err := getTimestampFromString(req.QueryStringParameters["start"])
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	periodEnd := req.QueryStringParameters["end"]
-	if periodEnd == "" {
-		return domain.ClientError(http.StatusBadRequest, "Parameter end is required and should be format YYYY-MM-DD")
-	}
-	periodEndTime, err := time.Parse(PeriodTimeFormat, periodEnd)
-	if err != nil {
-		return domain.ClientError(http.StatusBadRequest, err.Error())
-	}
-	_, periodEndTimestamp, err := reporting.GetStartEndTimestampsForDate(periodEndTime)
+	periodEndTimestamp, err := getTimestampFromString(req.QueryStringParameters["end"])
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
@@ -89,6 +74,22 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 		StatusCode: http.StatusOK,
 		Body:       string(js),
 	}, nil
+}
+
+func getTimestampFromString(date string) (int64, error) {
+	if date == "" {
+		return 0, fmt.Errorf("Parameters start and end are required and should be format YYYY-MM-DD")
+	}
+	dateTime, err := time.Parse(PeriodTimeFormat, date)
+	if err != nil {
+		return 0, err
+	}
+	timestamp, _, err := reporting.GetStartEndTimestampsForDate(dateTime)
+	if err != nil {
+		return 0, err
+	}
+
+	return timestamp, nil
 }
 
 func main() {
