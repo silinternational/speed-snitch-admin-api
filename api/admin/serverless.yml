@@ -349,7 +349,7 @@ resources:
           AttributeName: ExpirationTime
           Enabled: true
 
-     ScalingRole:
+    ScalingRole:
       Type: "AWS::IAM::Role"
       Properties:
        AssumeRolePolicyDocument:
@@ -383,7 +383,7 @@ resources:
              - "cloudwatch:DeleteAlarms"
             Resource: "*"
 
-     DataTableReadCapacityScalableTarget:
+    DataTableReadCapacityScalableTarget:
       Type: "AWS::ApplicationAutoScaling::ScalableTarget"
       Properties:
        MaxCapacity: ${self:custom.maxRcu}
@@ -393,7 +393,7 @@ resources:
        ScalableDimension: "dynamodb:table:ReadCapacityUnits"
        ServiceNamespace: dynamodb
 
-     DataTableWriteCapacityScalableTarget:
+    DataTableWriteCapacityScalableTarget:
       Type: "AWS::ApplicationAutoScaling::ScalableTarget"
       Properties:
        MaxCapacity: ${self:custom.maxWcu}
@@ -403,7 +403,7 @@ resources:
        ScalableDimension: "dynamodb:table:WriteCapacityUnits"
        ServiceNamespace: dynamodb
 
-     DataTableReadScalingPolicy:
+    DataTableReadScalingPolicy:
       Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
       Properties:
        PolicyName: ReadAutoScalingPolicy
@@ -417,7 +417,7 @@ resources:
         PredefinedMetricSpecification:
          PredefinedMetricType: DynamoDBReadCapacityUtilization
 
-     DataTableWriteScalingPolicy:
+    DataTableWriteScalingPolicy:
       Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
       Properties:
        PolicyName: WriteAutoScalingPolicy
@@ -431,7 +431,7 @@ resources:
         PredefinedMetricSpecification:
          PredefinedMetricType: DynamoDBWriteCapacityUtilization
 
-     TaskLogTableReadCapacityScalableTarget:
+    TaskLogTableReadCapacityScalableTarget:
       Type: "AWS::ApplicationAutoScaling::ScalableTarget"
       Properties:
        MaxCapacity: ${self:custom.maxRcu}
@@ -441,7 +441,7 @@ resources:
        ScalableDimension: "dynamodb:table:ReadCapacityUnits"
        ServiceNamespace: dynamodb
 
-     TaskLogTableWriteCapacityScalableTarget:
+    TaskLogTableWriteCapacityScalableTarget:
       Type: "AWS::ApplicationAutoScaling::ScalableTarget"
       Properties:
        MaxCapacity: ${self:custom.maxWcu}
@@ -451,7 +451,7 @@ resources:
        ScalableDimension: "dynamodb:table:WriteCapacityUnits"
        ServiceNamespace: dynamodb
 
-     TaskLogTableReadScalingPolicy:
+    TaskLogTableReadScalingPolicy:
       Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
       Properties:
        PolicyName: ReadAutoScalingPolicy
@@ -465,7 +465,7 @@ resources:
         PredefinedMetricSpecification:
          PredefinedMetricType: DynamoDBReadCapacityUtilization
 
-     TaskLogTableWriteScalingPolicy:
+    TaskLogTableWriteScalingPolicy:
       Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
       Properties:
        PolicyName: WriteAutoScalingPolicy
