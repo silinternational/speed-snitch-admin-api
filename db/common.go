@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/expression"
 	"github.com/fillup/semver"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-agent"
@@ -17,11 +18,15 @@ import (
 
 const ENV_DYNAMO_ENDPOINT = "AWS_DYNAMODB_ENDPOINT"
 
-var db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1"))
+var db *dynamodb.DynamoDB
 
 func GetDb() *dynamodb.DynamoDB {
-	dynamoEndpoint := os.Getenv(ENV_DYNAMO_ENDPOINT)
-	return dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint(dynamoEndpoint))
+	if db == nil {
+		dynamoEndpoint := os.Getenv(ENV_DYNAMO_ENDPOINT)
+		fmt.Fprintf(os.Stdout, "dynamodb endpoint: %s\n", dynamoEndpoint)
+		db = dynamodb.New(session.New(), aws.NewConfig().WithRegion("us-east-1").WithEndpoint(dynamoEndpoint))
+	}
+	return db
 }
 
 func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
@@ -102,7 +107,7 @@ func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 	return true, nil
 }
 
-func scanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeValue, error) {
+func ScanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeValue, error) {
 	tableName := domain.GetDbTableName(tableAlias)
 	filterExpression := "begins_with(ID, :dataType)"
 	input := &dynamodb.ScanInput{
@@ -130,6 +135,109 @@ func scanTable(tableAlias, dataType string) ([]map[string]*dynamodb.AttributeVal
 	return results, nil
 }
 
+func scanTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeIDPrefixes []string) ([]map[string]*dynamodb.AttributeValue, error) {
+	tableName := domain.GetDbTableName(domain.TaskLogTable)
+
+	var queryCondition expression.ConditionBuilder
+
+	// startTime and endTime are required, so start condition with it
+	timeCondition := expression.Between(expression.Name("Timestamp"), expression.Value(startTime), expression.Value(endTime))
+
+	// Default queryCondition is time alone
+	queryCondition = timeCondition
+
+	// If a list of ID prefixes were provided, append to query condition
+	//if len(logTypeIDPrefixes) > 0 {
+	//	conditionOrs := []expression.ConditionBuilder{}
+	//	for _, prefix := range logTypeIDPrefixes {
+	//		newOr := expression.BeginsWith(expression.Name("ID"), prefix)
+	//		conditionOrs = append(conditionOrs, newOr)
+	//	}
+	//	if len(logTypeIDPrefixes) == 1 {
+	//		queryCondition.And(timeCondition, conditionOrs[0])
+	//	} else if len(logTypeIDPrefixes) == 2 {
+	//		queryCondition = expression.And(timeCondition, conditionOrs[0], conditionOrs[1])
+	//	} else {
+	//		queryCondition.And(timeCondition, expression.Or(conditionOrs[0], conditionOrs[1], conditionOrs...))
+	//	}
+	//} else {
+	//	queryCondition = timeCondition
+	//}
+
+	prefixCount := len(logTypeIDPrefixes)
+	if prefixCount == 1 {
+		queryCondition = expression.And(timeCondition, expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]))
+	} else if prefixCount == 2 {
+		orCondition := expression.Or(
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]))
+		queryCondition = expression.And(timeCondition, orCondition)
+	} else if prefixCount == 3 {
+		orCondition := expression.Or(
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[2]))
+		queryCondition = expression.And(timeCondition, orCondition)
+	} else if prefixCount == 4 {
+		orCondition := expression.Or(
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[0]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[1]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[2]),
+			expression.BeginsWith(expression.Name("ID"), logTypeIDPrefixes[3]))
+		queryCondition = expression.And(timeCondition, orCondition)
+	}
+
+	// conditional macAddr condition
+	if nodeMacAddr != "" {
+		macAddrCondition := expression.Contains(expression.Name("MacAddr"), nodeMacAddr)
+		queryCondition = expression.And(queryCondition, macAddrCondition)
+	}
+
+	expr, err := expression.NewBuilder().WithCondition(queryCondition).Build()
+	if err != nil {
+		return []map[string]*dynamodb.AttributeValue{}, err
+	}
+
+	consistentRead := true
+	input := &dynamodb.ScanInput{
+		TableName:                 &tableName,
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		FilterExpression:          expr.Condition(),
+		ConsistentRead:            &consistentRead,
+	}
+
+	db := GetDb()
+	var results []map[string]*dynamodb.AttributeValue
+	err = db.ScanPages(input,
+		func(page *dynamodb.ScanOutput, lastPage bool) bool {
+			results = append(results, page.Items...)
+			return !lastPage
+		})
+
+	if err != nil {
+		return results, err
+	}
+
+	return results, nil
+}
+
+func GetTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeIDPrefixes []string) ([]domain.TaskLogEntry, error) {
+	var results []domain.TaskLogEntry
+
+	items, err := scanTaskLogForRange(startTime, endTime, nodeMacAddr, logTypeIDPrefixes)
+	if err != nil {
+		return results, err
+	}
+
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &results)
+	if err != nil {
+		return []domain.TaskLogEntry{}, err
+	}
+
+	return results, nil
+}
+
 func GetUserByUserID(userID string) (domain.User, error) {
 	tableName := domain.GetDbTableName(domain.DataTable)
 	filterExpression := "UserID = :userID"
@@ -144,6 +252,7 @@ func GetUserByUserID(userID string) (domain.User, error) {
 	}
 
 	var results []map[string]*dynamodb.AttributeValue
+	db := GetDb()
 	err := db.ScanPages(input,
 		func(page *dynamodb.ScanOutput, lastPage bool) bool {
 			results = append(results, page.Items...)
@@ -173,18 +282,14 @@ func ListTags() ([]domain.Tag, error) {
 
 	var list []domain.Tag
 
-	items, err := scanTable(domain.DataTable, "tag")
+	items, err := ScanTable(domain.DataTable, "tag")
 	if err != nil {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.Tag
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.Tag{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.Tag{}, err
 	}
 
 	return list, nil
@@ -194,18 +299,14 @@ func ListNodes() ([]domain.Node, error) {
 
 	var list []domain.Node
 
-	items, err := scanTable(domain.DataTable, "node")
+	items, err := ScanTable(domain.DataTable, "node")
 	if err != nil {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.Node
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.Node{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.Node{}, err
 	}
 
 	return list, nil
@@ -215,18 +316,14 @@ func ListVersions() ([]domain.Version, error) {
 
 	var list []domain.Version
 
-	items, err := scanTable(domain.DataTable, "version")
+	items, err := ScanTable(domain.DataTable, "version")
 	if err != nil {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.Version
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.Version{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.Version{}, err
 	}
 
 	return list, nil
@@ -236,18 +333,14 @@ func ListUsers() ([]domain.User, error) {
 
 	var list []domain.User
 
-	items, err := scanTable(domain.DataTable, "user")
+	items, err := ScanTable(domain.DataTable, "user")
 	if err != nil {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.User
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.User{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.User{}, err
 	}
 
 	return list, nil
@@ -257,18 +350,14 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 
 	var list []domain.NamedServer
 
-	items, err := scanTable(domain.DataTable, domain.DataTypeNamedServer)
+	items, err := ScanTable(domain.DataTable, domain.DataTypeNamedServer)
 	if err != nil {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.NamedServer
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.NamedServer{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.NamedServer{}, err
 	}
 
 	return list, nil
@@ -280,18 +369,14 @@ func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 
 	var list []domain.STNetServerList
 
-	items, err := scanTable(domain.DataTable, domain.DataTypeSTNetServerList)
+	items, err := ScanTable(domain.DataTable, domain.DataTypeSTNetServerList)
 	if err != nil {
 		return list, err
 	}
 
-	for _, item := range items {
-		var itemObj domain.STNetServerList
-		err := dynamodbattribute.UnmarshalMap(item, &itemObj)
-		if err != nil {
-			return []domain.STNetServerList{}, err
-		}
-		list = append(list, itemObj)
+	err = dynamodbattribute.UnmarshalListOfMaps(items, &list)
+	if err != nil {
+		return []domain.STNetServerList{}, err
 	}
 
 	return list, nil
@@ -483,4 +568,45 @@ func AreTagsValid(tags []string) bool {
 	}
 
 	return true
+}
+
+func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int64) ([]domain.ReportingSnapshot, error) {
+	tableName := domain.GetDbTableName(domain.TaskLogTable)
+	taskLogID := fmt.Sprintf("%s-%s", interval, nodeMacAddr)
+
+	rangeExpression := expression.KeyBetween(expression.Key("Timestamp"), expression.Value(rangeStart), expression.Value(rangeEnd))
+	keyExpression := expression.Key("ID").Equal(expression.Value(taskLogID)).And(rangeExpression)
+
+	cond, err := expression.NewBuilder().WithKeyCondition(keyExpression).Build()
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	input := &dynamodb.QueryInput{
+		TableName:                 &tableName,
+		KeyConditionExpression:    cond.KeyCondition(),
+		ExpressionAttributeNames:  cond.Names(),
+		ExpressionAttributeValues: cond.Values(),
+	}
+
+	db := GetDb()
+	var results []domain.ReportingSnapshot
+	err = db.QueryPages(input,
+		func(page *dynamodb.QueryOutput, lastPage bool) bool {
+			var pageResults []domain.ReportingSnapshot
+			err := dynamodbattribute.UnmarshalListOfMaps(page.Items, &pageResults)
+			if err != nil {
+				fmt.Fprintln(os.Stdout, "Unable to unmarshal results into list of ReportingSnapshots")
+				return false
+			}
+
+			results = append(results, pageResults...)
+			return !lastPage
+		})
+
+	if err != nil {
+		return results, err
+	}
+
+	return results, nil
 }

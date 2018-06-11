@@ -21,6 +21,7 @@ const DataTypeNamedServer = "namedserver"
 const DataTypeNode = "node"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
 const DataTypeSTNetServerList = "stnetserverlist"
+const DataTypeSTNetCountryList = "stnetcountrylist"
 const DataTypeTag = "tag"
 const DataTypeUser = "user"
 const DataTypeVersion = "version"
@@ -30,6 +31,8 @@ const ServerTypeCustom = "custom"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
 
+const STNetCountryListUID = "1"
+
 const TaskTypePing = "ping"
 const TaskTypeSpeedTest = "speedTest"
 
@@ -37,7 +40,7 @@ const TestConfigSpeedTest = "speedTest"
 const TestConfigLatencyTest = "latencyTest"
 
 const DefaultPingServerID = "defaultPing"
-const DefaultPingServerHost = "google.com:8080"
+const DefaultPingServerHost = "paris1.speedtest.orange.fr:8080"
 
 const DefaultSpeedTestNetServerID = "5559"
 const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
@@ -51,6 +54,10 @@ const UserRoleAdmin = "admin"
 
 const PermissionSuperAdmin = "superAdmin"
 const PermissionTagBased = "tagBased"
+
+const ReportingIntervalDaily = "daily"
+const ReportingIntervalWeekly = "weekly"
+const ReportingIntervalMonthly = "monthly"
 
 type Contact struct {
 	Name  string `json:"Name"`
@@ -169,6 +176,11 @@ type STNetServerList struct {
 	Servers []SpeedTestNetServer `xml:"server"`
 }
 
+type STNetCountryList struct {
+	ID        string    `json:"ID"`
+	Countries []Country `json:"Countries"`
+}
+
 type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
 }
@@ -194,6 +206,27 @@ type TaskLogEntry struct {
 	NodeRunningVersion string  `json:"RunningVersion"`
 }
 
+type ReportingSnapshot struct {
+	ID                  string  `json:"ID"`
+	Timestamp           int64   `json:"Timestamp"`
+	ExpirationTime      int64   `json:"ExpirationTime"`
+	MacAddr             string  `json:"MacAddr"`
+	UploadAvg           float64 `json:"UploadAvg"`
+	UploadMax           float64 `json:"UploadMax"`
+	UploadMin           float64 `json:"UploadMin"`
+	UploadTotal         float64 `json:"-"`
+	DownloadAvg         float64 `json:"DownloadAvg"`
+	DownloadMax         float64 `json:"DownloadMax"`
+	DownloadMin         float64 `json:"DownloadMin"`
+	DownloadTotal       float64 `json:"-"`
+	LatencyAvg          float64 `json:"LatencyAvg"`
+	LatencyMax          float64 `json:"LatencyMax"`
+	LatencyMin          float64 `json:"LatencyMin"`
+	LatencyTotal        float64 `json:"-"`
+	SpeedTestDataPoints int64   `json:"SpeedTestDataPoints"`
+	LatencyDataPoints   int64   `json:"LatencyDataPoints"`
+}
+
 // Add a helper for handling errors. This logs any error to os.Stderr
 // and returns a 500 Internal Server Error response that the AWS API
 // Gateway understands.
@@ -214,9 +247,14 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 	}, nil
 }
 
-// GetTableName returns the env var value of the string passed in
+// GetTableName returns the env var value of the string passed in or the string itself
 func GetDbTableName(table string) string {
-	return os.Getenv(table)
+	envOverride := os.Getenv(table)
+	if envOverride != "" {
+		return envOverride
+	}
+
+	return table
 }
 
 // IsValidMacAddress checks whether the input is ...
