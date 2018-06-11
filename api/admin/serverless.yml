@@ -388,8 +388,11 @@ resources:
       Properties:
        MaxCapacity: ${self:custom.maxRcu}
        MinCapacity: ${self:custom.minRcu}
-       ResourceId: !Sub table/${self:custom.dataTable}
-       RoleARN: !GetAtt ScalingRole.Arn
+       ResourceId: 'table/${self:custom.dataTable}'
+       RoleARN:
+        Fn::GetAtt:
+          - ScalingRole
+          - Arn
        ScalableDimension: "dynamodb:table:ReadCapacityUnits"
        ServiceNamespace: dynamodb
 
@@ -398,8 +401,11 @@ resources:
       Properties:
        MaxCapacity: ${self:custom.maxWcu}
        MinCapacity: ${self:custom.minWcu}
-       ResourceId: !Sub table/${self:custom.dataTable}
-       RoleARN: !GetAtt ScalingRole.Arn
+       ResourceId: 'table/${self:custom.dataTable}'
+       RoleARN:
+        Fn::GetAtt:
+          - ScalingRole
+          - Arn
        ScalableDimension: "dynamodb:table:WriteCapacityUnits"
        ServiceNamespace: dynamodb
 
@@ -436,8 +442,11 @@ resources:
       Properties:
        MaxCapacity: ${self:custom.maxRcu}
        MinCapacity: ${self:custom.minRcu}
-       ResourceId: !Sub table/${self:custom.taskLogTable}
-       RoleARN: !GetAtt ScalingRole.Arn
+       ResourceId: 'table/${self:custom.taskLogTable}'
+       RoleARN:
+        Fn::GetAtt:
+          - ScalingRole
+          - Arn
        ScalableDimension: "dynamodb:table:ReadCapacityUnits"
        ServiceNamespace: dynamodb
 
@@ -446,8 +455,11 @@ resources:
       Properties:
        MaxCapacity: ${self:custom.maxWcu}
        MinCapacity: ${self:custom.minWcu}
-       ResourceId: !Sub table/${self:custom.taskLogTable}
-       RoleARN: !GetAtt ScalingRole.Arn
+       ResourceId: 'table/${self:custom.taskLogTable}'
+       RoleARN:
+        Fn::GetAtt:
+          - ScalingRole
+          - Arn
        ScalableDimension: "dynamodb:table:WriteCapacityUnits"
        ServiceNamespace: dynamodb
 
