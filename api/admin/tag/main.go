@@ -171,6 +171,18 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		}, nil
 	}
 
+	// remove tag from users
+	err = db.RemoveTagFromUsers(UID)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	// remove tag from nodes
+	err = db.RemoveTagFromNodes(UID)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       "",
