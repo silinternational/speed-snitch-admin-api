@@ -27,15 +27,20 @@ const TestTypeKey = "testType"
 
 // This is need for testing
 type dbClient interface {
-	GetItem(string, string, string, interface{}) error
+	GetNode(string) (domain.Node, error)
+	GetNamedServer(string) (domain.NamedServer, error)
 	GetSpeedTestNetServerFromNamedServer(domain.NamedServer) (domain.SpeedTestNetServer, error)
 }
 
 // This is needed to allow for mock db result in the tests
 type Client struct{}
 
-func (c Client) GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
-	return db.GetItem(tableAlias, dataType, value, itemObj)
+func (c Client) GetNode(value string) (domain.Node, error) {
+	return db.GetNode(value)
+}
+
+func (c Client) GetNamedServer(value string) (domain.NamedServer, error) {
+	return db.GetNamedServer(value)
 }
 
 func (c Client) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
@@ -208,7 +213,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
-	err = db.GetItem(domain.DataTable, SelfType, macAddr, &node)
+	node, err = db.GetNode(macAddr)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -236,8 +241,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	node.Notes = updatedNode.Notes
 
 	// If node already exists, ensure user is authorized ...
-	var existingNode domain.Node
-	err = db.GetItem(domain.DataTable, SelfType, macAddr, &existingNode)
+	existingNode, err := db.GetNode(macAddr)
 	if err == nil {
 		statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, existingNode.Tags)
 		if statusCode > 0 {
@@ -247,7 +251,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// We need to use Client{} to allow for unit testing the function
 	// It just calls the common.db methods with the same names
-	node, err = updateNodeTasks(node, Client{})
+	node, err = updateNodeTasks(node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -270,17 +274,17 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}, nil
 }
 
-func updateNodeTasks(node domain.Node, db dbClient) (domain.Node, error) {
+func updateNodeTasks(node domain.Node) (domain.Node, error) {
 	newTasks := []domain.Task{}
 	for index, task := range node.Tasks {
 		if task.Type == domain.TaskTypePing {
-			newTask, err := updateTaskPing(task, db)
+			newTask, err := updateTaskPing(task)
 			if err != nil {
 				return node, fmt.Errorf("Error updating task. Index: %d. Type: %s ... %s", index, task.Type, err.Error())
 			}
 			newTasks = append(newTasks, newTask)
 		} else if task.Type == domain.TaskTypeSpeedTest {
-			newTask, err := updateTaskSpeedTest(task, db)
+			newTask, err := updateTaskSpeedTest(task)
 			if err != nil {
 				return node, fmt.Errorf("Error updating task. Index: %d. Type: %s ... %s", index, task.Type, err.Error())
 			}
@@ -294,11 +298,11 @@ func updateNodeTasks(node domain.Node, db dbClient) (domain.Node, error) {
 	return node, nil
 }
 
-func updateTaskPing(task domain.Task, db dbClient) (domain.Task, error) {
+func updateTaskPing(task domain.Task) (domain.Task, error) {
 	intValues := setIntValueIfMissing(task.Data.IntValues, TimeOutKey, DefaultPingTimeoutInSeconds)
 	task.Data.IntValues = intValues
 
-	stringValues, err := getPingStringValues(task, db)
+	stringValues, err := getPingStringValues(task)
 	if err != nil {
 		return task, err
 	}
@@ -307,7 +311,7 @@ func updateTaskPing(task domain.Task, db dbClient) (domain.Task, error) {
 	return task, nil
 }
 
-func getPingStringValues(task domain.Task, db dbClient) (map[string]string, error) {
+func getPingStringValues(task domain.Task) (map[string]string, error) {
 	stringValues := map[string]string{}
 	if task.Data.StringValues != nil {
 		stringValues = task.Data.StringValues
@@ -324,7 +328,7 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 
 	// There is a NamedServerID but we're not checking if it's associated with a SpeedTestNetServer (for Pings)
 	var namedServer domain.NamedServer
-	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServer.ID, &namedServer)
+	namedServer, err := db.GetNamedServer(task.NamedServer.UID)
 	if err != nil {
 		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.ID, err.Error())
 	}
@@ -335,11 +339,11 @@ func getPingStringValues(task domain.Task, db dbClient) (map[string]string, erro
 	return stringValues, nil
 }
 
-func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
+func updateTaskSpeedTest(task domain.Task) (domain.Task, error) {
 	intValues := setIntValueIfMissing(task.Data.IntValues, TimeOutKey, DefaultSpeedTestTimeoutInSeconds)
 	task.Data.IntValues = intValues
 
-	stringValues, err := getSpeedTestStringValues(task, db)
+	stringValues, err := getSpeedTestStringValues(task)
 	if err != nil {
 		return task, err
 	}
@@ -355,7 +359,7 @@ func updateTaskSpeedTest(task domain.Task, db dbClient) (domain.Task, error) {
 	return task, nil
 }
 
-func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string, error) {
+func getSpeedTestStringValues(task domain.Task) (map[string]string, error) {
 	stringValues := map[string]string{}
 	if task.Data.StringValues != nil {
 		stringValues = task.Data.StringValues
@@ -371,10 +375,9 @@ func getSpeedTestStringValues(task domain.Task, db dbClient) (map[string]string,
 	}
 
 	// There is a NamedServerID
-	var namedServer domain.NamedServer
-	err := db.GetItem(domain.DataTable, domain.DataTypeNamedServer, task.NamedServer.ID, &namedServer)
+	namedServer, err := db.GetNamedServer(task.NamedServer.UID)
 	if err != nil {
-		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.ID, err.Error())
+		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.UID, err.Error())
 	}
 
 	// This does not refer to a SpeedTestNetServer

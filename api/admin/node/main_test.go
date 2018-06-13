@@ -1,49 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
-	"reflect"
-	"strings"
+	"github.com/silinternational/speed-snitch-admin-api/db"
 	"testing"
 )
 
-type DBClient struct{}
-
 const TestHostForSpeedTestNet = "SpeedTestNetFixtureHost"
 const TestServerIDForSpeedTestNet = "111"
-
-// For test fixtures, the value param is going to dictate the attribute values.
-//   The value should have this format ...
-//     UID|ServerType|ServerHost|SpeedTestNetServerID
-func (d DBClient) GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
-	desiredAttributes := map[string]string{}
-	fixtureValues := strings.Split(value, "|")
-	desiredAttributes["UID"] = fixtureValues[0]
-	desiredAttributes["ServerType"] = fixtureValues[1]
-	desiredAttributes["ServerHost"] = fixtureValues[2]
-	desiredAttributes["SpeedTestNetServerID"] = fixtureValues[3]
-
-	stype := reflect.ValueOf(itemObj).Elem()
-	for fieldName, value := range desiredAttributes {
-		field := stype.FieldByName(fieldName)
-		if field.IsValid() {
-			field.SetString(value)
-		} else {
-			return fmt.Errorf("Can't set value on attribute: %s", fieldName)
-		}
-	}
-	return nil
-}
-
-// Minimal test fixture
-func (d DBClient) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	stnServer := domain.SpeedTestNetServer{
-		ServerID: TestServerIDForSpeedTestNet,
-		Host:     TestHostForSpeedTestNet,
-	}
-	return stnServer, nil
-}
 
 func areStringMapsEqual(expected, results map[string]string) bool {
 	if len(expected) != len(results) {
@@ -125,7 +89,7 @@ func areFloatMapsEqual(expected, results map[string]float64) bool {
 func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.NamedServer = domain.NamedServer{}
-	results, err := getPingStringValues(task, DBClient{})
+	results, err := getPingStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
 		ServerHostKey: domain.DefaultPingServerHost,
@@ -143,17 +107,29 @@ func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
 }
 
 func TestGetPingStringValuesWithNamedServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest1"
-	serverType := domain.ServerTypeCustom
-	serverHost := "PingTestHost"
-	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
 
-	results, err := getPingStringValues(task, DBClient{})
+	serverHost := "PingTestHost"
+	namedServerUID := "ns11"
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
+			UID:        namedServerUID,
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: serverHost,
+		},
+	}
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	results, err := getPingStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if err != nil {
@@ -170,7 +146,7 @@ func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.NamedServer = domain.NamedServer{}
 
-	resultsTask, err := updateTaskPing(task, DBClient{})
+	resultsTask, err := updateTaskPing(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -197,13 +173,24 @@ func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 }
 
 func TestUpdateTaskPingWithNamedServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest1"
-	serverType := domain.ServerTypeCustom
-	serverHost := "SpeedTestHost"
-	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
+	serverHost := "PingTestHost"
+	namedServerUID := "nst12"
 
-	resultsTask, err := updateTaskPing(task, DBClient{})
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
+			UID:        namedServerUID,
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: serverHost,
+		},
+	}
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	resultsTask, err := updateTaskPing(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -214,7 +201,7 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -233,7 +220,7 @@ func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.NamedServer = domain.NamedServer{}
 
-	results, err := getSpeedTestStringValues(task, DBClient{})
+	results, err := getSpeedTestStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
 		ServerHostKey: domain.DefaultSpeedTestNetServerHost,
@@ -251,17 +238,28 @@ func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 }
 
 func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest2"
-	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
+	namedServerUID := "nst21"
 
-	results, err := getSpeedTestStringValues(task, DBClient{})
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
+			UID:        namedServerUID,
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: serverHost,
+		},
+	}
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	results, err := getSpeedTestStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if err != nil {
@@ -275,18 +273,45 @@ func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
 }
 
 func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest3"
-	serverType := domain.ServerTypeSpeedTestNet
-	serverHost := "SpeedTestNetHost"
-	speedTestNetServerID := TestServerIDForSpeedTestNet
-	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|" + speedTestNetServerID}
+	serverID := "111"
+	serverHost := "SpeedTestHost"
+	country := domain.Country{Code: "US", Name: "United States"}
 
-	results, err := getSpeedTestStringValues(task, DBClient{})
+	sTNetServerListFixtures := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
+			Country: country,
+			Servers: []domain.SpeedTestNetServer{
+				domain.SpeedTestNetServer{Host: serverHost, ServerID: serverID},
+			},
+		},
+	}
+
+	db.LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
+
+	namedServerUID := "nst22"
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:                   domain.DataTypeNamedServer + "-" + namedServerUID,
+			UID:                  namedServerUID,
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			ServerHost:           serverHost,
+			Country:              country,
+			SpeedTestNetServerID: serverID,
+		},
+	}
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	results, err := getSpeedTestStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: TestHostForSpeedTestNet,
-		ServerIDKey:   TestServerIDForSpeedTestNet,
+		ServerHostKey: serverHost,
+		ServerIDKey:   serverID,
 	}
 
 	if err != nil {
@@ -303,7 +328,7 @@ func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.NamedServer = domain.NamedServer{}
 
-	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
+	resultsTask, err := updateTaskSpeedTest(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -346,13 +371,24 @@ func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 }
 
 func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest2"
-	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
+	namedServerUID := "nst23"
 
-	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
+			UID:        namedServerUID,
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: serverHost,
+		},
+	}
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	resultsTask, err := updateTaskSpeedTest(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -363,7 +399,7 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -395,13 +431,41 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 }
 
 func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest3"
-	serverType := domain.ServerTypeSpeedTestNet
+	serverID := "111"
 	serverHost := "SpeedTestHost"
-	task.NamedServer = domain.NamedServer{ID: uid + "|" + serverType + "|" + serverHost + "|"}
+	country := domain.Country{Code: "US", Name: "United States"}
 
-	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
+	sTNetServerListFixtures := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
+			Country: country,
+			Servers: []domain.SpeedTestNetServer{
+				domain.SpeedTestNetServer{Host: serverHost, ServerID: serverID},
+			},
+		},
+	}
+
+	db.LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
+
+	namedServerUID := "nst23"
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:                   domain.DataTypeNamedServer + "-" + namedServerUID,
+			UID:                  namedServerUID,
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			ServerHost:           serverHost,
+			Country:              country,
+			SpeedTestNetServerID: serverID,
+		},
+	}
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	resultsTask, err := updateTaskSpeedTest(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -411,8 +475,8 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: TestHostForSpeedTestNet,
-		ServerIDKey:   TestServerIDForSpeedTestNet,
+		ServerHostKey: serverHost,
+		ServerIDKey:   serverID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -451,7 +515,7 @@ func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 
 	node.Tasks = []domain.Task{task}
 
-	resultsNode, err := updateNodeTasks(node, DBClient{})
+	resultsNode, err := updateNodeTasks(node)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
