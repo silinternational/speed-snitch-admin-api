@@ -86,29 +86,9 @@ func TestViewNodeReport(t *testing.T) {
 		},
 	}
 
-	for _, fix := range tagFixtures {
-		err := db.PutItem(domain.DataTable, fix)
-		if err != nil {
-			t.Error(err)
-			t.Fail()
-		}
-	}
-
-	for _, fix := range nodeFixtures {
-		err := db.PutItem(domain.DataTable, fix)
-		if err != nil {
-			t.Error(err)
-			t.Fail()
-		}
-	}
-
-	for _, fix := range userFixtures {
-		err := db.PutItem(domain.DataTable, fix)
-		if err != nil {
-			t.Error(err)
-			t.Fail()
-		}
-	}
+	db.LoadTagFixtures(tagFixtures, t)
+	db.LoadNodeFixtures(nodeFixtures, t)
+	db.LoadUserFixtures(userFixtures, t)
 
 	for _, fix := range taskLogFixtures {
 		err := db.PutItem(domain.TaskLogTable, fix)
