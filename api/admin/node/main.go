@@ -227,8 +227,6 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		}
 	}
 
-	// We need to use Client{} to allow for unit testing the function
-	// It just calls the common.db methods with the same names
 	node, err = updateNodeTasks(node)
 	if err != nil {
 		return domain.ServerError(err)
