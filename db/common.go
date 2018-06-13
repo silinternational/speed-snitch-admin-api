@@ -656,6 +656,13 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	}
 
 	if permissionType == domain.PermissionSuperAdmin {
+
+		fmt.Fprintf(
+			os.Stdout,
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User is not a superAdmin.\n",
+			req.Path,
+			user.UserID,
+		)
 		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
 	}
 
@@ -669,7 +676,7 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 			os.Stdout,
 			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.\n",
 			req.Path,
-			user.UID,
+			user.UserID,
 			user.Tags,
 			objectTags,
 		)
