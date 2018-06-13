@@ -63,22 +63,33 @@ func FlushTables(t *testing.T) {
 	}
 }
 
-func loadTagFixtures(fixtures []domain.Tag, t *testing.T) {
-	for _, tag := range fixtures {
-		err := PutItem(domain.DataTable, &tag)
+func LoadTagFixtures(fixtures []domain.Tag, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
 		if err != nil {
-			t.Errorf("Error loading tag fixture: %v\n%s", tag, err.Error())
+			t.Errorf("Error loading Tag fixture: %v\n%s", item, err.Error())
 			t.Fail()
 			return
 		}
 	}
 }
 
-func loadNamedServerFixtures(fixtures []domain.NamedServer, t *testing.T) {
-	for _, namedServer := range fixtures {
-		err := PutItem(domain.DataTable, &namedServer)
+func LoadNamedServerFixtures(fixtures []domain.NamedServer, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
 		if err != nil {
-			t.Errorf("Error loading tag fixture: %v\n%s", namedServer, err.Error())
+			t.Errorf("Error loading NamedServer fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func LoadSTNetServerListFixtures(fixtures []domain.STNetServerList, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading STNetServerList fixture: %v\n%s", item, err.Error())
 			t.Fail()
 			return
 		}
