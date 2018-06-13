@@ -17,8 +17,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	node, err := db.GetNode(macAddr)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -47,8 +46,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			continue
 		}
 
-		var namedServer domain.NamedServer
-		err = db.GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServer.ID, &namedServer)
+		namedServer, err := db.GetNamedServer(oldTask.NamedServer.UID)
 		if err != nil {
 			return domain.ServerError(fmt.Errorf("Error getting NamedServer ... %s", err.Error()))
 		}
@@ -62,7 +60,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		} else {
 			// Use the NamedServer to get the SpeedTestNetServer's info
 			var speedtestnetserver domain.SpeedTestNetServer
-			err = db.GetItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, namedServer.SpeedTestNetServerID, &speedtestnetserver)
+			speedtestnetserver, err := db.GetSpeedTestNetServerFromNamedServer(namedServer)
 			if err != nil {
 				return domain.ServerError(fmt.Errorf("Error getting SpeedTestNetServer from NamedServer ... %s", err.Error()))
 			}

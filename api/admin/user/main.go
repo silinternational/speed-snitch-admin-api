@@ -97,8 +97,7 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
 	}
 
-	var user domain.User
-	err := db.GetItem(domain.DataTable, SelfType, uid, &user)
+	user, err := db.GetUser(uid)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -128,8 +127,7 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
 	}
 
-	var user domain.User
-	err := db.GetItem(domain.DataTable, SelfType, uid, &user)
+	user, err := db.GetUser(uid)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -177,7 +175,8 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &user)
+		var err error
+		user, err = db.GetUser(req.PathParameters["uid"])
 		if err != nil {
 			return domain.ServerError(err)
 		}

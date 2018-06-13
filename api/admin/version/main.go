@@ -68,8 +68,7 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ClientError(http.StatusBadRequest, "Number param must be specified")
 	}
 
-	var version domain.Version
-	err := db.GetItem(domain.DataTable, SelfType, number, &version)
+	version, err := db.GetVersion(number)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -119,7 +118,8 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 
 	// If {number} was provided in request, get existing record to update
 	if req.PathParameters["number"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["number"], &version)
+		var err error
+		version, err = db.GetVersion(req.PathParameters["number"])
 		if err != nil {
 			return domain.ServerError(err)
 		}

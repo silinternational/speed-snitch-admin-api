@@ -43,8 +43,7 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	}
 
 	// Fetch node to ensure exists and get tags for authorization
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, domain.DataTypeNode, macAddr, &node)
+	node, err := db.GetNode(macAddr)
 	if err != nil {
 		return domain.ServerError(err)
 	}

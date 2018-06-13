@@ -46,8 +46,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	countryCode := req.PathParameters["countryCode"]
-	var serversInCountry domain.STNetServerList
-	err := db.GetItem(domain.DataTable, SelfType, countryCode, &serversInCountry)
+	serversInCountry, err := db.GetSTNetServersForCountry(countryCode)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -88,8 +87,7 @@ func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayP
 
 	countryCode := req.PathParameters["countryCode"]
 
-	var serversInCountry domain.STNetServerList
-	err := db.GetItem(domain.DataTable, SelfType, countryCode, &serversInCountry)
+	serversInCountry, err := db.GetSTNetServersForCountry(countryCode)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -112,9 +110,8 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 	}
 
 	var countryList []domain.Country
-	countriesEntry := domain.STNetCountryList{}
 
-	err := db.GetItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countriesEntry)
+	countriesEntry, err := db.GetSTNetCountryList()
 	if err == nil && len(countriesEntry.Countries) > 50 {
 		countryList = countriesEntry.Countries
 	} else {

@@ -41,8 +41,7 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	var tag domain.Tag
-	err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &tag)
+	tag, err := db.GetTag(req.PathParameters["uid"])
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -97,7 +96,8 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &tag)
+		var err error
+		tag, err = db.GetTag(req.PathParameters["uid"])
 		if err != nil {
 			return domain.ServerError(err)
 		}
