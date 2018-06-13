@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"testing"
@@ -19,6 +20,56 @@ func getCustomNamedServerFixtures(uid, serverHost string) []domain.NamedServer {
 		},
 	}
 	return namedServerFixtures
+}
+
+func getNodeFixtures() []domain.Node {
+	nodeFixtures := []domain.Node{
+		{
+			ID:      "node-aa:aa:aa:aa:aa:aa",
+			Arch:    "arm",
+			MacAddr: "aa:aa:aa:aa:aa:aa",
+			Tags:    []domain.Tag{getTagFixtures()[0]},
+		},
+	}
+	return nodeFixtures
+}
+
+func getTagFixtures() []domain.Tag {
+
+	tagFixtures := []domain.Tag{
+		{ID: "tag-pass", UID: "pass", Name: "Pass"},
+		{ID: "tag-fail", UID: "fail", Name: "Fail"},
+	}
+	return tagFixtures
+}
+
+func getUserFixtures() []domain.User {
+	tagFixtures := getTagFixtures()
+
+	userFixtures := []domain.User{
+		{
+			ID:     "user-superadmin",
+			UID:    "superadmin",
+			UserID: "super_admin",
+			Role:   domain.UserRoleSuperAdmin,
+		},
+		{
+			ID:     "user-pass",
+			UID:    "pass",
+			UserID: "pass_test",
+			Role:   domain.UserRoleAdmin,
+			Tags:   []domain.Tag{tagFixtures[0]},
+		},
+		{
+			ID:     "user-fail",
+			UID:    "fail",
+			UserID: "fail_test",
+			Role:   domain.UserRoleAdmin,
+			Tags:   []domain.Tag{tagFixtures[1]},
+		},
+	}
+
+	return userFixtures
 }
 
 func areStringMapsEqual(expected, results map[string]string) bool {
@@ -507,4 +558,79 @@ func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
 	}
+}
+
+func TestNodeAuthorization(t *testing.T) {
+	db.FlushTables(t)
+	db.LoadTagFixtures(getTagFixtures(), t)
+
+	users := getUserFixtures()
+	db.LoadUserFixtures(users, t)
+
+	nodeFixtures := getNodeFixtures()
+	db.LoadNodeFixtures(nodeFixtures, t)
+
+	// Superadmin user
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/aa:aa:aa:aa:aa:aa",
+		PathParameters: map[string]string{
+			"macAddr": "aa:aa:aa:aa:aa:aa",
+		},
+		Headers: map[string]string{
+			"x-user-id": "super_admin",
+		},
+	}
+
+	response, err := viewNode(req)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+	}
+
+	// Authorized admin user
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/aa:aa:aa:aa:aa:aa",
+		PathParameters: map[string]string{
+			"macAddr": "aa:aa:aa:aa:aa:aa",
+		},
+		Headers: map[string]string{
+			"x-user-id": "pass_test",
+		},
+	}
+
+	response, err = viewNode(req)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+	}
+
+	// Unauthorized admin user should be rejected
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/report/node/aa:aa:aa:aa:aa:aa",
+		PathParameters: map[string]string{
+			"macAddr": "aa:aa:aa:aa:aa:aa",
+		},
+		Headers: map[string]string{
+			"x-user-id": "fail_test",
+		},
+	}
+
+	response, err = viewNode(req)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	if response.StatusCode != 403 {
+		t.Error("Wrong status code returned, expected 403, got", response.StatusCode, response.Body)
+	}
+
 }

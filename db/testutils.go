@@ -85,11 +85,33 @@ func LoadNamedServerFixtures(fixtures []domain.NamedServer, t *testing.T) {
 	}
 }
 
+func LoadNodeFixtures(fixtures []domain.Node, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading Node fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
 func LoadSTNetServerListFixtures(fixtures []domain.STNetServerList, t *testing.T) {
 	for _, item := range fixtures {
 		err := PutItem(domain.DataTable, &item)
 		if err != nil {
 			t.Errorf("Error loading STNetServerList fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func LoadUserFixtures(fixtures []domain.User, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading User fixture: %v\n%s", item, err.Error())
 			t.Fail()
 			return
 		}
