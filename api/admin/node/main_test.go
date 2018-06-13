@@ -9,6 +9,18 @@ import (
 const TestHostForSpeedTestNet = "SpeedTestNetFixtureHost"
 const TestServerIDForSpeedTestNet = "111"
 
+func getCustomNamedServerFixtures(uid, serverHost string) []domain.NamedServer {
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:         domain.DataTypeNamedServer + "-" + uid,
+			UID:        uid,
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: serverHost,
+		},
+	}
+	return namedServerFixtures
+}
+
 func areStringMapsEqual(expected, results map[string]string) bool {
 	if len(expected) != len(results) {
 		return false
@@ -111,15 +123,7 @@ func TestGetPingStringValuesWithNamedServer(t *testing.T) {
 	serverHost := "PingTestHost"
 	namedServerUID := "ns11"
 
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
-			UID:        namedServerUID,
-			ServerType: domain.ServerTypeCustom,
-			ServerHost: serverHost,
-		},
-	}
-
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
 	db.LoadNamedServerFixtures(namedServerFixtures, t)
 
 	task := domain.Task{}
@@ -176,15 +180,7 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 	serverHost := "PingTestHost"
 	namedServerUID := "nst12"
 
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
-			UID:        namedServerUID,
-			ServerType: domain.ServerTypeCustom,
-			ServerHost: serverHost,
-		},
-	}
-
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
 	db.LoadNamedServerFixtures(namedServerFixtures, t)
 
 	task := domain.Task{}
@@ -241,15 +237,7 @@ func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
 	serverHost := "SpeedTestHost"
 	namedServerUID := "nst21"
 
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
-			UID:        namedServerUID,
-			ServerType: domain.ServerTypeCustom,
-			ServerHost: serverHost,
-		},
-	}
-
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
 	db.LoadNamedServerFixtures(namedServerFixtures, t)
 
 	task := domain.Task{}
@@ -374,15 +362,7 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 	serverHost := "SpeedTestHost"
 	namedServerUID := "nst23"
 
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:         domain.DataTypeNamedServer + "-" + namedServerUID,
-			UID:        namedServerUID,
-			ServerType: domain.ServerTypeCustom,
-			ServerHost: serverHost,
-		},
-	}
-
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
 	db.LoadNamedServerFixtures(namedServerFixtures, t)
 
 	task := domain.Task{}
