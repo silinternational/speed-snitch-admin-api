@@ -29,7 +29,7 @@ func GetDb() *dynamodb.DynamoDB {
 	return db
 }
 
-func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
+func getItem(tableAlias, dataType, value string, itemObj interface{}) error {
 	// Prepare the input for the query.
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
@@ -243,7 +243,7 @@ func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
 	newTags := []domain.Tag{}
 	for _, oldTag := range oldTags {
 		newTag := domain.Tag{}
-		err := GetItem(domain.DataTable, domain.DataTypeTag, oldTag.UID, &newTag)
+		err := getItem(domain.DataTable, domain.DataTypeTag, oldTag.UID, &newTag)
 		if err != nil {
 			return []domain.Tag{}, fmt.Errorf("Error finding tag %s.\n%s", oldTag.UID, err.Error())
 		}
@@ -265,7 +265,7 @@ func updateTasks(oldTasks []domain.Task) ([]domain.Task, error) {
 			continue
 		}
 		namedServer := domain.NamedServer{}
-		err := GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServer.UID, &namedServer)
+		err := getItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServer.UID, &namedServer)
 		if err != nil {
 			return []domain.Task{}, fmt.Errorf("Error finding named server %s.\n%s", oldTask.NamedServer.UID, err.Error())
 		}
@@ -277,12 +277,33 @@ func updateTasks(oldTasks []domain.Task) ([]domain.Task, error) {
 	return newTasks, nil
 }
 
+func GetNamedServer(uid string) (domain.NamedServer, error) {
+	namedServer := domain.NamedServer{}
+	err := getItem(domain.DataTable, domain.DataTypeNamedServer, uid, &namedServer)
+	if err != nil {
+		return namedServer, fmt.Errorf("Error getting NamedServer with uid: %s.\n%s", uid, err.Error())
+	}
+
+	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+		return namedServer, nil
+	}
+
+	//  If this is related to a speedtest.net server, then update its host value
+	matchingServer, err := GetSpeedTestNetServerFromNamedServer(namedServer)
+	if err != nil {
+		return namedServer, err
+	}
+
+	namedServer.ServerHost = matchingServer.Host
+	return namedServer, nil
+}
+
 // GetNode gets the Node from the database and updates its tags to have the latest
 //  information from the database.
 //  Any tags that are no longer in the db will be dropped from the Node
 func GetNode(macAddr string) (domain.Node, error) {
 	node := domain.Node{}
-	err := GetItem(domain.DataTable, domain.DataTypeNode, macAddr, &node)
+	err := getItem(domain.DataTable, domain.DataTypeNode, macAddr, &node)
 
 	if err != nil {
 		return node, err
@@ -301,6 +322,34 @@ func GetNode(macAddr string) (domain.Node, error) {
 	node.Tasks = newTasks
 
 	return node, nil
+}
+
+func GetSTNetCountryList() (domain.STNetCountryList, error) {
+	countriesEntry := domain.STNetCountryList{}
+	err := getItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countriesEntry)
+
+	return countriesEntry, err
+}
+
+func GetSTNetServersForCountry(countryCode string) (domain.STNetServerList, error) {
+	serversInCountry := domain.STNetServerList{}
+	err := getItem(domain.DataTable, domain.DataTypeSTNetServerList, countryCode, &serversInCountry)
+
+	return serversInCountry, err
+}
+
+func GetTag(uid string) (domain.Tag, error) {
+	var tag domain.Tag
+	err := getItem(domain.DataTable, domain.DataTypeTag, uid, &tag)
+
+	return tag, err
+}
+
+func GetUser(uid string) (domain.User, error) {
+	var user domain.User
+	err := getItem(domain.DataTable, domain.DataTypeUser, uid, &user)
+
+	return user, err
 }
 
 func GetUserByUserID(userID string) (domain.User, error) {
@@ -347,6 +396,13 @@ func GetUserByUserID(userID string) (domain.User, error) {
 
 	user.Tags = newTags
 	return user, nil
+}
+
+func GetVersion(number string) (domain.Version, error) {
+	version := domain.Version{}
+	err := getItem(domain.DataTable, domain.DataTypeVersion, number, &version)
+
+	return version, err
 }
 
 func ListTags() ([]domain.Tag, error) {
@@ -454,9 +510,8 @@ func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 }
 
 func GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	var stnServerList domain.STNetServerList
 	countryCode := namedServer.Country.Code
-	err := GetItem(domain.DataTable, domain.DataTypeSTNetServerList, countryCode, &stnServerList)
+	stnServerList, err := GetSTNetServersForCountry(countryCode)
 	if err != nil {
 		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting STNetServerList for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
 	}
