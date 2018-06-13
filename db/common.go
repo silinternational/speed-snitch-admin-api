@@ -667,7 +667,7 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 
 		fmt.Fprintf(
 			os.Stdout,
-			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.",
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.\n",
 			req.Path,
 			user.UID,
 			user.Tags,
