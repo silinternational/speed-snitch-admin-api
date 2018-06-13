@@ -58,11 +58,6 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
 	uid := req.PathParameters["uid"]
 
 	server, err := db.GetNamedServer(uid)
@@ -86,11 +81,6 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
 	servers, err := db.ListNamedServers()
 	if err != nil {
 		return domain.ServerError(err)
