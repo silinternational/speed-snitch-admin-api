@@ -25,28 +25,6 @@ const UploadSizesKey = "uploadSizes"
 const MaxSecondsKey = "maxSeconds"
 const TestTypeKey = "testType"
 
-// This is need for testing
-type dbClient interface {
-	GetNode(string) (domain.Node, error)
-	GetNamedServer(string) (domain.NamedServer, error)
-	GetSpeedTestNetServerFromNamedServer(domain.NamedServer) (domain.SpeedTestNetServer, error)
-}
-
-// This is needed to allow for mock db result in the tests
-type Client struct{}
-
-func (c Client) GetNode(value string) (domain.Node, error) {
-	return db.GetNode(value)
-}
-
-func (c Client) GetNamedServer(value string) (domain.NamedServer, error) {
-	return db.GetNamedServer(value)
-}
-
-func (c Client) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	return db.GetSpeedTestNetServerFromNamedServer(namedServer)
-}
-
 func GetDefaultSpeedTestDownloadSizes() []int {
 	return []int{245388, 505544, 1118012, 1986284}
 }
