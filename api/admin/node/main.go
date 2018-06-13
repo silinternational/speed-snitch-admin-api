@@ -309,8 +309,21 @@ func getPingStringValues(task domain.Task) (map[string]string, error) {
 		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.ID, err.Error())
 	}
 
-	stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
-	stringValues = setStringValue(stringValues, ServerIDKey, namedServer.UID)
+	// If this does not refer to a SpeedTestNetServer, just use the NamedServer's values
+	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+		stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
+		stringValues = setStringValue(stringValues, ServerIDKey, namedServer.UID)
+		return stringValues, nil
+	}
+
+	// This does refer to a SpeedTestNetServer, so use its info
+	stnServer, err := db.GetSpeedTestNetServerFromNamedServer(namedServer)
+	if err != nil {
+		return stringValues, err
+	}
+
+	stringValues = setStringValue(stringValues, ServerHostKey, stnServer.Host)
+	stringValues = setStringValue(stringValues, ServerIDKey, stnServer.ServerID)
 
 	return stringValues, nil
 }
@@ -356,7 +369,7 @@ func getSpeedTestStringValues(task domain.Task) (map[string]string, error) {
 		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.UID, err.Error())
 	}
 
-	// This does not refer to a SpeedTestNetServer
+	// If this does not refer to a SpeedTestNetServer, just use the NamedServer's values
 	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
 		stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
 		stringValues = setStringValue(stringValues, ServerIDKey, namedServer.UID)
