@@ -151,7 +151,7 @@ var namedServerFixtures = []domain.NamedServer{
 
 func TestUpdateTags(t *testing.T) {
 	FlushTables(t)
-	loadTagFixtures(tagFixtures, t)
+	LoadTagFixtures(tagFixtures, t)
 
 	oldTags := []domain.Tag{
 		{ID: "tag-000", UID: "000", Name: "Bad Name 000"},
@@ -172,8 +172,8 @@ func TestUpdateTags(t *testing.T) {
 
 func TestGetNode(t *testing.T) {
 	FlushTables(t)
-	loadTagFixtures(tagFixtures, t)
-	loadNamedServerFixtures(namedServerFixtures, t)
+	LoadTagFixtures(tagFixtures, t)
+	LoadNamedServerFixtures(namedServerFixtures, t)
 
 	dbNode := testNodes["11Kenya"]
 	err := PutItem(domain.DataTable, dbNode)
@@ -206,7 +206,7 @@ func TestGetNode(t *testing.T) {
 
 func TestGetUserByUserID(t *testing.T) {
 	FlushTables(t)
-	loadTagFixtures(tagFixtures, t)
+	LoadTagFixtures(tagFixtures, t)
 
 	oldTags := []domain.Tag{
 		{ID: "tag-000", UID: "000", Name: "Eastern Africa"},    // This name should change
