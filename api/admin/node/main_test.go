@@ -279,16 +279,10 @@ func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
 
 	namedServerUID := "nst22"
 
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:                   domain.DataTypeNamedServer + "-" + namedServerUID,
-			UID:                  namedServerUID,
-			ServerType:           domain.ServerTypeSpeedTestNet,
-			ServerHost:           serverHost,
-			Country:              country,
-			SpeedTestNetServerID: serverID,
-		},
-	}
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	namedServerFixtures[0].ServerType = domain.ServerTypeSpeedTestNet
+	namedServerFixtures[0].Country = country
+	namedServerFixtures[0].SpeedTestNetServerID = serverID
 
 	db.LoadNamedServerFixtures(namedServerFixtures, t)
 
@@ -429,16 +423,10 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 
 	namedServerUID := "nst23"
 
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:                   domain.DataTypeNamedServer + "-" + namedServerUID,
-			UID:                  namedServerUID,
-			ServerType:           domain.ServerTypeSpeedTestNet,
-			ServerHost:           serverHost,
-			Country:              country,
-			SpeedTestNetServerID: serverID,
-		},
-	}
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	namedServerFixtures[0].ServerType = domain.ServerTypeSpeedTestNet
+	namedServerFixtures[0].Country = country
+	namedServerFixtures[0].SpeedTestNetServerID = serverID
 
 	db.LoadNamedServerFixtures(namedServerFixtures, t)
 
