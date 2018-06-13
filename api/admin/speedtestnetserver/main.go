@@ -40,14 +40,13 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 //  It gets the server row for that country code and extracts the server that
 //  matches that serverID.
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	countryCode := req.PathParameters["countryCode"]
-	var serversInCountry domain.STNetServerList
-	err := db.GetItem(domain.DataTable, SelfType, countryCode, &serversInCountry)
+	serversInCountry, err := db.GetSTNetServersForCountry(countryCode)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -81,15 +80,14 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 // listServersInCountry requires a "countryCode" path param and returns the one row that has the
 //   list of servers for that country
 func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	countryCode := req.PathParameters["countryCode"]
 
-	var serversInCountry domain.STNetServerList
-	err := db.GetItem(domain.DataTable, SelfType, countryCode, &serversInCountry)
+	serversInCountry, err := db.GetSTNetServersForCountry(countryCode)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -106,15 +104,14 @@ func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayP
 }
 
 func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	var countryList []domain.Country
-	countriesEntry := domain.STNetCountryList{}
 
-	err := db.GetItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countriesEntry)
+	countriesEntry, err := db.GetSTNetCountryList()
 	if err == nil && len(countriesEntry.Countries) > 50 {
 		countryList = countriesEntry.Countries
 	} else {

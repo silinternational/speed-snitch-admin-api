@@ -379,8 +379,7 @@ func TestRefreshSTNetServersByCountry(t *testing.T) {
 	}
 
 	// Check that the list of countries got saved to the DB
-	countryList := domain.STNetCountryList{}
-	err = db.GetItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countryList)
+	countryList, err := db.GetSTNetCountryList()
 	if err != nil {
 		t.Errorf("Unexpected error retrieving country list for speedtest.net servers.\n%s", err.Error())
 		return

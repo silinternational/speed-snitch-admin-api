@@ -31,7 +31,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -68,8 +68,7 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ClientError(http.StatusBadRequest, "Number param must be specified")
 	}
 
-	var version domain.Version
-	err := db.GetItem(domain.DataTable, SelfType, number, &version)
+	version, err := db.GetVersion(number)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -110,7 +109,7 @@ func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -119,7 +118,8 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 
 	// If {number} was provided in request, get existing record to update
 	if req.PathParameters["number"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["number"], &version)
+		var err error
+		version, err = db.GetVersion(req.PathParameters["number"])
 		if err != nil {
 			return domain.ServerError(err)
 		}

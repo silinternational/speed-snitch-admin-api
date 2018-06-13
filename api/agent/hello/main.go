@@ -31,8 +31,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	}
 
 	// Fetch existing node if exists
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, "node", helloReq.ID, &node)
+	node, err := db.GetNode(helloReq.ID)
 	if err != nil {
 		return domain.ServerError(err)
 	}

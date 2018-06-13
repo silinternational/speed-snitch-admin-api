@@ -11,28 +11,33 @@ import (
 func TestViewNodeReport(t *testing.T) {
 	db.FlushTables(t)
 
+	tagFixtures := []domain.Tag{
+		{ID: "tag-pass", UID: "pass", Name: "Pass"},
+		{ID: "tag-fail", UID: "fail", Name: "Fail"},
+	}
+
 	nodeFixtures := []domain.Node{
 		{
 			ID:      "node-aa:aa:aa:aa:aa:aa",
 			MacAddr: "aa:aa:aa:aa:aa:aa",
-			TagUIDs: []string{"pass"},
+			Tags:    []domain.Tag{tagFixtures[0]},
 		},
 	}
 
 	userFixtures := []domain.User{
 		{
-			ID:      "user-pass",
-			UID:     "pass",
-			UserID:  "pass_test",
-			Role:    domain.UserRoleAdmin,
-			TagUIDs: []string{"pass"},
+			ID:     "user-pass",
+			UID:    "pass",
+			UserID: "pass_test",
+			Role:   domain.UserRoleAdmin,
+			Tags:   []domain.Tag{tagFixtures[0]},
 		},
 		{
-			ID:      "user-fail",
-			UID:     "fail",
-			UserID:  "fail_test",
-			Role:    domain.UserRoleAdmin,
-			TagUIDs: []string{"fail"},
+			ID:     "user-fail",
+			UID:    "fail",
+			UserID: "fail_test",
+			Role:   domain.UserRoleAdmin,
+			Tags:   []domain.Tag{tagFixtures[1]},
 		},
 	}
 
@@ -79,6 +84,14 @@ func TestViewNodeReport(t *testing.T) {
 			LatencyMax:  6,
 			LatencyMin:  2,
 		},
+	}
+
+	for _, fix := range tagFixtures {
+		err := db.PutItem(domain.DataTable, fix)
+		if err != nil {
+			t.Error(err)
+			t.Fail()
+		}
 	}
 
 	for _, fix := range nodeFixtures {
