@@ -36,8 +36,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	//}
 
 	// Enrich log entry with node metadata details
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	node, err := db.GetNode(macAddr)
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, "Invalid Node MacAddr")
 	} else {
