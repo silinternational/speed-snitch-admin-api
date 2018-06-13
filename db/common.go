@@ -665,6 +665,15 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 			return 0, ""
 		}
 
+		fmt.Fprintf(
+			os.Stdout,
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.",
+			req.Path,
+			user.UID,
+			user.Tags,
+			objectTags,
+		)
+
 		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
 	}
 
