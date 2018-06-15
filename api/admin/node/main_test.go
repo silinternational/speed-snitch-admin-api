@@ -1,48 +1,75 @@
 package main
 
 import (
-	"fmt"
+	"github.com/aws/aws-lambda-go/events"
 	"github.com/silinternational/speed-snitch-admin-api"
-	"reflect"
-	"strings"
+	"github.com/silinternational/speed-snitch-admin-api/db"
 	"testing"
 )
-
-type DBClient struct{}
 
 const TestHostForSpeedTestNet = "SpeedTestNetFixtureHost"
 const TestServerIDForSpeedTestNet = "111"
 
-// For test fixtures, the value param is going to dictate the attribute values.
-//   The value should have this format ...
-//     UID|ServerType|ServerHost|SpeedTestNetServerID
-func (d DBClient) GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
-	desiredAttributes := map[string]string{}
-	fixtureValues := strings.Split(value, "|")
-	desiredAttributes["UID"] = fixtureValues[0]
-	desiredAttributes["ServerType"] = fixtureValues[1]
-	desiredAttributes["ServerHost"] = fixtureValues[2]
-	desiredAttributes["SpeedTestNetServerID"] = fixtureValues[3]
-
-	stype := reflect.ValueOf(itemObj).Elem()
-	for fieldName, value := range desiredAttributes {
-		field := stype.FieldByName(fieldName)
-		if field.IsValid() {
-			field.SetString(value)
-		} else {
-			return fmt.Errorf("Can't set value on attribute: %s", fieldName)
-		}
+func getCustomNamedServerFixtures(uid, serverHost string) []domain.NamedServer {
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:         domain.DataTypeNamedServer + "-" + uid,
+			UID:        uid,
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: serverHost,
+		},
 	}
-	return nil
+	return namedServerFixtures
 }
 
-// Minimal test fixture
-func (d DBClient) GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	stnServer := domain.SpeedTestNetServer{
-		ServerID: TestServerIDForSpeedTestNet,
-		Host:     TestHostForSpeedTestNet,
+func getNodeFixtures() []domain.Node {
+	nodeFixtures := []domain.Node{
+		{
+			ID:      "node-aa:aa:aa:aa:aa:aa",
+			Arch:    "arm",
+			MacAddr: "aa:aa:aa:aa:aa:aa",
+			Tags:    []domain.Tag{getTagFixtures()[0]},
+		},
 	}
-	return stnServer, nil
+	return nodeFixtures
+}
+
+func getTagFixtures() []domain.Tag {
+
+	tagFixtures := []domain.Tag{
+		{ID: "tag-pass", UID: "pass", Name: "Pass"},
+		{ID: "tag-fail", UID: "fail", Name: "Fail"},
+	}
+	return tagFixtures
+}
+
+func getUserFixtures() []domain.User {
+	tagFixtures := getTagFixtures()
+
+	userFixtures := []domain.User{
+		{
+			ID:     "user-superadmin",
+			UID:    "superadmin",
+			UserID: "super_admin",
+			Role:   domain.UserRoleSuperAdmin,
+		},
+		{
+			ID:     "user-pass",
+			UID:    "pass",
+			UserID: "pass_test",
+			Role:   domain.UserRoleAdmin,
+			Tags:   []domain.Tag{tagFixtures[0]},
+		},
+		{
+			ID:     "user-fail",
+			UID:    "fail",
+			UserID: "fail_test",
+			Role:   domain.UserRoleAdmin,
+			Tags:   []domain.Tag{tagFixtures[1]},
+		},
+	}
+
+	return userFixtures
 }
 
 func areStringMapsEqual(expected, results map[string]string) bool {
@@ -124,9 +151,8 @@ func areFloatMapsEqual(expected, results map[string]float64) bool {
 
 func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
-
-	results, err := getPingStringValues(task, DBClient{})
+	task.NamedServer = domain.NamedServer{}
+	results, err := getPingStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
 		ServerHostKey: domain.DefaultPingServerHost,
@@ -144,17 +170,21 @@ func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
 }
 
 func TestGetPingStringValuesWithNamedServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest1"
-	serverType := domain.ServerTypeCustom
-	serverHost := "PingTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
 
-	results, err := getPingStringValues(task, DBClient{})
+	serverHost := "PingTestHost"
+	namedServerUID := "ns11"
+
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	results, err := getPingStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if err != nil {
@@ -169,9 +199,9 @@ func TestGetPingStringValuesWithNamedServer(t *testing.T) {
 
 func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 
-	resultsTask, err := updateTaskPing(task, DBClient{})
+	resultsTask, err := updateTaskPing(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -198,13 +228,16 @@ func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
 }
 
 func TestUpdateTaskPingWithNamedServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest1"
-	serverType := domain.ServerTypeCustom
-	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	serverHost := "PingTestHost"
+	namedServerUID := "nst12"
 
-	resultsTask, err := updateTaskPing(task, DBClient{})
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	resultsTask, err := updateTaskPing(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -215,7 +248,7 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigLatencyTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -232,9 +265,9 @@ func TestUpdateTaskPingWithNamedServer(t *testing.T) {
 
 func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 
-	results, err := getSpeedTestStringValues(task, DBClient{})
+	results, err := getSpeedTestStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
 		ServerHostKey: domain.DefaultSpeedTestNetServerHost,
@@ -252,17 +285,20 @@ func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 }
 
 func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest2"
-	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	namedServerUID := "nst21"
 
-	results, err := getSpeedTestStringValues(task, DBClient{})
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	results, err := getSpeedTestStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if err != nil {
@@ -276,18 +312,39 @@ func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
 }
 
 func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest3"
-	serverType := domain.ServerTypeSpeedTestNet
-	serverHost := "SpeedTestNetHost"
-	speedTestNetServerID := TestServerIDForSpeedTestNet
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|" + speedTestNetServerID
+	serverID := "111"
+	serverHost := "SpeedTestHost"
+	country := domain.Country{Code: "US", Name: "United States"}
 
-	results, err := getSpeedTestStringValues(task, DBClient{})
+	sTNetServerListFixtures := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
+			Country: country,
+			Servers: []domain.SpeedTestNetServer{
+				domain.SpeedTestNetServer{Host: serverHost, ServerID: serverID},
+			},
+		},
+	}
+
+	db.LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
+
+	namedServerUID := "nst22"
+
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	namedServerFixtures[0].ServerType = domain.ServerTypeSpeedTestNet
+	namedServerFixtures[0].Country = country
+	namedServerFixtures[0].SpeedTestNetServerID = serverID
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	results, err := getSpeedTestStringValues(task)
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: TestHostForSpeedTestNet,
-		ServerIDKey:   TestServerIDForSpeedTestNet,
+		ServerHostKey: serverHost,
+		ServerIDKey:   serverID,
 	}
 
 	if err != nil {
@@ -302,9 +359,9 @@ func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
 
 func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 
-	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
+	resultsTask, err := updateTaskSpeedTest(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -347,13 +404,16 @@ func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
 }
 
 func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest2"
-	serverType := domain.ServerTypeCustom
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	namedServerUID := "nst23"
 
-	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	resultsTask, err := updateTaskSpeedTest(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -364,7 +424,7 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
 		ServerHostKey: serverHost,
-		ServerIDKey:   uid,
+		ServerIDKey:   namedServerUID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -396,13 +456,35 @@ func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
 }
 
 func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
-	task := domain.Task{}
-	uid := "NSTest3"
-	serverType := domain.ServerTypeSpeedTestNet
+	serverID := "111"
 	serverHost := "SpeedTestHost"
-	task.NamedServerID = uid + "|" + serverType + "|" + serverHost + "|"
+	country := domain.Country{Code: "US", Name: "United States"}
 
-	resultsTask, err := updateTaskSpeedTest(task, DBClient{})
+	sTNetServerListFixtures := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
+			Country: country,
+			Servers: []domain.SpeedTestNetServer{
+				domain.SpeedTestNetServer{Host: serverHost, ServerID: serverID},
+			},
+		},
+	}
+
+	db.LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
+
+	namedServerUID := "nst23"
+
+	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
+	namedServerFixtures[0].ServerType = domain.ServerTypeSpeedTestNet
+	namedServerFixtures[0].Country = country
+	namedServerFixtures[0].SpeedTestNetServerID = serverID
+
+	db.LoadNamedServerFixtures(namedServerFixtures, t)
+
+	task := domain.Task{}
+	task.NamedServer = namedServerFixtures[0]
+
+	resultsTask, err := updateTaskSpeedTest(task)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -412,8 +494,8 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 	results := resultsTask.Data.StringValues
 	expected := map[string]string{
 		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: TestHostForSpeedTestNet,
-		ServerIDKey:   TestServerIDForSpeedTestNet,
+		ServerHostKey: serverHost,
+		ServerIDKey:   serverID,
 	}
 
 	if !areStringMapsEqual(expected, results) {
@@ -447,12 +529,12 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.Type = domain.TaskTypePing
-	task.NamedServerID = ""
+	task.NamedServer = domain.NamedServer{}
 	node := domain.Node{}
 
 	node.Tasks = []domain.Task{task}
 
-	resultsNode, err := updateNodeTasks(node, DBClient{})
+	resultsNode, err := updateNodeTasks(node)
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -476,4 +558,79 @@ func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 	if !areIntMapsEqual(expectedInts, resultsInts) {
 		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
 	}
+}
+
+func TestNodeAuthorization(t *testing.T) {
+	db.FlushTables(t)
+	db.LoadTagFixtures(getTagFixtures(), t)
+
+	users := getUserFixtures()
+	db.LoadUserFixtures(users, t)
+
+	nodeFixtures := getNodeFixtures()
+	db.LoadNodeFixtures(nodeFixtures, t)
+
+	// Superadmin user
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/aa:aa:aa:aa:aa:aa",
+		PathParameters: map[string]string{
+			"macAddr": "aa:aa:aa:aa:aa:aa",
+		},
+		Headers: map[string]string{
+			"x-user-id": "super_admin",
+		},
+	}
+
+	response, err := viewNode(req)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+	}
+
+	// Authorized admin user
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/aa:aa:aa:aa:aa:aa",
+		PathParameters: map[string]string{
+			"macAddr": "aa:aa:aa:aa:aa:aa",
+		},
+		Headers: map[string]string{
+			"x-user-id": "pass_test",
+		},
+	}
+
+	response, err = viewNode(req)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+	}
+
+	// Unauthorized admin user should be rejected
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/report/node/aa:aa:aa:aa:aa:aa",
+		PathParameters: map[string]string{
+			"macAddr": "aa:aa:aa:aa:aa:aa",
+		},
+		Headers: map[string]string{
+			"x-user-id": "fail_test",
+		},
+	}
+
+	response, err = viewNode(req)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+	if response.StatusCode != 403 {
+		t.Error("Wrong status code returned, expected 403, got", response.StatusCode, response.Body)
+	}
+
 }

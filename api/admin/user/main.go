@@ -38,7 +38,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -86,7 +86,7 @@ func viewMe(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -97,8 +97,7 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
 	}
 
-	var user domain.User
-	err := db.GetItem(domain.DataTable, SelfType, uid, &user)
+	user, err := db.GetUser(uid)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -128,27 +127,12 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
 	}
 
-	var user domain.User
-	err := db.GetItem(domain.DataTable, SelfType, uid, &user)
+	user, err := db.GetUser(uid)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	allTags, err := db.ListTags()
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	var userTags []domain.Tag
-
-	for _, tag := range allTags {
-		inArray, _ := domain.InArray(tag.UID, user.TagUIDs)
-		if inArray {
-			userTags = append(userTags, tag)
-		}
-	}
-
-	jsBody, err := domain.GetJSONFromSlice(userTags)
+	jsBody, err := domain.GetJSONFromSlice(user.Tags)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -160,7 +144,7 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -182,7 +166,7 @@ func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -191,7 +175,8 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &user)
+		var err error
+		user, err = db.GetUser(req.PathParameters["uid"])
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -219,7 +204,7 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Make sure tags are valid and user calling api is allowed to use them
-	if !db.AreTagsValid(updatedUser.TagUIDs) {
+	if !db.AreTagsValid(updatedUser.Tags) {
 		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
 	}
 	// @todo do we need to check if user making api call can use the tags provided?
@@ -237,7 +222,7 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	user.Email = updatedUser.Email
 	user.Name = updatedUser.Name
 	user.Role = updatedUser.Role
-	user.TagUIDs = updatedUser.TagUIDs
+	user.Tags = updatedUser.Tags
 
 	// Update the user in the database
 	err = db.PutItem(domain.DataTable, user)

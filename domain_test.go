@@ -98,36 +98,36 @@ func TestDoTagsOverlap(t *testing.T) {
 	allTags := getTestTags()
 
 	type testData struct {
-		tags1    []string
-		tags2    []string
+		tags1    []Tag
+		tags2    []Tag
 		expected bool
 	}
 
 	allTestData := []testData{
 		{
-			[]string{},
-			[]string{},
-			false,
+			tags1:    []Tag{},
+			tags2:    []Tag{},
+			expected: false,
 		},
 		{
-			[]string{allTags[0].UID},
-			[]string{},
-			false,
+			tags1:    []Tag{allTags[0]},
+			tags2:    []Tag{},
+			expected: false,
 		},
 		{
-			[]string{},
-			[]string{allTags[0].UID},
-			false,
+			tags1:    []Tag{},
+			tags2:    []Tag{allTags[0]},
+			expected: false,
 		},
 		{
-			[]string{allTags[0].UID, allTags[1].UID},
-			[]string{allTags[2].UID, allTags[3].UID},
-			false,
+			tags1:    []Tag{allTags[0], allTags[1]},
+			tags2:    []Tag{allTags[2], allTags[3]},
+			expected: false,
 		},
 		{
-			[]string{allTags[0].UID, allTags[1].UID, allTags[2].UID},
-			[]string{allTags[3].UID, allTags[2].UID},
-			true,
+			tags1:    []Tag{allTags[0], allTags[1], allTags[2]},
+			tags2:    []Tag{allTags[3], allTags[2]},
+			expected: true,
 		},
 	}
 
@@ -145,35 +145,35 @@ func TestDoTagsOverlap(t *testing.T) {
 func TestCanUserUseNode(t *testing.T) {
 	allTags := getTestTags()
 	user := User{
-		ID:      "123",
-		UID:     "AA123",
-		Name:    "Andy Admin",
-		Email:   "andy_admin@some.org",
-		Role:    "admin",
-		TagUIDs: []string{allTags[3].UID},
+		ID:    "123",
+		UID:   "AA123",
+		Name:  "Andy Admin",
+		Email: "andy_admin@some.org",
+		Role:  "admin",
+		Tags:  []Tag{allTags[3]},
 	}
 
 	node := Node{}
 	node.MacAddr = "11:22:33:44:55:66"
 
 	type testData struct {
-		nodeTagUIDs []string
-		expected    bool
+		nodeTags []Tag
+		expected bool
 	}
 
 	allTestData := []testData{
 		{
-			nodeTagUIDs: []string{allTags[0].UID, allTags[1].UID},
-			expected:    false,
+			nodeTags: []Tag{allTags[0], allTags[1]},
+			expected: false,
 		},
 		{
-			nodeTagUIDs: []string{allTags[1].UID, allTags[2].UID, allTags[3].UID},
-			expected:    true,
+			nodeTags: []Tag{allTags[1], allTags[2], allTags[3]},
+			expected: true,
 		},
 	}
 
 	for index, nextData := range allTestData {
-		node.TagUIDs = nextData.nodeTagUIDs
+		node.Tags = nextData.nodeTags
 		results := CanUserUseNode(user, node)
 
 		if results != nextData.expected {

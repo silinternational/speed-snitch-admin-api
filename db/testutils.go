@@ -1,8 +1,10 @@
 package db
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/silinternational/speed-snitch-admin-api"
 	"testing"
 )
 
@@ -59,4 +61,84 @@ func FlushTables(t *testing.T) {
 			}
 		}
 	}
+}
+
+func LoadTagFixtures(fixtures []domain.Tag, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading Tag fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func LoadNamedServerFixtures(fixtures []domain.NamedServer, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading NamedServer fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func LoadNodeFixtures(fixtures []domain.Node, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading Node fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func LoadSTNetServerListFixtures(fixtures []domain.STNetServerList, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading STNetServerList fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func LoadUserFixtures(fixtures []domain.User, t *testing.T) {
+	for _, item := range fixtures {
+		err := PutItem(domain.DataTable, &item)
+		if err != nil {
+			t.Errorf("Error loading User fixture: %v\n%s", item, err.Error())
+			t.Fail()
+			return
+		}
+	}
+}
+
+func areTagsEqual(expected, results []domain.Tag, t *testing.T) bool {
+	errMsg := fmt.Sprintf("Tag slices are not equal.\nExpected: %v\n But got: %v", expected, results)
+
+	if len(expected) != len(results) {
+		t.Errorf(errMsg)
+		return false
+	}
+
+	for _, nextExpected := range expected {
+		foundMatch := false
+		for _, nextResults := range results {
+			if nextExpected == nextResults {
+				foundMatch = true
+				break
+			}
+		}
+		if !foundMatch {
+			t.Errorf(errMsg)
+			return false
+		}
+	}
+
+	return true
 }
