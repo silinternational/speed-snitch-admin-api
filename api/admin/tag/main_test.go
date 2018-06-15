@@ -135,17 +135,17 @@ func TestDeleteTag(t *testing.T) {
 	user, _ := db.GetUser("changed")
 	hasTag, _ := domain.InArray(deleteMeTag, user.Tags)
 	if hasTag {
-		t.Error("Tag deleteme still present in user tags after deletion. User tags: ", user.Tags)
+		t.Errorf("Tag deleteme still present in user tags after deletion. User tags: %v", user.Tags)
 		t.Fail()
 	}
 	if len(user.Tags) != 1 {
-		t.Error("User does not have one tag (keepme) as expected, has tags:", user.Tags)
+		t.Errorf("User does not have one tag (keepme) as expected, has tags: %v", user.Tags)
 	}
 
 	node, _ := db.GetNode("aa:aa:aa:aa:aa:aa")
 	hasTag, _ = domain.InArray(deleteMeTag, node.Tags)
 	if hasTag {
-		t.Error("Tag deleteme still present in node tags after deletion. User tags: ", node.Tags)
+		t.Errorf("Tag deleteme still present in node tags after deletion. User tags: %v", node.Tags)
 		t.Fail()
 	}
 	if len(node.Tags) != 1 {
@@ -155,7 +155,7 @@ func TestDeleteTag(t *testing.T) {
 	// Get other user who should not have been changed to ensure they were not
 	notChangedUser, err := db.GetUser("notchanged")
 	if len(notChangedUser.Tags) != 1 {
-		t.Error("User does not have one tag (notchanged) as expected, has tags:", notChangedUser.Tags)
+		t.Errorf("User does not have one tag (notchanged) as expected, has tags: %v", notChangedUser.Tags)
 	}
 
 }
