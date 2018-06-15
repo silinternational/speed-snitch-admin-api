@@ -765,22 +765,22 @@ func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int
 }
 
 // Iterate through all users and remove given tag from any that have it
-func RemoveTagFromUsers(tagUID string) error {
+func RemoveTagFromUsers(removeTag domain.Tag) error {
 	allUsers, err := ListUsers()
 	if err != nil {
 		return err
 	}
 
 	for _, user := range allUsers {
-		hasTag, _ := domain.InArray(tagUID, user.TagUIDs)
+		hasTag, _ := domain.InArray(removeTag, user.Tags)
 		if hasTag {
-			newTags := []string{}
-			for _, tag := range user.TagUIDs {
-				if tag != tagUID {
+			var newTags []domain.Tag
+			for _, tag := range user.Tags {
+				if tag.UID != removeTag.UID {
 					newTags = append(newTags, tag)
 				}
 			}
-			user.TagUIDs = newTags
+			user.Tags = newTags
 			err := PutItem(domain.DataTable, user)
 			if err != nil {
 				return err
@@ -792,22 +792,22 @@ func RemoveTagFromUsers(tagUID string) error {
 }
 
 // Iterate through all nodes and remove given tag from any that have it
-func RemoveTagFromNodes(tagUID string) error {
+func RemoveTagFromNodes(removeTag domain.Tag) error {
 	allNodes, err := ListNodes()
 	if err != nil {
 		return err
 	}
 
 	for _, node := range allNodes {
-		hasTag, _ := domain.InArray(tagUID, node.TagUIDs)
+		hasTag, _ := domain.InArray(removeTag, node.Tags)
 		if hasTag {
-			newTags := []string{}
-			for _, tag := range node.TagUIDs {
-				if tag != tagUID {
+			var newTags []domain.Tag
+			for _, tag := range node.Tags {
+				if tag.UID != removeTag.UID {
 					newTags = append(newTags, tag)
 				}
 			}
-			node.TagUIDs = newTags
+			node.Tags = newTags
 			err := PutItem(domain.DataTable, node)
 			if err != nil {
 				return err

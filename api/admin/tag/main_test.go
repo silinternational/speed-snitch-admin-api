@@ -10,11 +10,28 @@ import (
 func TestDeleteTag(t *testing.T) {
 	db.FlushTables(t)
 
+	deleteMeTag := domain.Tag{
+		ID:          "tag-deleteme",
+		UID:         "deleteme",
+		Name:        "Delete Me Test",
+		Description: "This tag is to be deleted",
+	}
+
+	keepMeTag := domain.Tag{
+		ID:          "tag-keepme",
+		UID:         "keepme",
+		Name:        "Keep me",
+		Description: "This tag is not to be deleted",
+	}
+
 	nodeFixtures := []domain.Node{
 		{
 			ID:      "node-aa:aa:aa:aa:aa:aa",
 			MacAddr: "aa:aa:aa:aa:aa:aa",
-			TagUIDs: []string{"deleteme", "keepme"},
+			Tags: []domain.Tag{
+				deleteMeTag,
+				keepMeTag,
+			},
 		},
 	}
 
@@ -26,28 +43,29 @@ func TestDeleteTag(t *testing.T) {
 			Role:   domain.UserRoleSuperAdmin,
 		},
 		{
-			ID:      "user-changed",
-			UID:     "changed",
-			UserID:  "changed_test",
-			Role:    domain.UserRoleAdmin,
-			TagUIDs: []string{"deleteme", "keepme"},
+			ID:     "user-changed",
+			UID:    "changed",
+			UserID: "changed_test",
+			Role:   domain.UserRoleAdmin,
+			Tags: []domain.Tag{
+				deleteMeTag,
+				keepMeTag,
+			},
 		},
 		{
-			ID:      "user-notchanged",
-			UID:     "notchanged",
-			UserID:  "notchanged_test",
-			Role:    domain.UserRoleAdmin,
-			TagUIDs: []string{"notchanged"},
+			ID:     "user-notchanged",
+			UID:    "notchanged",
+			UserID: "notchanged_test",
+			Role:   domain.UserRoleAdmin,
+			Tags: []domain.Tag{
+				keepMeTag,
+			},
 		},
 	}
 
 	tagFixtures := []domain.Tag{
-		{
-			ID:          "tag-deleteme",
-			UID:         "deleteme",
-			Name:        "Delete Me Test",
-			Description: "This tag is to be deleted",
-		},
+		deleteMeTag,
+		keepMeTag,
 	}
 
 	for _, fix := range nodeFixtures {
@@ -114,33 +132,30 @@ func TestDeleteTag(t *testing.T) {
 		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
 	}
 
-	var user domain.User
-	err = db.GetItem(domain.DataTable, domain.DataTypeUser, "changed", &user)
-	hasTag, _ := domain.InArray("deleteme", user.TagUIDs)
+	user, _ := db.GetUser("changed")
+	hasTag, _ := domain.InArray(deleteMeTag, user.Tags)
 	if hasTag {
-		t.Error("Tag deleteme still present in user tags after deletion. User tags: ", user.TagUIDs)
+		t.Error("Tag deleteme still present in user tags after deletion. User tags: ", user.Tags)
 		t.Fail()
 	}
-	if len(user.TagUIDs) != 1 {
-		t.Error("User does not have one tag (keepme) as expected, has tags:", user.TagUIDs)
+	if len(user.Tags) != 1 {
+		t.Error("User does not have one tag (keepme) as expected, has tags:", user.Tags)
 	}
 
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, domain.DataTypeNode, "aa:aa:aa:aa:aa:aa", &node)
-	hasTag, _ = domain.InArray("deleteme", node.TagUIDs)
+	node, _ := db.GetNode("aa:aa:aa:aa:aa:aa")
+	hasTag, _ = domain.InArray(deleteMeTag, node.Tags)
 	if hasTag {
-		t.Error("Tag deleteme still present in node tags after deletion. User tags: ", node.TagUIDs)
+		t.Error("Tag deleteme still present in node tags after deletion. User tags: ", node.Tags)
 		t.Fail()
 	}
-	if len(node.TagUIDs) != 1 {
-		t.Error("Node does not have one tag (keepme) as expected, has tags:", node.TagUIDs)
+	if len(node.Tags) != 1 {
+		t.Error("Node does not have one tag (keepme) as expected, has tags:", node.Tags)
 	}
 
 	// Get other user who should not have been changed to ensure they were not
-	var notChangedUser domain.User
-	err = db.GetItem(domain.DataTable, domain.DataTypeUser, "notchanged", &notChangedUser)
-	if len(notChangedUser.TagUIDs) != 1 {
-		t.Error("User does not have one tag (notchanged) as expected, has tags:", notChangedUser.TagUIDs)
+	notChangedUser, err := db.GetUser("notchanged")
+	if len(notChangedUser.Tags) != 1 {
+		t.Error("User does not have one tag (notchanged) as expected, has tags:", notChangedUser.Tags)
 	}
 
 }

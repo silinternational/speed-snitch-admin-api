@@ -158,6 +158,10 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}
 
 	UID := req.PathParameters["uid"]
+	tag, err := db.GetTag(UID)
+	if err != nil {
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+	}
 
 	deleted, err := db.DeleteItem(domain.DataTable, SelfType, UID)
 	if err != nil {
@@ -172,13 +176,13 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}
 
 	// remove tag from users
-	err = db.RemoveTagFromUsers(UID)
+	err = db.RemoveTagFromUsers(tag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
 	// remove tag from nodes
-	err = db.RemoveTagFromNodes(UID)
+	err = db.RemoveTagFromNodes(tag)
 	if err != nil {
 		return domain.ServerError(err)
 	}
