@@ -198,7 +198,7 @@ type TaskLogEntry struct {
 	ServerID           string  `json:"ServerID"`
 	ServerCountry      string  `json:"ServerCountry"`
 	ServerCoordinates  string  `json:"ServerCoordinates"`
-	ServerSponsor      string  `json:"ServerSponsor"`
+	ServerName         string  `json:"ServerName"`
 	NodeLocation       string  `json:"Location"`
 	NodeCoordinates    string  `json:"Coordinates"`
 	NodeNetwork        string  `json:"Network"`

@@ -338,6 +338,21 @@ func GetSTNetServersForCountry(countryCode string) (domain.STNetServerList, erro
 	return serversInCountry, err
 }
 
+func GetSTNetServer(countryCode, serverID string) (domain.SpeedTestNetServer, error) {
+	serversForCountry, err := GetSTNetServersForCountry(countryCode)
+	if err != nil {
+		return domain.SpeedTestNetServer{}, err
+	}
+
+	for _, server := range serversForCountry.Servers {
+		if server.ServerID == serverID {
+			return server, nil
+		}
+	}
+
+	return domain.SpeedTestNetServer{}, fmt.Errorf("SpeedTestNetServer for ID %s not found", serverID)
+}
+
 func GetTag(uid string) (domain.Tag, error) {
 	var tag domain.Tag
 	err := getItem(domain.DataTable, domain.DataTypeTag, uid, &tag)
