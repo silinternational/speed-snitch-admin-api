@@ -773,18 +773,20 @@ func RemoveTagFromUsers(removeTag domain.Tag) error {
 
 	for _, user := range allUsers {
 		hasTag, _ := domain.InArray(removeTag, user.Tags)
-		if hasTag {
-			var newTags []domain.Tag
-			for _, tag := range user.Tags {
-				if tag.UID != removeTag.UID {
-					newTags = append(newTags, tag)
-				}
+		if !hasTag {
+			continue
+		}
+
+		var newTags []domain.Tag
+		for _, tag := range user.Tags {
+			if tag.UID != removeTag.UID {
+				newTags = append(newTags, tag)
 			}
-			user.Tags = newTags
-			err := PutItem(domain.DataTable, user)
-			if err != nil {
-				return err
-			}
+		}
+		user.Tags = newTags
+		err := PutItem(domain.DataTable, user)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -800,18 +802,20 @@ func RemoveTagFromNodes(removeTag domain.Tag) error {
 
 	for _, node := range allNodes {
 		hasTag, _ := domain.InArray(removeTag, node.Tags)
-		if hasTag {
-			var newTags []domain.Tag
-			for _, tag := range node.Tags {
-				if tag.UID != removeTag.UID {
-					newTags = append(newTags, tag)
-				}
+		if !hasTag {
+			continue
+		}
+
+		var newTags []domain.Tag
+		for _, tag := range node.Tags {
+			if tag.UID != removeTag.UID {
+				newTags = append(newTags, tag)
 			}
-			node.Tags = newTags
-			err := PutItem(domain.DataTable, node)
-			if err != nil {
-				return err
-			}
+		}
+		node.Tags = newTags
+		err := PutItem(domain.DataTable, node)
+		if err != nil {
+			return err
 		}
 	}
 

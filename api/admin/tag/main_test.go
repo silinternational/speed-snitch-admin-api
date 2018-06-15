@@ -149,7 +149,7 @@ func TestDeleteTag(t *testing.T) {
 		t.Fail()
 	}
 	if len(node.Tags) != 1 {
-		t.Error("Node does not have one tag (keepme) as expected, has tags:", node.Tags)
+		t.Errorf("Node does not have one tag (keepme) as expected, has tags: %v", node.Tags)
 	}
 
 	// Get other user who should not have been changed to ensure they were not
