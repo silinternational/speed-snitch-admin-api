@@ -82,6 +82,7 @@ func PutItem(tableAlias string, item interface{}) error {
 
 func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 
+	returnOldValues := "ALL_OLD"
 	// Prepare the input for the query.
 	input := &dynamodb.DeleteItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
@@ -90,13 +91,18 @@ func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 				S: aws.String(dataType + "-" + value),
 			},
 		},
+		ReturnValues: &returnOldValues,
 	}
 
 	db := GetDb()
 	// Delete the item from DynamoDB. I
-	_, err := db.DeleteItem(input)
+	resp, err := db.DeleteItem(input)
+	if err != nil {
+		return false, err
+	}
 
-	if err != nil && err.Error() == dynamodb.ErrCodeReplicaNotFoundException {
+	// resp.Attributes contains attribute of old record before deletion, if empty the original item was not found
+	if len(resp.Attributes) == 0 {
 		return false, nil
 	}
 
@@ -756,4 +762,62 @@ func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int
 	}
 
 	return results, nil
+}
+
+// Iterate through all users and remove given tag from any that have it
+func RemoveTagFromUsers(removeTag domain.Tag) error {
+	allUsers, err := ListUsers()
+	if err != nil {
+		return err
+	}
+
+	for _, user := range allUsers {
+		hasTag, _ := domain.InArray(removeTag, user.Tags)
+		if !hasTag {
+			continue
+		}
+
+		var newTags []domain.Tag
+		for _, tag := range user.Tags {
+			if tag.UID != removeTag.UID {
+				newTags = append(newTags, tag)
+			}
+		}
+		user.Tags = newTags
+		err := PutItem(domain.DataTable, user)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Iterate through all nodes and remove given tag from any that have it
+func RemoveTagFromNodes(removeTag domain.Tag) error {
+	allNodes, err := ListNodes()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range allNodes {
+		hasTag, _ := domain.InArray(removeTag, node.Tags)
+		if !hasTag {
+			continue
+		}
+
+		var newTags []domain.Tag
+		for _, tag := range node.Tags {
+			if tag.UID != removeTag.UID {
+				newTags = append(newTags, tag)
+			}
+		}
+		node.Tags = newTags
+		err := PutItem(domain.DataTable, node)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
