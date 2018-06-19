@@ -1,11 +1,47 @@
 package reporting
 
 import (
+	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"strings"
 	"testing"
 	"time"
 )
+
+func areShortPingEntrySlicesEqual(expected, results []domain.ShortPingEntry) string {
+	errMsg := fmt.Sprintf("Bad ShortPingEntry results.\nExpected: %v\n But got: %v", expected, results)
+
+	if len(expected) != len(results) {
+		return errMsg
+	}
+
+	for _, nextExpected := range expected {
+		matchFound, _ := domain.InArray(nextExpected, results)
+		if !matchFound {
+			return errMsg
+		}
+	}
+
+	return ""
+}
+
+func areShortSpeedTestEntrySlicesEqual(expected, results []domain.ShortSpeedTestEntry) string {
+	errMsg := fmt.Sprintf("Bad ShortSpeedTestEntry results.\nExpected: %v\n But got: %v", expected, results)
+
+	if len(expected) != len(results) {
+		return errMsg
+	}
+
+	for _, nextExpected := range expected {
+		matchFound, _ := domain.InArray(nextExpected, results)
+		if !matchFound {
+			return errMsg
+		}
+	}
+
+	return ""
+}
 
 func TestGenerateDailySnapshotsForDate(t *testing.T) {
 	db.FlushTables(t)
@@ -47,26 +83,26 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 		{
 			ID:        "ping-aa:aa:aa:aa:aa:aa",
 			MacAddr:   "aa:aa:aa:aa:aa:aa",
-			Timestamp: 1528145485,
+			Timestamp: 1528145486,
 			Latency:   10,
 		},
 		{
 			ID:        "ping-aa:aa:aa:aa:aa:aa",
 			MacAddr:   "aa:aa:aa:aa:aa:aa",
-			Timestamp: 1528145485,
+			Timestamp: 1528145487,
 			Latency:   15,
 		},
 		{
 			ID:        "speedTest-11:11:11:11:11:11",
 			MacAddr:   "11:11:11:11:11:11",
-			Timestamp: 1528145485,
+			Timestamp: 1528145488,
 			Upload:    10.0,
 			Download:  10.0,
 		},
 		{
 			ID:        "ping-11:11:11:11:11:11",
 			MacAddr:   "11:11:11:11:11:11",
-			Timestamp: 1528145485,
+			Timestamp: 1528145489,
 			Latency:   15,
 		},
 	}
@@ -97,7 +133,7 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 		t.Fail()
 	}
 	if len(results) != 1 {
-		t.Error("Not enough results returned, got ", len(results), "expected 2")
+		t.Error("Not enough results returned, got ", len(results), "expected 1")
 	}
 
 	for _, snap := range results {
@@ -114,6 +150,34 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 				t.Errorf("Daily upload max not as expected (40.0), got: %v", snap.UploadMax)
 				t.Fail()
 			}
+			rawPingResults := snap.RawPingData
+			expectedPings := []domain.ShortPingEntry{}
+			for _, nextFixture := range fixturesInRange {
+				if strings.HasPrefix(nextFixture.ID, "ping-") && strings.HasSuffix(nextFixture.ID, "aa:aa") {
+					expectedPings = append(expectedPings, nextFixture.GetShortPingEntry())
+				}
+			}
+
+			errMsg := areShortPingEntrySlicesEqual(expectedPings, rawPingResults)
+			if errMsg != "" {
+				t.Error(errMsg)
+				break
+			}
+
+			rawSpeedTestResults := snap.RawSpeedTestData
+			expectedSpeedTests := []domain.ShortSpeedTestEntry{}
+			for _, nextFixture := range fixturesInRange {
+				if strings.HasPrefix(nextFixture.ID, "speedTest-") && strings.HasSuffix(nextFixture.ID, "aa:aa") {
+					expectedSpeedTests = append(expectedSpeedTests, nextFixture.GetShortSpeedTestEntry())
+				}
+			}
+
+			errMsg = areShortSpeedTestEntrySlicesEqual(expectedSpeedTests, rawSpeedTestResults)
+			if errMsg != "" {
+				t.Error(errMsg)
+				break
+			}
+
 			break
 		}
 	}

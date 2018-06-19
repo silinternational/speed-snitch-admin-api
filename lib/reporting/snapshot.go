@@ -10,14 +10,14 @@ import (
 func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 	startTime, endTime, err := GetStartEndTimestampsForDate(date)
 
-	taskLog, err := db.GetTaskLogForRange(startTime, endTime, "", []string{domain.TaskTypePing, domain.TaskTypeSpeedTest})
+	taskLogs, err := db.GetTaskLogForRange(startTime, endTime, "", []string{domain.TaskTypePing, domain.TaskTypeSpeedTest})
 	if err != nil {
 		return 0, err
 	}
 
 	dailySnapshots := map[string]domain.ReportingSnapshot{}
 
-	for _, entry := range taskLog {
+	for _, entry := range taskLogs {
 		nodeEntry, exists := dailySnapshots[entry.MacAddr]
 		if !exists {
 			nodeEntry = domain.ReportingSnapshot{
@@ -39,6 +39,8 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 				LatencyTotal:        0.0,
 				SpeedTestDataPoints: 0,
 				LatencyDataPoints:   0,
+				RawPingData:         []domain.ShortPingEntry{},
+				RawSpeedTestData:    []domain.ShortSpeedTestEntry{},
 			}
 		}
 
@@ -55,6 +57,7 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 
 			// Calculate average
 			nodeEntry.LatencyAvg = nodeEntry.LatencyTotal / float64(nodeEntry.LatencyDataPoints)
+			nodeEntry.RawPingData = append(nodeEntry.RawPingData, entry.GetShortPingEntry())
 
 		} else if strings.HasPrefix(entry.ID, domain.TaskTypeSpeedTest) {
 			// Increment counts and update max/min
@@ -73,6 +76,7 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 			// Calculate average
 			nodeEntry.UploadAvg = nodeEntry.UploadTotal / float64(nodeEntry.SpeedTestDataPoints)
 			nodeEntry.DownloadAvg = nodeEntry.DownloadTotal / float64(nodeEntry.SpeedTestDataPoints)
+			nodeEntry.RawSpeedTestData = append(nodeEntry.RawSpeedTestData, entry.GetShortSpeedTestEntry())
 
 		}
 
