@@ -253,13 +253,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 func updateNodeTasks(node domain.Node) (domain.Node, error) {
 	newTasks := []domain.Task{}
 	for index, task := range node.Tasks {
-		if task.Type == domain.TaskTypePing {
-			newTask, err := updateTaskPing(task)
-			if err != nil {
-				return node, fmt.Errorf("Error updating task. Index: %d. Type: %s ... %s", index, task.Type, err.Error())
-			}
-			newTasks = append(newTasks, newTask)
-		} else if task.Type == domain.TaskTypeSpeedTest {
+		if task.Type == domain.TaskTypeSpeedTest {
 			newTask, err := updateTaskSpeedTest(task)
 			if err != nil {
 				return node, fmt.Errorf("Error updating task. Index: %d. Type: %s ... %s", index, task.Type, err.Error())
@@ -272,60 +266,6 @@ func updateNodeTasks(node domain.Node) (domain.Node, error) {
 
 	node.Tasks = newTasks
 	return node, nil
-}
-
-func updateTaskPing(task domain.Task) (domain.Task, error) {
-	intValues := setIntValueIfMissing(task.Data.IntValues, TimeOutKey, DefaultPingTimeoutInSeconds)
-	task.Data.IntValues = intValues
-
-	stringValues, err := getPingStringValues(task)
-	if err != nil {
-		return task, err
-	}
-	task.Data.StringValues = stringValues
-
-	return task, nil
-}
-
-func getPingStringValues(task domain.Task) (map[string]string, error) {
-	stringValues := map[string]string{}
-	if task.Data.StringValues != nil {
-		stringValues = task.Data.StringValues
-	}
-
-	stringValues[TestTypeKey] = domain.TestConfigLatencyTest
-
-	// If no NamedServerID, then use defaults
-	if task.NamedServer.ID == "" {
-		stringValues = setStringValue(stringValues, ServerHostKey, domain.DefaultPingServerHost)
-		stringValues = setStringValue(stringValues, ServerIDKey, domain.DefaultPingServerID)
-		return stringValues, nil
-	}
-
-	// There is a NamedServerID but we're not checking if it's associated with a SpeedTestNetServer (for Pings)
-	var namedServer domain.NamedServer
-	namedServer, err := db.GetNamedServer(task.NamedServer.UID)
-	if err != nil {
-		return stringValues, fmt.Errorf("Error getting NamedServer with UID: %s ... %s", task.NamedServer.ID, err.Error())
-	}
-
-	// If this does not refer to a SpeedTestNetServer, just use the NamedServer's values
-	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
-		stringValues = setStringValue(stringValues, ServerHostKey, namedServer.ServerHost)
-		stringValues = setStringValue(stringValues, ServerIDKey, namedServer.UID)
-		return stringValues, nil
-	}
-
-	// This does refer to a SpeedTestNetServer, so use its info
-	stnServer, err := db.GetSpeedTestNetServerFromNamedServer(namedServer)
-	if err != nil {
-		return stringValues, err
-	}
-
-	stringValues = setStringValue(stringValues, ServerHostKey, stnServer.Host)
-	stringValues = setStringValue(stringValues, ServerIDKey, stnServer.ServerID)
-
-	return stringValues, nil
 }
 
 func updateTaskSpeedTest(task domain.Task) (domain.Task, error) {

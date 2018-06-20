@@ -149,120 +149,6 @@ func areFloatMapsEqual(expected, results map[string]float64) bool {
 	return true
 }
 
-func TestGetPingStringValuesWithoutNamedServer(t *testing.T) {
-	task := domain.Task{}
-	task.NamedServer = domain.NamedServer{}
-	results, err := getPingStringValues(task)
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigLatencyTest,
-		ServerHostKey: domain.DefaultPingServerHost,
-		ServerIDKey:   domain.DefaultPingServerID,
-	}
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-}
-
-func TestGetPingStringValuesWithNamedServer(t *testing.T) {
-
-	serverHost := "PingTestHost"
-	namedServerUID := "ns11"
-
-	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
-	db.LoadNamedServerFixtures(namedServerFixtures, t)
-
-	task := domain.Task{}
-	task.NamedServer = namedServerFixtures[0]
-
-	results, err := getPingStringValues(task)
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigLatencyTest,
-		ServerHostKey: serverHost,
-		ServerIDKey:   namedServerUID,
-	}
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-}
-
-func TestUpdateTaskPingWithoutNamedServer(t *testing.T) {
-	task := domain.Task{}
-	task.NamedServer = domain.NamedServer{}
-
-	resultsTask, err := updateTaskPing(task)
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	results := resultsTask.Data.StringValues
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigLatencyTest,
-		ServerHostKey: domain.DefaultPingServerHost,
-		ServerIDKey:   domain.DefaultPingServerID,
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-
-	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{TimeOutKey: DefaultPingTimeoutInSeconds}
-
-	if !areIntMapsEqual(expectedInts, resultsInts) {
-		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
-	}
-}
-
-func TestUpdateTaskPingWithNamedServer(t *testing.T) {
-	serverHost := "PingTestHost"
-	namedServerUID := "nst12"
-
-	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
-	db.LoadNamedServerFixtures(namedServerFixtures, t)
-
-	task := domain.Task{}
-	task.NamedServer = namedServerFixtures[0]
-
-	resultsTask, err := updateTaskPing(task)
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	results := resultsTask.Data.StringValues
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigLatencyTest,
-		ServerHostKey: serverHost,
-		ServerIDKey:   namedServerUID,
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-
-	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{TimeOutKey: DefaultPingTimeoutInSeconds}
-
-	if !areIntMapsEqual(expectedInts, resultsInts) {
-		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
-	}
-}
-
 func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.NamedServer = domain.NamedServer{}
@@ -529,7 +415,11 @@ func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
 func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 	task := domain.Task{}
 	task.Type = domain.TaskTypePing
-	task.NamedServer = domain.NamedServer{}
+	task.NamedServer = domain.NamedServer{
+		UID:        "test",
+		Name:       "test",
+		ServerHost: "www.google.com",
+	}
 	node := domain.Node{}
 
 	node.Tasks = []domain.Task{task}
@@ -541,22 +431,9 @@ func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
 		return
 	}
 
-	results := resultsNode.Tasks[0].Data.StringValues
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigLatencyTest,
-		ServerHostKey: domain.DefaultPingServerHost,
-		ServerIDKey:   domain.DefaultPingServerID,
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-
-	resultsInts := resultsNode.Tasks[0].Data.IntValues
-	expectedInts := map[string]int{TimeOutKey: DefaultPingTimeoutInSeconds}
-
-	if !areIntMapsEqual(expectedInts, resultsInts) {
-		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
+	if resultsNode.Tasks[0].NamedServer.ServerHost != task.NamedServer.ServerHost {
+		t.Errorf("Node was not updated properly with ping task")
+		t.Fail()
 	}
 }
 
