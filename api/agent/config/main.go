@@ -8,7 +8,6 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
-	"os"
 )
 
 func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
