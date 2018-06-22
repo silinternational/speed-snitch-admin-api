@@ -8,7 +8,6 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
-	"os"
 )
 
 func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -53,8 +52,6 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		},
 		Tasks: newTasks,
 	}
-
-	fmt.Fprintf(os.Stdout, "Node %s. New (updated) Tasks:\n %+v", macAddr, newTasks)
 
 	js, err := json.Marshal(config)
 	if err != nil {
