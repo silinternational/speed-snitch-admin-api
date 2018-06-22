@@ -8,6 +8,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"os"
 )
 
 func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -40,6 +41,9 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	var newTasks []domain.Task
 
 	for _, oldTask := range node.Tasks {
+
+		fmt.Fprintf(os.Stdout, "Node %s. Original Task: %+v", macAddr, oldTask)
+
 		// Only modify tasks that involve a NamedServer
 		if oldTask.NamedServer.ID == "" {
 			newTasks = append(newTasks, oldTask)
@@ -82,6 +86,8 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		},
 		Tasks: newTasks,
 	}
+
+	fmt.Fprintf(os.Stdout, "Node %s. New (updated) Tasks:\n %+v", macAddr, newTasks)
 
 	js, err := json.Marshal(config)
 	if err != nil {
