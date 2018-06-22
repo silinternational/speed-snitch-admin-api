@@ -260,20 +260,37 @@ func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
 	return newTags, nil
 }
 
-// updateTasks makes sure the NamedServer object of a Node's Tasks has the latest information from the db.
+// GetUpdatedTasks makes sure the NamedServer object of a Node's Tasks has the latest information from the db.
 // This is just for Ping and SpeedTest tasks.
-func updateTasks(oldTasks []domain.Task) ([]domain.Task, error) {
+func GetUpdatedTasks(oldTasks []domain.Task) ([]domain.Task, error) {
 	newTasks := []domain.Task{}
 	for _, oldTask := range oldTasks {
 		newTask := oldTask
 
 		if newTask.Type != domain.TaskTypePing && newTask.Type != domain.TaskTypeSpeedTest {
+			newTasks = append(newTasks, newTask)
 			continue
 		}
-		namedServer := domain.NamedServer{}
-		err := getItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServer.UID, &namedServer)
+
+		namedServer, err := GetNamedServer(oldTask.NamedServer.UID)
 		if err != nil {
 			return []domain.Task{}, fmt.Errorf("Error finding named server %s.\n%s", oldTask.NamedServer.UID, err.Error())
+		}
+
+		// If it's not a SpeedTestNetServer, add the server info
+		if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+			newTask.SpeedTestNetServerID = ""
+			newTask.ServerHost = namedServer.ServerHost
+		} else {
+			// Use the NamedServer to get the SpeedTestNetServer's info
+			var speedtestnetserver domain.SpeedTestNetServer
+			speedtestnetserver, err := GetSpeedTestNetServerFromNamedServer(namedServer)
+			if err != nil {
+				return []domain.Task{}, fmt.Errorf("Error getting SpeedTestNetServer from NamedServer ... %s", err.Error())
+			}
+
+			newTask.SpeedTestNetServerID = speedtestnetserver.ServerID
+			newTask.ServerHost = speedtestnetserver.Host
 		}
 
 		newTask.NamedServer = namedServer
@@ -321,7 +338,7 @@ func GetNode(macAddr string) (domain.Node, error) {
 	}
 	node.Tags = newTags
 
-	newTasks, err := updateTasks(node.Tasks)
+	newTasks, err := GetUpdatedTasks(node.Tasks)
 	if err != nil {
 		return node, fmt.Errorf("Error updating tasks for node %s.\n%s", node.MacAddr, err.Error())
 	}
