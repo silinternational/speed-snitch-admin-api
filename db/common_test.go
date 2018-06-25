@@ -171,8 +171,22 @@ func TestUpdateTags(t *testing.T) {
 	areTagsEqual(expected, results, t)
 }
 
+func errorPrintTasks(expected, results []domain.Task, t *testing.T) {
+	errMsg := "Mismatched Tasks results.\nExpected:\n\t"
+	for _, next := range expected {
+		errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %s\n\t", next.Type, next.ServerHost)
+	}
+	errMsg += "\n But Got:\n\t"
+	for _, next := range results {
+		errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %s\n\t", next.Type, next.ServerHost)
+	}
+
+	t.Error(errMsg)
+}
+
 // Make sure the updated task's NamedServer gets the new information for the matching speedtestnet server
 func TestGetUpdatedTasks(t *testing.T) {
+	FlushTables(t)
 	serverID := "111"
 	newServerHost := "new.host.com" // This should be a change
 	country := domain.Country{Code: "US", Name: "United States"}
@@ -246,32 +260,16 @@ func TestGetUpdatedTasks(t *testing.T) {
 		},
 	}
 
-	gotError := false
-
 	if len(results) != len(expected) {
-		gotError = true
+		errorPrintTasks(expected, results, t)
+		return
 	}
 
-	if !gotError {
-		for index, nextExpected := range expected {
-			if results[index].Type != nextExpected.Type || results[index].ServerHost != nextExpected.ServerHost {
-				gotError = true
-				break
-			}
+	for index, nextExpected := range expected {
+		if results[index].Type != nextExpected.Type || results[index].ServerHost != nextExpected.ServerHost {
+			errorPrintTasks(expected, results, t)
+			return
 		}
-	}
-
-	if gotError {
-		errMsg := "Mismatched Tasks results.\nExpected:\n\t"
-		for _, next := range expected {
-			errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %+v\n\t", next.Type, next.ServerHost)
-		}
-		errMsg += "\n But Got:\n\t"
-		for _, next := range results {
-			errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %+v\n\t", next.Type, next.ServerHost)
-		}
-
-		t.Error(errMsg)
 	}
 }
 
