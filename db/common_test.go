@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-agent"
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
@@ -168,6 +169,108 @@ func TestUpdateTags(t *testing.T) {
 	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
 
 	areTagsEqual(expected, results, t)
+}
+
+func errorPrintTasks(expected, results []domain.Task, t *testing.T) {
+	errMsg := "Mismatched Tasks results.\nExpected:\n\t"
+	for _, next := range expected {
+		errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %s\n\t", next.Type, next.ServerHost)
+	}
+	errMsg += "\n But Got:\n\t"
+	for _, next := range results {
+		errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %s\n\t", next.Type, next.ServerHost)
+	}
+
+	t.Error(errMsg)
+}
+
+// Make sure the updated task's NamedServer gets the new information for the matching speedtestnet server
+func TestGetUpdatedTasks(t *testing.T) {
+	FlushTables(t)
+	serverID := "111"
+	newServerHost := "new.host.com" // This should be a change
+	country := domain.Country{Code: "US", Name: "United States"}
+
+	sTNetServerListFixtures := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
+			Country: country,
+			Servers: []domain.SpeedTestNetServer{
+				domain.SpeedTestNetServer{Host: newServerHost, ServerID: serverID},
+			},
+		},
+	}
+
+	LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:                   "namedserver-000",
+			UID:                  "000",
+			Name:                 "New Name",
+			Country:              country,
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			ServerHost:           "outdated.host.com", // This should get changed
+			SpeedTestNetServerID: serverID,
+		},
+	}
+
+	LoadNamedServerFixtures(namedServerFixtures, t)
+
+	tasks := []domain.Task{
+		{
+			Type:     "reboot",
+			Schedule: "*/5 * * * *",
+		},
+		testTasks["111Ping"],
+		testTasks["222SpeedTest"],
+	}
+
+	results, err := GetUpdatedTasks(tasks)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	expected := []domain.Task{
+		{
+			Type:     "reboot",
+			Schedule: "*/5 * * * *",
+		},
+		{
+			Type:     "ping",
+			Schedule: "*/11 * * * *",
+			NamedServer: domain.NamedServer{
+				ID:                   "namedserver-000",
+				UID:                  "000",
+				Name:                 "New Name",
+				Country:              country,
+				ServerType:           domain.ServerTypeSpeedTestNet,
+				ServerHost:           newServerHost, // This should have gotten changed
+				SpeedTestNetServerID: serverID,
+			},
+			ServerHost:           newServerHost, // This should have gotten changed
+			SpeedTestNetServerID: serverID,
+		},
+		{
+			Type:        "speedTest",
+			Schedule:    "* 2 * * *",
+			NamedServer: domain.NamedServer{},
+		},
+	}
+
+	if len(results) != len(expected) {
+		errorPrintTasks(expected, results, t)
+		return
+	}
+
+	for index, nextExpected := range expected {
+		if results[index].Type != nextExpected.Type || results[index].ServerHost != nextExpected.ServerHost {
+			errorPrintTasks(expected, results, t)
+			return
+		}
+	}
 }
 
 func TestGetNode(t *testing.T) {
