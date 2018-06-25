@@ -193,8 +193,11 @@ type TaskLogEntry struct {
 	Upload             float64 `json:"Upload"`
 	Download           float64 `json:"Download"`
 	Latency            float64 `json:"Latency"`
+	PacketLossPercent  float64 `json:"PacketLossPercent"`
 	ErrorCode          string  `json:"ErrorCode"`
 	ErrorMessage       string  `json:"ErrorMessage"`
+	DowntimeStart      string  `json:"DowntimeStart,omitempty"`
+	DowntimeSeconds    int64   `json:"DowntimeSeconds,omitempty"`
 	ServerID           string  `json:"ServerID"`
 	ServerCountry      string  `json:"ServerCountry"`
 	ServerCoordinates  string  `json:"ServerCoordinates"`
