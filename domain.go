@@ -101,7 +101,7 @@ type Node struct {
 	IPAddress         string    `json:"IPAddress"`
 	Tasks             []Task    `json:"Tasks"`
 	Contacts          []Contact `json:"Contacts"`
-	TagUIDs           []string  `json:"TagUIDs"`
+	Tags              []Tag     `json:"Tags"`
 	ConfiguredBy      string    `json:"ConfiguredBy"`
 	Nickname          string    `json:"Nickname"`
 	Notes             string    `json:"Notes"`
@@ -116,12 +116,12 @@ type NodeConfig struct {
 }
 
 type Task struct {
-	Type                 string   `json:"Type"`
-	Schedule             string   `json:"Schedule"`
-	NamedServerID        string   `json:"NamedServerID"`
-	SpeedTestNetServerID string   `json:"SpeedTestNetServerID,omitempty"`
-	ServerHost           string   `json:"ServerHost,omitempty"`
-	Data                 TaskData `json:"Data"`
+	Type                 string      `json:"Type"`
+	Schedule             string      `json:"Schedule"`
+	NamedServer          NamedServer `json:"NamedServer"`
+	SpeedTestNetServerID string      `json:"SpeedTestNetServerID,omitempty"`
+	ServerHost           string      `json:"ServerHost,omitempty"`
+	Data                 TaskData    `json:"Data"`
 }
 
 type TaskData struct {
@@ -144,13 +144,13 @@ type NamedServer struct {
 }
 
 type User struct {
-	ID      string   `json:"ID"`
-	UID     string   `json:"UID"`
-	UserID  string   `json:"UserID"`
-	Name    string   `json:"Name"`
-	Email   string   `json:"Email"`
-	Role    string   `json:"Role"`
-	TagUIDs []string `json:"TagUIDs"`
+	ID     string `json:"ID"`
+	UID    string `json:"UID"`
+	UserID string `json:"UserID"`
+	Name   string `json:"Name"`
+	Email  string `json:"Email"`
+	Role   string `json:"Role"`
+	Tags   []Tag  `json:"Tags"`
 }
 
 type Version struct {
@@ -193,12 +193,15 @@ type TaskLogEntry struct {
 	Upload             float64 `json:"Upload"`
 	Download           float64 `json:"Download"`
 	Latency            float64 `json:"Latency"`
+	PacketLossPercent  float64 `json:"PacketLossPercent"`
 	ErrorCode          string  `json:"ErrorCode"`
 	ErrorMessage       string  `json:"ErrorMessage"`
+	DowntimeStart      string  `json:"DowntimeStart,omitempty"`
+	DowntimeSeconds    int64   `json:"DowntimeSeconds,omitempty"`
 	ServerID           string  `json:"ServerID"`
 	ServerCountry      string  `json:"ServerCountry"`
 	ServerCoordinates  string  `json:"ServerCoordinates"`
-	ServerSponsor      string  `json:"ServerSponsor"`
+	ServerName         string  `json:"ServerName"`
 	NodeLocation       string  `json:"Location"`
 	NodeCoordinates    string  `json:"Coordinates"`
 	NodeNetwork        string  `json:"Network"`
@@ -206,25 +209,90 @@ type TaskLogEntry struct {
 	NodeRunningVersion string  `json:"RunningVersion"`
 }
 
+func (e *TaskLogEntry) GetShortPingEntry() ShortPingEntry {
+	short := ShortPingEntry{
+		ID:                 e.ID,
+		Timestamp:          e.Timestamp,
+		MacAddr:            e.MacAddr,
+		Latency:            e.Latency,
+		ErrorCode:          e.ErrorCode,
+		ErrorMessage:       e.ErrorMessage,
+		ServerID:           e.ServerID,
+		NodeLocation:       e.NodeLocation,
+		NodeIPAddress:      e.NodeIPAddress,
+		NodeRunningVersion: e.NodeRunningVersion,
+	}
+	return short
+}
+
+func (e *TaskLogEntry) GetShortSpeedTestEntry() ShortSpeedTestEntry {
+	short := ShortSpeedTestEntry{
+		ID:                 e.ID,
+		Timestamp:          e.Timestamp,
+		MacAddr:            e.MacAddr,
+		Upload:             e.Upload,
+		Download:           e.Download,
+		ErrorCode:          e.ErrorCode,
+		ErrorMessage:       e.ErrorMessage,
+		ServerID:           e.ServerID,
+		NodeLocation:       e.NodeLocation,
+		NodeIPAddress:      e.NodeIPAddress,
+		NodeRunningVersion: e.NodeRunningVersion,
+	}
+	return short
+}
+
+type ShortPingEntry struct {
+	ID                 string  `json:"ID"`
+	Timestamp          int64   `json:"Timestamp"`
+	MacAddr            string  `json:"MacAddr"`
+	Upload             float64 `json:"Upload"`
+	Download           float64 `json:"Download"`
+	Latency            float64 `json:"Latency"`
+	ErrorCode          string  `json:"ErrorCode"`
+	ErrorMessage       string  `json:"ErrorMessage"`
+	ServerID           string  `json:"ServerID"`
+	NodeLocation       string  `json:"Location"`
+	NodeIPAddress      string  `json:"IPAddress"`
+	NodeRunningVersion string  `json:"RunningVersion"`
+}
+
+type ShortSpeedTestEntry struct {
+	ID                 string  `json:"ID"`
+	Timestamp          int64   `json:"Timestamp"`
+	MacAddr            string  `json:"MacAddr"`
+	Upload             float64 `json:"Upload"`
+	Download           float64 `json:"Download"`
+	Latency            float64 `json:"Latency"`
+	ErrorCode          string  `json:"ErrorCode"`
+	ErrorMessage       string  `json:"ErrorMessage"`
+	ServerID           string  `json:"ServerID"`
+	NodeLocation       string  `json:"Location"`
+	NodeIPAddress      string  `json:"IPAddress"`
+	NodeRunningVersion string  `json:"RunningVersion"`
+}
+
 type ReportingSnapshot struct {
-	ID                  string  `json:"ID"`
-	Timestamp           int64   `json:"Timestamp"`
-	ExpirationTime      int64   `json:"ExpirationTime"`
-	MacAddr             string  `json:"MacAddr"`
-	UploadAvg           float64 `json:"UploadAvg"`
-	UploadMax           float64 `json:"UploadMax"`
-	UploadMin           float64 `json:"UploadMin"`
-	UploadTotal         float64 `json:"-"`
-	DownloadAvg         float64 `json:"DownloadAvg"`
-	DownloadMax         float64 `json:"DownloadMax"`
-	DownloadMin         float64 `json:"DownloadMin"`
-	DownloadTotal       float64 `json:"-"`
-	LatencyAvg          float64 `json:"LatencyAvg"`
-	LatencyMax          float64 `json:"LatencyMax"`
-	LatencyMin          float64 `json:"LatencyMin"`
-	LatencyTotal        float64 `json:"-"`
-	SpeedTestDataPoints int64   `json:"SpeedTestDataPoints"`
-	LatencyDataPoints   int64   `json:"LatencyDataPoints"`
+	ID                  string                `json:"ID"`
+	Timestamp           int64                 `json:"Timestamp"`
+	ExpirationTime      int64                 `json:"ExpirationTime"`
+	MacAddr             string                `json:"MacAddr"`
+	UploadAvg           float64               `json:"UploadAvg"`
+	UploadMax           float64               `json:"UploadMax"`
+	UploadMin           float64               `json:"UploadMin"`
+	UploadTotal         float64               `json:"-"`
+	DownloadAvg         float64               `json:"DownloadAvg"`
+	DownloadMax         float64               `json:"DownloadMax"`
+	DownloadMin         float64               `json:"DownloadMin"`
+	DownloadTotal       float64               `json:"-"`
+	LatencyAvg          float64               `json:"LatencyAvg"`
+	LatencyMax          float64               `json:"LatencyMax"`
+	LatencyMin          float64               `json:"LatencyMin"`
+	LatencyTotal        float64               `json:"-"`
+	SpeedTestDataPoints int64                 `json:"SpeedTestDataPoints"`
+	LatencyDataPoints   int64                 `json:"LatencyDataPoints"`
+	RawPingData         []ShortPingEntry      `json:"RawPingData"`
+	RawSpeedTestData    []ShortSpeedTestEntry `json:"RawSpeedTestData"`
 }
 
 // Add a helper for handling errors. This logs any error to os.Stderr
@@ -296,16 +364,16 @@ func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
 	return url
 }
 
-// DoTagsOverlap returns true if there is a tag with the same name
+// DoTagsOverlap returns true if there is a tag with the same UID
 //  in both slices of tags.  Otherwise, returns false.
-func DoTagsOverlap(tags1, tags2 []string) bool {
+func DoTagsOverlap(tags1, tags2 []Tag) bool {
 	if len(tags1) == 0 || len(tags2) == 0 {
 		return false
 	}
 
 	for _, tag1 := range tags1 {
 		for _, tag2 := range tags2 {
-			if tag1 == tag2 {
+			if tag1.UID == tag2.UID {
 				return true
 			}
 		}
@@ -320,7 +388,7 @@ func CanUserUseNode(user User, node Node) bool {
 	if user.Role == UserRoleSuperAdmin {
 		return true
 	}
-	return DoTagsOverlap(user.TagUIDs, node.TagUIDs)
+	return DoTagsOverlap(user.Tags, node.Tags)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

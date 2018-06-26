@@ -31,7 +31,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -58,15 +58,9 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
 	uid := req.PathParameters["uid"]
 
-	var server domain.NamedServer
-	err := db.GetItem(domain.DataTable, SelfType, uid, &server)
+	server, err := db.GetNamedServer(uid)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -87,11 +81,6 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 }
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
 	servers, err := db.ListNamedServers()
 	if err != nil {
 		return domain.ServerError(err)
@@ -109,7 +98,7 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -118,7 +107,8 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &server)
+		var err error
+		server, err = db.GetNamedServer(req.PathParameters["uid"])
 		if err != nil {
 			return domain.ServerError(err)
 		}

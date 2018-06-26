@@ -29,7 +29,7 @@ func GetDb() *dynamodb.DynamoDB {
 	return db
 }
 
-func GetItem(tableAlias, dataType, value string, itemObj interface{}) error {
+func getItem(tableAlias, dataType, value string, itemObj interface{}) error {
 	// Prepare the input for the query.
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
@@ -82,6 +82,7 @@ func PutItem(tableAlias string, item interface{}) error {
 
 func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 
+	returnOldValues := "ALL_OLD"
 	// Prepare the input for the query.
 	input := &dynamodb.DeleteItemInput{
 		TableName: aws.String(domain.GetDbTableName(tableAlias)),
@@ -90,13 +91,18 @@ func DeleteItem(tableAlias, dataType, value string) (bool, error) {
 				S: aws.String(dataType + "-" + value),
 			},
 		},
+		ReturnValues: &returnOldValues,
 	}
 
 	db := GetDb()
 	// Delete the item from DynamoDB. I
-	_, err := db.DeleteItem(input)
+	resp, err := db.DeleteItem(input)
+	if err != nil {
+		return false, err
+	}
 
-	if err != nil && err.Error() == dynamodb.ErrCodeReplicaNotFoundException {
+	// resp.Attributes contains attribute of old record before deletion, if empty the original item was not found
+	if len(resp.Attributes) == 0 {
 		return false, nil
 	}
 
@@ -238,6 +244,152 @@ func GetTaskLogForRange(startTime, endTime int64, nodeMacAddr string, logTypeIDP
 	return results, nil
 }
 
+// updateTags makes sure a Node's Tag objects have the latest information from the db
+func updateTags(oldTags []domain.Tag) ([]domain.Tag, error) {
+	newTags := []domain.Tag{}
+	for _, oldTag := range oldTags {
+		newTag := domain.Tag{}
+		err := getItem(domain.DataTable, domain.DataTypeTag, oldTag.UID, &newTag)
+		if err != nil {
+			return []domain.Tag{}, fmt.Errorf("Error finding tag %s.\n%s", oldTag.UID, err.Error())
+		}
+		if newTag.UID != "" {
+			newTags = append(newTags, newTag)
+		}
+	}
+	return newTags, nil
+}
+
+// GetUpdatedTasks makes sure the NamedServer object of a Node's Tasks has the latest information from the db.
+// This is just for Ping and SpeedTest tasks.
+func GetUpdatedTasks(oldTasks []domain.Task) ([]domain.Task, error) {
+	newTasks := []domain.Task{}
+	for _, oldTask := range oldTasks {
+		newTask := oldTask
+
+		if newTask.Type != domain.TaskTypePing && newTask.Type != domain.TaskTypeSpeedTest {
+			newTasks = append(newTasks, newTask)
+			continue
+		}
+
+		namedServer, err := GetNamedServer(oldTask.NamedServer.UID)
+		if err != nil {
+			return []domain.Task{}, fmt.Errorf("Error finding named server %s.\n%s", oldTask.NamedServer.UID, err.Error())
+		}
+
+		// If it's not a SpeedTestNetServer, add the server info
+		if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+			newTask.SpeedTestNetServerID = ""
+			newTask.ServerHost = namedServer.ServerHost
+		} else {
+			// Use the NamedServer to get the SpeedTestNetServer's info
+			var speedtestnetserver domain.SpeedTestNetServer
+			speedtestnetserver, err := GetSpeedTestNetServerFromNamedServer(namedServer)
+			if err != nil {
+				return []domain.Task{}, fmt.Errorf("Error getting SpeedTestNetServer from NamedServer ... %s", err.Error())
+			}
+
+			newTask.SpeedTestNetServerID = speedtestnetserver.ServerID
+			newTask.ServerHost = speedtestnetserver.Host
+		}
+
+		newTask.NamedServer = namedServer
+		newTasks = append(newTasks, newTask)
+	}
+
+	return newTasks, nil
+}
+
+func GetNamedServer(uid string) (domain.NamedServer, error) {
+	namedServer := domain.NamedServer{}
+	err := getItem(domain.DataTable, domain.DataTypeNamedServer, uid, &namedServer)
+	if err != nil {
+		return namedServer, fmt.Errorf("Error getting NamedServer with uid: %s.\n%s", uid, err.Error())
+	}
+
+	if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
+		return namedServer, nil
+	}
+
+	//  If this is related to a speedtest.net server, then update its host value
+	matchingServer, err := GetSpeedTestNetServerFromNamedServer(namedServer)
+	if err != nil {
+		return namedServer, err
+	}
+
+	namedServer.ServerHost = matchingServer.Host
+	return namedServer, nil
+}
+
+// GetNode gets the Node from the database and updates its tags to have the latest
+//  information from the database.
+//  Any tags that are no longer in the db will be dropped from the Node
+func GetNode(macAddr string) (domain.Node, error) {
+	node := domain.Node{}
+	err := getItem(domain.DataTable, domain.DataTypeNode, macAddr, &node)
+
+	if err != nil {
+		return node, err
+	}
+
+	newTags, err := updateTags(node.Tags)
+	if err != nil {
+		return node, fmt.Errorf("Error updating tags for node %s.\n%s", node.MacAddr, err.Error())
+	}
+	node.Tags = newTags
+
+	newTasks, err := GetUpdatedTasks(node.Tasks)
+	if err != nil {
+		return node, fmt.Errorf("Error updating tasks for node %s.\n%s", node.MacAddr, err.Error())
+	}
+	node.Tasks = newTasks
+
+	return node, nil
+}
+
+func GetSTNetCountryList() (domain.STNetCountryList, error) {
+	countriesEntry := domain.STNetCountryList{}
+	err := getItem(domain.DataTable, domain.DataTypeSTNetCountryList, domain.STNetCountryListUID, &countriesEntry)
+
+	return countriesEntry, err
+}
+
+func GetSTNetServersForCountry(countryCode string) (domain.STNetServerList, error) {
+	serversInCountry := domain.STNetServerList{}
+	err := getItem(domain.DataTable, domain.DataTypeSTNetServerList, countryCode, &serversInCountry)
+
+	return serversInCountry, err
+}
+
+func GetSTNetServer(countryCode, serverID string) (domain.SpeedTestNetServer, error) {
+	serversForCountry, err := GetSTNetServersForCountry(countryCode)
+	if err != nil {
+		return domain.SpeedTestNetServer{}, err
+	}
+
+	for _, server := range serversForCountry.Servers {
+		if server.ServerID == serverID {
+			return server, nil
+		}
+	}
+
+	return domain.SpeedTestNetServer{}, fmt.Errorf("SpeedTestNetServer for ID %s not found", serverID)
+}
+
+func GetTag(uid string) (domain.Tag, error) {
+	var tag domain.Tag
+	err := getItem(domain.DataTable, domain.DataTypeTag, uid, &tag)
+
+	return tag, err
+}
+
+func GetUser(uid string) (domain.User, error) {
+	var user domain.User
+	err := getItem(domain.DataTable, domain.DataTypeUser, uid, &user)
+
+	return user, err
+}
+
 func GetUserByUserID(userID string) (domain.User, error) {
 	tableName := domain.GetDbTableName(domain.DataTable)
 	filterExpression := "UserID = :userID"
@@ -265,17 +417,30 @@ func GetUserByUserID(userID string) (domain.User, error) {
 	if len(results) == 0 {
 		return domain.User{}, nil
 	}
-	if len(results) == 1 {
-		var user domain.User
-		err := dynamodbattribute.UnmarshalMap(results[0], &user)
-		if err != nil {
-			return domain.User{}, err
-		}
-
-		return user, nil
+	if len(results) > 1 {
+		return domain.User{}, fmt.Errorf("More than one user found for UserID %s", userID)
 	}
 
-	return domain.User{}, fmt.Errorf("More than one user found for UserID %s", userID)
+	var user domain.User
+	err = dynamodbattribute.UnmarshalMap(results[0], &user)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	newTags, err := updateTags(user.Tags)
+	if err != nil {
+		return user, fmt.Errorf("Error updating tags for user %s.\n%s", userID, err.Error())
+	}
+
+	user.Tags = newTags
+	return user, nil
+}
+
+func GetVersion(number string) (domain.Version, error) {
+	version := domain.Version{}
+	err := getItem(domain.DataTable, domain.DataTypeVersion, number, &version)
+
+	return version, err
 }
 
 func ListTags() ([]domain.Tag, error) {
@@ -299,7 +464,7 @@ func ListNodes() ([]domain.Node, error) {
 
 	var list []domain.Node
 
-	items, err := ScanTable(domain.DataTable, "node")
+	items, err := ScanTable(domain.DataTable, domain.DataTypeNode)
 	if err != nil {
 		return list, err
 	}
@@ -316,7 +481,7 @@ func ListVersions() ([]domain.Version, error) {
 
 	var list []domain.Version
 
-	items, err := ScanTable(domain.DataTable, "version")
+	items, err := ScanTable(domain.DataTable, domain.DataTypeVersion)
 	if err != nil {
 		return list, err
 	}
@@ -333,7 +498,7 @@ func ListUsers() ([]domain.User, error) {
 
 	var list []domain.User
 
-	items, err := ScanTable(domain.DataTable, "user")
+	items, err := ScanTable(domain.DataTable, domain.DataTypeUser)
 	if err != nil {
 		return list, err
 	}
@@ -383,9 +548,8 @@ func ListSTNetServerLists() ([]domain.STNetServerList, error) {
 }
 
 func GetSpeedTestNetServerFromNamedServer(namedServer domain.NamedServer) (domain.SpeedTestNetServer, error) {
-	var stnServerList domain.STNetServerList
 	countryCode := namedServer.Country.Code
-	err := GetItem(domain.DataTable, domain.DataTypeSTNetServerList, countryCode, &stnServerList)
+	stnServerList, err := GetSTNetServersForCountry(countryCode)
 	if err != nil {
 		return domain.SpeedTestNetServer{}, fmt.Errorf("Error getting STNetServerList for NamedServer with UID: %s ... %s", namedServer.UID, err.Error())
 	}
@@ -519,7 +683,7 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 }
 
 // GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
-func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTagUIDs []string) (int, string) {
+func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
 	user, err := GetUserFromRequest(req)
 	if err != nil {
 		return http.StatusBadRequest, err.Error()
@@ -530,14 +694,30 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	}
 
 	if permissionType == domain.PermissionSuperAdmin {
+
+		fmt.Fprintf(
+			os.Stdout,
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User is not a superAdmin.\n",
+			req.Path,
+			user.UserID,
+		)
 		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
 	}
 
 	if permissionType == domain.PermissionTagBased {
-		tagsOverlap := domain.DoTagsOverlap(user.TagUIDs, objectTagUIDs)
+		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
 		if tagsOverlap {
 			return 0, ""
 		}
+
+		fmt.Fprintf(
+			os.Stdout,
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.\n",
+			req.Path,
+			user.UserID,
+			user.Tags,
+			objectTags,
+		)
 
 		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
 	}
@@ -545,7 +725,12 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
 }
 
-func AreTagsValid(tags []string) bool {
+// AreTagsValid returns a bool based on this ...
+//  - if the input is empty, then true
+//  - if there is an error getting the tags from the database, then false
+//  - if any of the tags do not have a UID that matches one that's in the db, then false
+//  - if all of the tags have a UID that matches one that's in the db, then true
+func AreTagsValid(tags []domain.Tag) bool {
 	if len(tags) == 0 {
 		return true
 	}
@@ -561,7 +746,7 @@ func AreTagsValid(tags []string) bool {
 	}
 
 	for _, tag := range tags {
-		inArray, _ := domain.InArray(tag, allTagUIDs)
+		inArray, _ := domain.InArray(tag.UID, allTagUIDs)
 		if !inArray {
 			return false
 		}
@@ -609,4 +794,62 @@ func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int
 	}
 
 	return results, nil
+}
+
+// Iterate through all users and remove given tag from any that have it
+func RemoveTagFromUsers(removeTag domain.Tag) error {
+	allUsers, err := ListUsers()
+	if err != nil {
+		return err
+	}
+
+	for _, user := range allUsers {
+		hasTag, _ := domain.InArray(removeTag, user.Tags)
+		if !hasTag {
+			continue
+		}
+
+		var newTags []domain.Tag
+		for _, tag := range user.Tags {
+			if tag.UID != removeTag.UID {
+				newTags = append(newTags, tag)
+			}
+		}
+		user.Tags = newTags
+		err := PutItem(domain.DataTable, user)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Iterate through all nodes and remove given tag from any that have it
+func RemoveTagFromNodes(removeTag domain.Tag) error {
+	allNodes, err := ListNodes()
+	if err != nil {
+		return err
+	}
+
+	for _, node := range allNodes {
+		hasTag, _ := domain.InArray(removeTag, node.Tags)
+		if !hasTag {
+			continue
+		}
+
+		var newTags []domain.Tag
+		for _, tag := range node.Tags {
+			if tag.UID != removeTag.UID {
+				newTags = append(newTags, tag)
+			}
+		}
+		node.Tags = newTags
+		err := PutItem(domain.DataTable, node)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

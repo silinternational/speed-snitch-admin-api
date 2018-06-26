@@ -36,13 +36,12 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	var tag domain.Tag
-	err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &tag)
+	tag, err := db.GetTag(req.PathParameters["uid"])
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -66,7 +65,7 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 }
 
 func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -88,7 +87,7 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
@@ -97,7 +96,8 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	// If {uid} was provided in request, get existing record to update
 	if req.PathParameters["uid"] != "" {
-		err := db.GetItem(domain.DataTable, SelfType, req.PathParameters["uid"], &tag)
+		var err error
+		tag, err = db.GetTag(req.PathParameters["uid"])
 		if err != nil {
 			return domain.ServerError(err)
 		}
@@ -152,12 +152,16 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []string{})
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
 	UID := req.PathParameters["uid"]
+	tag, err := db.GetTag(UID)
+	if err != nil {
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+	}
 
 	deleted, err := db.DeleteItem(domain.DataTable, SelfType, UID)
 	if err != nil {
@@ -169,6 +173,18 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 			StatusCode: http.StatusNotFound,
 			Body:       http.StatusText(http.StatusNotFound),
 		}, nil
+	}
+
+	// remove tag from users
+	err = db.RemoveTagFromUsers(tag)
+	if err != nil {
+		return domain.ServerError(err)
+	}
+
+	// remove tag from nodes
+	err = db.RemoveTagFromNodes(tag)
+	if err != nil {
+		return domain.ServerError(err)
 	}
 
 	return events.APIGatewayProxyResponse{

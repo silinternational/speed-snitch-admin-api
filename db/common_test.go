@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-agent"
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
@@ -12,6 +13,11 @@ var testTasks = map[string]domain.Task{
 	"111Ping": {
 		Type:     agent.TypePing,
 		Schedule: "*/11 * * * *",
+		NamedServer: domain.NamedServer{
+			ID:   "namedserver-000",
+			UID:  "000",
+			Name: "Outdated NamedServer",
+		},
 		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_LATENCY,
@@ -25,6 +31,11 @@ var testTasks = map[string]domain.Task{
 	"111SpeedTest": {
 		Type:     agent.TypeSpeedTest,
 		Schedule: "* 1 * * *",
+		NamedServer: domain.NamedServer{
+			ID:   "namedserver-999",
+			UID:  "999",
+			Name: "Deleted NamedServer",
+		},
 		Data: domain.TaskData{
 			StringValues: map[string]string{
 				speedtestnet.CFG_TEST_TYPE:   speedtestnet.CFG_TYPE_ALL,
@@ -65,7 +76,7 @@ var testTasks = map[string]domain.Task{
 
 var testNodes = map[string]domain.Node{
 	"11Kenya": {
-		ID:                "node-1111",
+		ID:                "node-11:11:11:11:11:11",
 		MacAddr:           "11:11:11:11:11:11",
 		OS:                "linux",
 		Arch:              "amd",
@@ -89,13 +100,16 @@ var testNodes = map[string]domain.Node{
 				Phone: "100-123-4567",
 			},
 		},
-		TagUIDs:      []string{"000", "111"},
+		Tags: []domain.Tag{
+			{ID: "tag-000", UID: "000", Name: "Eastern Africa"},
+			{ID: "tag-111", UID: "111", Name: "Anglophone Africa"},
+		},
 		ConfiguredBy: "John Doe",
 		Nickname:     "Nairobi RaspberryPi",
 		Notes:        "",
 	},
 	"22Chad": {
-		ID:                "2222",
+		ID:                "node-22:22:22:22:22:22",
 		MacAddr:           "22:22:22:22:22:22",
 		OS:                "linux",
 		Arch:              "amd",
@@ -118,11 +132,214 @@ var testNodes = map[string]domain.Node{
 				Phone: "100-123-4567",
 			},
 		},
-		TagUIDs:      []string{"222", "333"},
+		Tags:         []domain.Tag{{ID: "tag-222", UID: "222"}, {ID: "tag-333", UID: "333"}},
 		ConfiguredBy: "John Doe",
 		Nickname:     "Chad Windoze server",
 		Notes:        "",
 	},
+}
+
+var tagFixtures = []domain.Tag{
+	{ID: "tag-000", UID: "000", Name: "Test Tag 000"},
+	{ID: "tag-111", UID: "111", Name: "Test Tag 111"},
+	{ID: "tag-222", UID: "222", Name: "Test Tag 222"},
+	{ID: "tag-333", UID: "333", Name: "Test Tag 333"},
+}
+
+var namedServerFixtures = []domain.NamedServer{
+	{ID: "namedserver-000", UID: "000", Name: "New Name"},
+}
+
+func TestUpdateTags(t *testing.T) {
+	FlushTables(t)
+	LoadTagFixtures(tagFixtures, t)
+
+	oldTags := []domain.Tag{
+		{ID: "tag-000", UID: "000", Name: "Bad Name 000"},
+		tagFixtures[1],
+		{ID: "tag-999", UID: "999", Name: "Doesn't Exist"},
+	}
+
+	results, err := updateTags(oldTags)
+	if err != nil {
+		t.Errorf("Unexpected Error. \n%s", err.Error())
+		return
+	}
+
+	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
+
+	areTagsEqual(expected, results, t)
+}
+
+func errorPrintTasks(expected, results []domain.Task, t *testing.T) {
+	errMsg := "Mismatched Tasks results.\nExpected:\n\t"
+	for _, next := range expected {
+		errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %s\n\t", next.Type, next.ServerHost)
+	}
+	errMsg += "\n But Got:\n\t"
+	for _, next := range results {
+		errMsg += fmt.Sprintf("Type: %s ... with ServerHost: %s\n\t", next.Type, next.ServerHost)
+	}
+
+	t.Error(errMsg)
+}
+
+// Make sure the updated task's NamedServer gets the new information for the matching speedtestnet server
+func TestGetUpdatedTasks(t *testing.T) {
+	FlushTables(t)
+	serverID := "111"
+	newServerHost := "new.host.com" // This should be a change
+	country := domain.Country{Code: "US", Name: "United States"}
+
+	sTNetServerListFixtures := []domain.STNetServerList{
+		{
+			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
+			Country: country,
+			Servers: []domain.SpeedTestNetServer{
+				domain.SpeedTestNetServer{Host: newServerHost, ServerID: serverID},
+			},
+		},
+	}
+
+	LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			ID:                   "namedserver-000",
+			UID:                  "000",
+			Name:                 "New Name",
+			Country:              country,
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			ServerHost:           "outdated.host.com", // This should get changed
+			SpeedTestNetServerID: serverID,
+		},
+	}
+
+	LoadNamedServerFixtures(namedServerFixtures, t)
+
+	tasks := []domain.Task{
+		{
+			Type:     "reboot",
+			Schedule: "*/5 * * * *",
+		},
+		testTasks["111Ping"],
+		testTasks["222SpeedTest"],
+	}
+
+	results, err := GetUpdatedTasks(tasks)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	expected := []domain.Task{
+		{
+			Type:     "reboot",
+			Schedule: "*/5 * * * *",
+		},
+		{
+			Type:     "ping",
+			Schedule: "*/11 * * * *",
+			NamedServer: domain.NamedServer{
+				ID:                   "namedserver-000",
+				UID:                  "000",
+				Name:                 "New Name",
+				Country:              country,
+				ServerType:           domain.ServerTypeSpeedTestNet,
+				ServerHost:           newServerHost, // This should have gotten changed
+				SpeedTestNetServerID: serverID,
+			},
+			ServerHost:           newServerHost, // This should have gotten changed
+			SpeedTestNetServerID: serverID,
+		},
+		{
+			Type:        "speedTest",
+			Schedule:    "* 2 * * *",
+			NamedServer: domain.NamedServer{},
+		},
+	}
+
+	if len(results) != len(expected) {
+		errorPrintTasks(expected, results, t)
+		return
+	}
+
+	for index, nextExpected := range expected {
+		if results[index].Type != nextExpected.Type || results[index].ServerHost != nextExpected.ServerHost {
+			errorPrintTasks(expected, results, t)
+			return
+		}
+	}
+}
+
+func TestGetNode(t *testing.T) {
+	FlushTables(t)
+	LoadTagFixtures(tagFixtures, t)
+	LoadNamedServerFixtures(namedServerFixtures, t)
+
+	dbNode := testNodes["11Kenya"]
+	err := PutItem(domain.DataTable, dbNode)
+	if err != nil {
+		t.Errorf("Error saving Node fixture to db.\n%s", err.Error())
+	}
+
+	node, err := GetNode(testNodes["11Kenya"].MacAddr)
+	if err != nil {
+		t.Errorf("Unexpected error from GetNode. %s", err.Error())
+	}
+
+	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
+	if !areTagsEqual(expected, node.Tags, t) {
+		return
+	}
+
+	expectedNS := namedServerFixtures[0]
+	namedServer := node.Tasks[0].NamedServer // domain.NamedServer{}
+
+	if namedServer.Name != expectedNS.Name {
+		t.Errorf(
+			"Mismatching Named Server for first Task. Expected Name: %s. But got Name: %s",
+			expectedNS.Name,
+			namedServer.Name,
+		)
+	}
+
+}
+
+func TestGetUserByUserID(t *testing.T) {
+	FlushTables(t)
+	LoadTagFixtures(tagFixtures, t)
+
+	oldTags := []domain.Tag{
+		{ID: "tag-000", UID: "000", Name: "Eastern Africa"},    // This name should change
+		{ID: "tag-111", UID: "111", Name: "Anglophone Africa"}, // This name should change
+		{ID: "tag-999", UID: "999", Name: "Not In DB"},         // This tag should get dropped
+	}
+
+	userID := "tommy_tester"
+	dbUser := domain.User{
+		ID:     "user-" + userID,
+		UserID: userID,
+		Tags:   oldTags,
+	}
+	err := PutItem(domain.DataTable, dbUser)
+	if err != nil {
+		t.Errorf("Error saving User fixture to db.\n%s", err.Error())
+		return
+	}
+
+	results, err := GetUserByUserID(userID)
+	if err != nil {
+		t.Errorf("Unexpected error getting user. %s", err.Error())
+		return
+	}
+	if results.UserID != userID {
+		t.Errorf("Got wrong user. Expected UserID: %s, \n but got %v", userID, results)
+		return
+	}
+	expected := []domain.Tag{tagFixtures[0], tagFixtures[1]}
+	areTagsEqual(expected, results.Tags, t)
 }
 
 func TestGetServerDataFromNode(t *testing.T) {

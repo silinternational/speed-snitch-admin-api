@@ -17,8 +17,7 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	var node domain.Node
-	err = db.GetItem(domain.DataTable, "node", macAddr, &node)
+	node, err := db.GetNode(macAddr)
 	if err != nil {
 		return domain.ServerError(err)
 	}
@@ -38,40 +37,9 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	downloadUrl := domain.GetUrlForAgentVersion(node.ConfiguredVersion, node.OS, node.Arch)
 
-	var newTasks []domain.Task
-
-	for _, oldTask := range node.Tasks {
-		// Only modify tasks that involve a NamedServer
-		if oldTask.NamedServerID == "" {
-			newTasks = append(newTasks, oldTask)
-			continue
-		}
-
-		var namedServer domain.NamedServer
-		err = db.GetItem(domain.DataTable, domain.DataTypeNamedServer, oldTask.NamedServerID, &namedServer)
-		if err != nil {
-			return domain.ServerError(fmt.Errorf("Error getting NamedServer ... %s", err.Error()))
-		}
-
-		newTask := oldTask
-
-		// If it's not a SpeedTestNetServer, add the server info
-		if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
-			newTask.SpeedTestNetServerID = ""
-			newTask.ServerHost = namedServer.ServerHost
-		} else {
-			// Use the NamedServer to get the SpeedTestNetServer's info
-			var speedtestnetserver domain.SpeedTestNetServer
-			err = db.GetItem(domain.DataTable, domain.DataTypeSpeedTestNetServer, namedServer.SpeedTestNetServerID, &speedtestnetserver)
-			if err != nil {
-				return domain.ServerError(fmt.Errorf("Error getting SpeedTestNetServer from NamedServer ... %s", err.Error()))
-			}
-
-			newTask.SpeedTestNetServerID = speedtestnetserver.ServerID
-			newTask.ServerHost = speedtestnetserver.Host
-		}
-
-		newTasks = append(newTasks, newTask)
+	newTasks, err := db.GetUpdatedTasks(node.Tasks)
+	if err != nil {
+		return domain.ServerError(fmt.Errorf("Error updating tasks for node %s\n%s", macAddr, err.Error()))
 	}
 
 	config := domain.NodeConfig{
