@@ -43,7 +43,10 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		speedTestServer, err := db.GetSTNetServer(taskLogEntry.ServerCountry, taskLogEntry.ServerID)
 		if err != nil {
 			// Just log it and not error out for now
-			fmt.Fprintf(os.Stdout, "\nUnable to enrich task log entry for node %s. Err: %s", macAddr, err.Error())
+			fmt.Fprintf(
+				os.Stdout,
+				"\nUnable to enrich task log entry for node %s. Country: %s, ServerID: %s. Err: %s",
+				macAddr, taskLogEntry.ServerCountry, taskLogEntry.ServerID, err.Error())
 		} else {
 			taskLogEntry.ServerCountry = speedTestServer.Country
 			taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", speedTestServer.Lat, speedTestServer.Lon)
