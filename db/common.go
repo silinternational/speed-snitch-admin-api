@@ -459,7 +459,7 @@ func ListTags() ([]domain.Tag, error) {
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Name > list[j].Name
+		return list[i].Name < list[j].Name
 	})
 
 	return list, nil
@@ -480,7 +480,7 @@ func ListNodes() ([]domain.Node, error) {
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Nickname > list[j].Nickname
+		return list[i].Nickname < list[j].Nickname
 	})
 
 	return list, nil
@@ -501,7 +501,7 @@ func ListVersions() ([]domain.Version, error) {
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Number > list[j].Number
+		return list[i].Number < list[j].Number
 	})
 
 	return list, nil
@@ -522,7 +522,7 @@ func ListUsers() ([]domain.User, error) {
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Name > list[j].Name
+		return list[i].Name < list[j].Name
 	})
 
 	return list, nil
@@ -543,7 +543,7 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 	}
 
 	sort.Slice(list, func(i, j int) bool {
-		return list[i].Name > list[j].Name
+		return list[i].Name < list[j].Name
 	})
 
 	return list, nil
