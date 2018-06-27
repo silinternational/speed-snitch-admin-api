@@ -14,6 +14,7 @@ import (
 	"github.com/silinternational/speed-snitch-agent/lib/speedtestnet"
 	"net/http"
 	"os"
+	"sort"
 )
 
 const ENV_DYNAMO_ENDPOINT = "AWS_DYNAMODB_ENDPOINT"
@@ -457,6 +458,10 @@ func ListTags() ([]domain.Tag, error) {
 		return []domain.Tag{}, err
 	}
 
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Name > list[j].Name
+	})
+
 	return list, nil
 }
 
@@ -473,6 +478,10 @@ func ListNodes() ([]domain.Node, error) {
 	if err != nil {
 		return []domain.Node{}, err
 	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Nickname > list[j].Nickname
+	})
 
 	return list, nil
 }
@@ -491,6 +500,10 @@ func ListVersions() ([]domain.Version, error) {
 		return []domain.Version{}, err
 	}
 
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Number > list[j].Number
+	})
+
 	return list, nil
 }
 
@@ -508,6 +521,10 @@ func ListUsers() ([]domain.User, error) {
 		return []domain.User{}, err
 	}
 
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Name > list[j].Name
+	})
+
 	return list, nil
 }
 
@@ -524,6 +541,10 @@ func ListNamedServers() ([]domain.NamedServer, error) {
 	if err != nil {
 		return []domain.NamedServer{}, err
 	}
+
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].Name > list[j].Name
+	})
 
 	return list, nil
 }
