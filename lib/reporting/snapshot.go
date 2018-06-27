@@ -3,6 +3,7 @@ package reporting
 import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"sort"
 	"strings"
 	"time"
 )
@@ -86,6 +87,15 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 
 	// Put snapshots into db
 	for _, snapshot := range dailySnapshots {
+
+		sort.Slice(snapshot.RawSpeedTestData, func(i, j int) bool {
+			return snapshot.RawSpeedTestData[i].Timestamp < snapshot.RawSpeedTestData[j].Timestamp
+		})
+
+		sort.Slice(snapshot.RawPingData, func(i, j int) bool {
+			return snapshot.RawPingData[i].Timestamp < snapshot.RawPingData[j].Timestamp
+		})
+
 		err = db.PutItem(domain.TaskLogTable, snapshot)
 		if err != nil {
 			return 0, err
