@@ -51,7 +51,7 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 
 			// Update update max/min
 			nodeEntry.LatencyMax = GetHigherFloat(entry.Latency, nodeEntry.LatencyMax)
-			nodeEntry.LatencyMin = GetLowerFloat(entry.Latency, nodeEntry.LatencyMin)
+			nodeEntry.LatencyMin = GetLowerLatency(entry.Latency, nodeEntry.LatencyMin)
 
 			// Increment totals
 			nodeEntry.LatencyTotal += entry.Latency
