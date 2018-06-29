@@ -38,6 +38,18 @@ func GetLowerFloat(first, second float64) float64 {
 	return second
 }
 
+func GetLowerLatency(first, second float64) float64 {
+	if first == 0 {
+		return second
+	}
+
+	if second == 0 {
+		return first
+	}
+
+	return GetLowerFloat(first, second)
+}
+
 func GetHigherFloat(first, second float64) float64 {
 	if first > second {
 		return first

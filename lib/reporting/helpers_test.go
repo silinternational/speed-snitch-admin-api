@@ -88,6 +88,48 @@ func TestGetLowerFloat(t *testing.T) {
 	}
 }
 
+func TestGetLowerLatency(t *testing.T) {
+	fixtures := []struct {
+		first  float64
+		second float64
+		lower  float64
+	}{
+		{
+			first:  1.0,
+			second: 1.1,
+			lower:  1.0,
+		},
+		{
+			first:  0.0001,
+			second: 0.00001,
+			lower:  0.00001,
+		},
+		{
+			first:  123.456789,
+			second: 12.1212,
+			lower:  12.1212,
+		},
+		{
+			first:  0.0,
+			second: 0.00001,
+			lower:  0.00001,
+		},
+		{
+			first:  0.0001,
+			second: 0.0,
+			lower:  0.0001,
+		},
+	}
+
+	for _, fix := range fixtures {
+		result := GetLowerLatency(fix.first, fix.second)
+		if result != fix.lower {
+			t.Error("GetLowerLatency did not return expected winner. Got", result, "expected", fix.lower)
+			t.Fail()
+		}
+	}
+}
+
 func TestIsValidReportingInterval(t *testing.T) {
 	tests := []struct {
 		value   string
