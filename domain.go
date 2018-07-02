@@ -26,6 +26,9 @@ const DataTypeTag = "tag"
 const DataTypeUser = "user"
 const DataTypeVersion = "version"
 
+const LogTypeDowntime = "downtime"
+const LogTypeRestart = "restart"
+
 const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"
 
@@ -273,26 +276,33 @@ type ShortSpeedTestEntry struct {
 }
 
 type ReportingSnapshot struct {
-	ID                  string                `json:"ID"`
-	Timestamp           int64                 `json:"Timestamp"`
-	ExpirationTime      int64                 `json:"ExpirationTime"`
-	MacAddr             string                `json:"MacAddr"`
-	UploadAvg           float64               `json:"UploadAvg"`
-	UploadMax           float64               `json:"UploadMax"`
-	UploadMin           float64               `json:"UploadMin"`
-	UploadTotal         float64               `json:"-"`
-	DownloadAvg         float64               `json:"DownloadAvg"`
-	DownloadMax         float64               `json:"DownloadMax"`
-	DownloadMin         float64               `json:"DownloadMin"`
-	DownloadTotal       float64               `json:"-"`
-	LatencyAvg          float64               `json:"LatencyAvg"`
-	LatencyMax          float64               `json:"LatencyMax"`
-	LatencyMin          float64               `json:"LatencyMin"`
-	LatencyTotal        float64               `json:"-"`
-	SpeedTestDataPoints int64                 `json:"SpeedTestDataPoints"`
-	LatencyDataPoints   int64                 `json:"LatencyDataPoints"`
-	RawPingData         []ShortPingEntry      `json:"RawPingData"`
-	RawSpeedTestData    []ShortSpeedTestEntry `json:"RawSpeedTestData"`
+	ID                     string                `json:"ID"`
+	Timestamp              int64                 `json:"Timestamp"`
+	ExpirationTime         int64                 `json:"ExpirationTime"`
+	MacAddr                string                `json:"MacAddr"`
+	UploadAvg              float64               `json:"UploadAvg"`
+	UploadMax              float64               `json:"UploadMax"`
+	UploadMin              float64               `json:"UploadMin"`
+	UploadTotal            float64               `json:"-"`
+	DownloadAvg            float64               `json:"DownloadAvg"`
+	DownloadMax            float64               `json:"DownloadMax"`
+	DownloadMin            float64               `json:"DownloadMin"`
+	DownloadTotal          float64               `json:"-"`
+	LatencyAvg             float64               `json:"LatencyAvg"`
+	LatencyMax             float64               `json:"LatencyMax"`
+	LatencyMin             float64               `json:"LatencyMin"`
+	LatencyTotal           float64               `json:"-"`
+	PacketLossAvg          float64               `json:"PacketLossAvg"`
+	PacketLossMax          float64               `json:"PacketLossMax"`
+	PacketLossMin          float64               `json:"PacketLossMin"`
+	PacketLossTotal        float64               `json:"-"`
+	SpeedTestDataPoints    int64                 `json:"SpeedTestDataPoints"`
+	LatencyDataPoints      int64                 `json:"LatencyDataPoints"`
+	NetworkDowntimeSeconds int64                 `json:"NetworkDowntimeSeconds"`
+	NetworkOutagesCount    int64                 `json:"NetworkOutagesCount"`
+	RestartsCount          int64                 `json:"RestartsCount"`
+	RawPingData            []ShortPingEntry      `json:"RawPingData"`
+	RawSpeedTestData       []ShortSpeedTestEntry `json:"RawSpeedTestData"`
 }
 
 // Add a helper for handling errors. This logs any error to os.Stderr
