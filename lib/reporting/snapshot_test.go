@@ -75,22 +75,25 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 			Download:  40.0,
 		},
 		{
-			ID:        "ping-aa:aa:aa:aa:aa:aa",
-			MacAddr:   "aa:aa:aa:aa:aa:aa",
-			Timestamp: 1528145485,
-			Latency:   5,
+			ID:                "ping-aa:aa:aa:aa:aa:aa",
+			MacAddr:           "aa:aa:aa:aa:aa:aa",
+			Timestamp:         1528145485,
+			Latency:           5,
+			PacketLossPercent: 1,
 		},
 		{
-			ID:        "ping-aa:aa:aa:aa:aa:aa",
-			MacAddr:   "aa:aa:aa:aa:aa:aa",
-			Timestamp: 1528145486,
-			Latency:   10,
+			ID:                "ping-aa:aa:aa:aa:aa:aa",
+			MacAddr:           "aa:aa:aa:aa:aa:aa",
+			Timestamp:         1528145486,
+			Latency:           10,
+			PacketLossPercent: 2,
 		},
 		{
-			ID:        "ping-aa:aa:aa:aa:aa:aa",
-			MacAddr:   "aa:aa:aa:aa:aa:aa",
-			Timestamp: 1528145487,
-			Latency:   15,
+			ID:                "ping-aa:aa:aa:aa:aa:aa",
+			MacAddr:           "aa:aa:aa:aa:aa:aa",
+			Timestamp:         1528145487,
+			Latency:           15,
+			PacketLossPercent: 3,
 		},
 		{
 			ID:        "speedTest-11:11:11:11:11:11",
@@ -100,10 +103,23 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 			Download:  10.0,
 		},
 		{
-			ID:        "ping-11:11:11:11:11:11",
-			MacAddr:   "11:11:11:11:11:11",
-			Timestamp: 1528145489,
-			Latency:   15,
+			ID:                "ping-11:11:11:11:11:11",
+			MacAddr:           "11:11:11:11:11:11",
+			Timestamp:         1528145489,
+			Latency:           15,
+			PacketLossPercent: 0,
+		},
+		{
+			ID:              "downtime-aa:aa:aa:aa:aa:aa",
+			MacAddr:         "aa:aa:aa:aa:aa:aa",
+			Timestamp:       1528145490,
+			DowntimeSeconds: 240,
+		},
+		{
+			ID:              "downtime-aa:aa:aa:aa:aa:aa",
+			MacAddr:         "aa:aa:aa:aa:aa:aa",
+			Timestamp:       1528145491,
+			DowntimeSeconds: 60,
 		},
 	}
 
@@ -150,6 +166,27 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 				t.Errorf("Daily upload max not as expected (40.0), got: %v", snap.UploadMax)
 				t.Fail()
 			}
+			if snap.PacketLossAvg != 2.0 {
+				t.Errorf("Daily packet loss avg not as expected (2.0), got: %v", snap.PacketLossAvg)
+				t.Fail()
+			}
+			if snap.PacketLossMin != 1.0 {
+				t.Errorf("Daily packet loss min not as expected (1.0), got: %v", snap.PacketLossMin)
+				t.Fail()
+			}
+			if snap.PacketLossMax != 3.0 {
+				t.Errorf("Daily packet loss max not as expected (3.0), got: %v", snap.PacketLossMax)
+				t.Fail()
+			}
+			if snap.NetworkDowntimeSeconds != 300 {
+				t.Errorf("Daily network downtime seconds not as expected (300), got: %v", snap.NetworkDowntimeSeconds)
+				t.Fail()
+			}
+			if snap.NetworkOutagesCount != 2 {
+				t.Errorf("Daily network outages count not as expected (2), got: %v", snap.NetworkOutagesCount)
+				t.Fail()
+			}
+
 			rawPingResults := snap.RawPingData
 			expectedPings := []domain.ShortPingEntry{}
 			for _, nextFixture := range fixturesInRange {
