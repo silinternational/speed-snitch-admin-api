@@ -27,7 +27,7 @@ const DataTypeUser = "user"
 const DataTypeVersion = "version"
 
 const LogTypeDowntime = "downtime"
-const LogTypeRestart = "restart"
+const LogTypeRestart = "restarted"
 
 const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"

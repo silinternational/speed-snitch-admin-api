@@ -70,13 +70,6 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 			nodeEntry.LatencyAvg = nodeEntry.LatencyTotal / float64(nodeEntry.LatencyDataPoints)
 			nodeEntry.RawPingData = append(nodeEntry.RawPingData, entry.GetShortPingEntry())
 			nodeEntry.PacketLossAvg = nodeEntry.PacketLossTotal / float64(nodeEntry.LatencyDataPoints)
-
-			// Fix PacketLoss values if not updated
-			if nodeEntry.PacketLossMin == 1000 {
-				nodeEntry.PacketLossAvg = 0
-				nodeEntry.PacketLossMax = 0
-				nodeEntry.PacketLossMin = 0
-			}
 		} else if strings.HasPrefix(entry.ID, domain.TaskTypeSpeedTest) {
 			// Increment counts and update max/min
 			nodeEntry.SpeedTestDataPoints++
