@@ -62,6 +62,8 @@ const ReportingIntervalDaily = "daily"
 const ReportingIntervalWeekly = "weekly"
 const ReportingIntervalMonthly = "monthly"
 
+const SecondsPerYear = 31557600
+
 type Contact struct {
 	Name  string `json:"Name"`
 	Email string `json:"Email"`
@@ -218,6 +220,7 @@ func (e *TaskLogEntry) GetShortPingEntry() ShortPingEntry {
 		Timestamp:          e.Timestamp,
 		MacAddr:            e.MacAddr,
 		Latency:            e.Latency,
+		PacketLossPercent:  e.PacketLossPercent,
 		ErrorCode:          e.ErrorCode,
 		ErrorMessage:       e.ErrorMessage,
 		ServerID:           e.ServerID,
@@ -252,6 +255,7 @@ type ShortPingEntry struct {
 	Upload             float64 `json:"Upload"`
 	Download           float64 `json:"Download"`
 	Latency            float64 `json:"Latency"`
+	PacketLossPercent  float64 `json:"PacketLossPercent"`
 	ErrorCode          string  `json:"ErrorCode"`
 	ErrorMessage       string  `json:"ErrorMessage"`
 	ServerID           string  `json:"ServerID"`
@@ -266,7 +270,6 @@ type ShortSpeedTestEntry struct {
 	MacAddr            string  `json:"MacAddr"`
 	Upload             float64 `json:"Upload"`
 	Download           float64 `json:"Download"`
-	Latency            float64 `json:"Latency"`
 	ErrorCode          string  `json:"ErrorCode"`
 	ErrorMessage       string  `json:"ErrorMessage"`
 	ServerID           string  `json:"ServerID"`

@@ -24,7 +24,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	// Set required attributes that are not part of post body
 	taskLogEntry.ID = entryType + "-" + macAddr
 	taskLogEntry.MacAddr = macAddr
-	taskLogEntry.ExpirationTime = taskLogEntry.Timestamp + 31557600 // expire one year after log entry was created
+	taskLogEntry.ExpirationTime = taskLogEntry.Timestamp + domain.SecondsPerYear // expire one year after log entry was created
 
 	// Enrich log entry with node metadata details
 	node, err := db.GetNode(macAddr)
