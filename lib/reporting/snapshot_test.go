@@ -149,7 +149,7 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 		t.Fail()
 	}
 	if len(results) != 1 {
-		t.Error("Not enough results returned, got ", len(results), "expected 1")
+		t.Error("Wrong number of results returned. Got ", len(results), "expected 1")
 	}
 
 	for _, snap := range results {
