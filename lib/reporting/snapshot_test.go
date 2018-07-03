@@ -133,12 +133,12 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 	count, err := GenerateDailySnapshotsForDate(date)
 	if err != nil {
 		t.Error("Unable to generate daily snapshots:", err)
-		t.Fail()
+		return
 	}
 
 	if count != 2 {
-		t.Error("Not enough snapshots created, should have created 2, got:", count)
-		t.Fail()
+		t.Error("Wrong number of snapshots created. Should have created 2, got:", count)
+		return
 	}
 
 	// Get snapshot for MacAddr aa:aa:aa:aa:aa:aa and make sure averages are right
