@@ -100,7 +100,7 @@ func TestDeleteTag(t *testing.T) {
 			"uid": "does-not-exist",
 		},
 		Headers: map[string]string{
-			"x-user-id": "super_admin",
+			domain.UserReqHeaderID: "super_admin",
 		},
 	}
 	response, err := deleteTag(req)
@@ -120,7 +120,7 @@ func TestDeleteTag(t *testing.T) {
 			"uid": "deleteme",
 		},
 		Headers: map[string]string{
-			"x-user-id": "super_admin",
+			domain.UserReqHeaderID: "super_admin",
 		},
 	}
 	response, err = deleteTag(req)

@@ -578,7 +578,7 @@ func TestNodeAuthorization(t *testing.T) {
 			"macAddr": "aa:aa:aa:aa:aa:aa",
 		},
 		Headers: map[string]string{
-			"x-user-id": "super_admin",
+			domain.UserReqHeaderID: "super_admin",
 		},
 	}
 
@@ -599,7 +599,7 @@ func TestNodeAuthorization(t *testing.T) {
 			"macAddr": "aa:aa:aa:aa:aa:aa",
 		},
 		Headers: map[string]string{
-			"x-user-id": "pass_test",
+			domain.UserReqHeaderID: "pass_test",
 		},
 	}
 
@@ -620,7 +620,7 @@ func TestNodeAuthorization(t *testing.T) {
 			"macAddr": "aa:aa:aa:aa:aa:aa",
 		},
 		Headers: map[string]string{
-			"x-user-id": "fail_test",
+			domain.UserReqHeaderID: "fail_test",
 		},
 	}
 
