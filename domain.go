@@ -51,7 +51,7 @@ const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
-const UserReqHeaderID = "x-user-id"
+const UserReqHeaderID = "x-user-uuid"
 const UserRoleSuperAdmin = "superAdmin"
 const UserRoleAdmin = "admin"
 

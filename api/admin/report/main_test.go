@@ -105,7 +105,7 @@ func TestViewNodeReport(t *testing.T) {
 			"macAddr": "aa:aa:aa:aa:aa:aa",
 		},
 		Headers: map[string]string{
-			"x-user-id": "pass_test",
+			domain.UserReqHeaderID: "pass_test",
 		},
 		QueryStringParameters: map[string]string{
 			"interval": "daily",
@@ -143,7 +143,7 @@ func TestViewNodeReport(t *testing.T) {
 			"macAddr": "aa:aa:aa:aa:aa:aa",
 		},
 		Headers: map[string]string{
-			"x-user-id": "fail_test",
+			domain.UserReqHeaderID: "fail_test",
 		},
 		QueryStringParameters: map[string]string{
 			"interval": "daily",
