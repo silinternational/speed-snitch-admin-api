@@ -17,6 +17,16 @@ var SuperAdmin = domain.User{
 	},
 }
 
+var AdminUser = domain.User{
+	Role:  domain.UserRoleAdmin,
+	Email: "normal@admin.com",
+	UUID:  "22222222-2222-2222-2222-222222222222",
+	Name:  "Normal Admin",
+	Model: gorm.Model{
+		ID: 2,
+	},
+}
+
 func MigrateTables(t *testing.T) {
 	err := db.AutoMigrateTables()
 	if err != nil {
@@ -44,9 +54,23 @@ func CreateSuperAdmin(t *testing.T) {
 	}
 }
 
+func CreateAdminUser(t *testing.T) {
+	err := db.PutItem(&AdminUser)
+	if err != nil {
+		t.Error("Error creating admin user: ", err.Error())
+	}
+}
+
 func GetSuperAdminReqHeader() map[string]string {
 	return map[string]string{
 		"x-user-uuid": SuperAdmin.UUID,
 		"x-user-mail": SuperAdmin.Email,
+	}
+}
+
+func GetAdminUserReqHeader() map[string]string {
+	return map[string]string{
+		"x-user-uuid": AdminUser.UUID,
+		"x-user-mail": AdminUser.Email,
 	}
 }
