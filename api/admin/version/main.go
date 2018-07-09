@@ -61,7 +61,7 @@ func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var versions []domain.Version
-	err := db.ListItems(&versions, "name asc")
+	err := db.ListItems(&versions, "number asc")
 	return domain.ReturnJsonOrError(versions, err)
 }
 
@@ -100,7 +100,7 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 	}
 
 	if updatedVersion.Number == "" || updatedVersion.Description == "" {
-		return domain.ClientError(http.StatusUnprocessableEntity, "Name and Description are required")
+		return domain.ClientError(http.StatusUnprocessableEntity, "Number and Description are required")
 	}
 
 	// Update tag record attributes for persistence
