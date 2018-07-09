@@ -3,8 +3,11 @@ package db
 import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/fillup/semver"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"net/http"
+	"os"
 )
 
 const ENV_DYNAMO_ENDPOINT = "AWS_DYNAMODB_ENDPOINT"
@@ -772,79 +775,77 @@ func AreTagsValid(tags []domain.Tag) bool {
 //
 //	return allNodesForServer, nil
 //}
-//
-//// GetLatestVersion iterates through version in db to return only the latest version
-//func GetLatestVersion() (domain.Version, error) {
-//	versions, err := ListVersions()
-//	if err != nil {
-//		return domain.Version{}, err
-//	}
-//
-//	var latest domain.Version
-//
-//	for _, version := range versions {
-//		if latest.Number == "" {
-//			latest = version
-//		} else {
-//			isNewer, err := semver.IsNewer(latest.Number, version.Number)
-//			if err != nil {
-//				return domain.Version{}, err
-//			}
-//			if isNewer {
-//				latest = version
-//			}
-//		}
-//
-//	}
-//
-//	return latest, nil
-//}
-//
 
-//
-//// GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
-//func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
-//	user, err := GetUserFromRequest(req)
-//	if err != nil {
-//		return http.StatusBadRequest, err.Error()
-//	}
-//
-//	if user.Role == domain.PermissionSuperAdmin {
-//		return 0, ""
-//	}
-//
-//	if permissionType == domain.PermissionSuperAdmin {
-//
-//		fmt.Fprintf(
-//			os.Stdout,
-//			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User is not a superAdmin.\n",
-//			req.Path,
-//			user.UserID,
-//		)
-//		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
-//	}
-//
-//	if permissionType == domain.PermissionTagBased {
-//		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
-//		if tagsOverlap {
-//			return 0, ""
-//		}
-//
-//		fmt.Fprintf(
-//			os.Stdout,
-//			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.\n",
-//			req.Path,
-//			user.UserID,
-//			user.Tags,
-//			objectTags,
-//		)
-//
-//		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
-//	}
-//
-//	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
-//}
-//
+// GetLatestVersion iterates through version in db to return only the latest version
+func GetLatestVersion() (domain.Version, error) {
+	var versions []domain.Version
+	err := ListItems(&versions, "name asc")
+	if err != nil {
+		return domain.Version{}, err
+	}
+
+	var latest domain.Version
+
+	for _, version := range versions {
+		if latest.Number == "" {
+			latest = version
+			continue
+		}
+
+		isNewer, err := semver.IsNewer(latest.Number, version.Number)
+		if err != nil {
+			return domain.Version{}, err
+		}
+		if isNewer {
+			latest = version
+		}
+	}
+
+	return latest, nil
+}
+
+// GetAuthorizationStatus returns 0, nil for users that are authorized to use the object
+func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType string, objectTags []domain.Tag) (int, string) {
+	user, err := GetUserFromRequest(req)
+	if err != nil {
+		return http.StatusBadRequest, err.Error()
+	}
+
+	if user.Role == domain.PermissionSuperAdmin {
+		return 0, ""
+	}
+
+	if permissionType == domain.PermissionSuperAdmin {
+
+		fmt.Fprintf(
+			os.Stdout,
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User is not a superAdmin.\n",
+			req.Path,
+			user.Email,
+		)
+		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
+	}
+
+	if permissionType == domain.PermissionTagBased {
+		tagsOverlap := domain.DoTagsOverlap(user.Tags, objectTags)
+		if tagsOverlap {
+			return 0, ""
+		}
+
+		fmt.Fprintf(
+			os.Stdout,
+			"Attempt at unauthorized access at path: %s.\n  User: %s.\n  User Tags: %v.\n  Object Tags: %v.\n",
+			req.Path,
+			user.Email,
+			user.Tags,
+			objectTags,
+		)
+
+		return http.StatusForbidden, http.StatusText(http.StatusForbidden)
+	}
+
+	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
+}
 
 //
 //func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int64) ([]domain.ReportingSnapshot, error) {

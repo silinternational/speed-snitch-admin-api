@@ -389,30 +389,30 @@ func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
 
 // DoTagsOverlap returns true if there is a tag with the same UID
 //  in both slices of tags.  Otherwise, returns false.
-//func DoTagsOverlap(tags1, tags2 []Tag) bool {
-//	if len(tags1) == 0 || len(tags2) == 0 {
-//		return false
-//	}
-//
-//	for _, tag1 := range tags1 {
-//		for _, tag2 := range tags2 {
-//			if tag1.UID == tag2.UID {
-//				return true
-//			}
-//		}
-//	}
-//
-//	return false
-//}
+func DoTagsOverlap(tags1, tags2 []Tag) bool {
+	if len(tags1) == 0 || len(tags2) == 0 {
+		return false
+	}
+
+	for _, tag1 := range tags1 {
+		for _, tag2 := range tags2 {
+			if tag1.ID == tag2.ID {
+				return true
+			}
+		}
+	}
+
+	return false
+}
 
 // CanUserUseNode returns true if the user has a superAdmin role or
 //   if the user has a tag that the node has
-//func CanUserUseNode(user User, node Node) bool {
-//	if user.Role == UserRoleSuperAdmin {
-//		return true
-//	}
-//	return DoTagsOverlap(user.Tags, node.Tags)
-//}
+func CanUserUseNode(user User, node Node) bool {
+	if user.Role == UserRoleSuperAdmin {
+		return true
+	}
+	return DoTagsOverlap(user.Tags, node.Tags)
+}
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
