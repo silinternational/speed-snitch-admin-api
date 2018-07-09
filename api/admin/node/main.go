@@ -87,6 +87,15 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	//	return domain.ClientError(statusCode, errMsg)
 	//}
 
+	user, err := db.GetUserFromRequest(req)
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	if !domain.CanUserUseNode(user, node) {
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+	}
+
 	return domain.ReturnJsonOrError(node, err)
 }
 

@@ -13,6 +13,12 @@
   version = "v1.2.0"
 
 [[projects]]
+  name = "github.com/fillup/semver"
+  packages = ["."]
+  revision = "08201dc719617e5457b54d07b66988c422da44e6"
+  version = "0.1.0"
+
+[[projects]]
   name = "github.com/go-sql-driver/mysql"
   packages = ["."]
   revision = "d523deb1b23d913de5bdada721a6071e71283618"
@@ -34,16 +40,6 @@
   revision = "04140366298a54a039076d798123ffa108fff46c"
 
 [[projects]]
-  branch = "develop"
-  name = "github.com/silinternational/speed-snitch-agent"
-  packages = [
-    ".",
-    "lib/httputils",
-    "lib/speedtestnet"
-  ]
-  revision = "333470d211f0fedebd9dcad8e7209a8a248c5924"
-
-[[projects]]
   name = "google.golang.org/appengine"
   packages = ["cloudsql"]
   revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
@@ -52,6 +48,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ced7305c93eba64b562776b812615eca39f36100e54d385806bd23ea91593154"
+  inputs-digest = "51cbd719e11f3af6a4eadd9419efacf4f07ef2747657b13bdffc28f9dba9dc96"
   solver-name = "gps-cdcl"
   solver-version = 1

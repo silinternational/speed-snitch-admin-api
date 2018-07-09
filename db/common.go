@@ -70,6 +70,10 @@ func DropTables() error {
 		}
 	}
 
+	// Need to manually drop many2many tables since they don't have their own models
+	db.DropTable("node_tags")
+	db.DropTable("user_tags")
+
 	return nil
 }
 

@@ -396,7 +396,7 @@ func DoTagsOverlap(tags1, tags2 []Tag) bool {
 
 	for _, tag1 := range tags1 {
 		for _, tag2 := range tags2 {
-			if tag1.ID == tag2.ID {
+			if tag1.Model.ID == tag2.Model.ID {
 				return true
 			}
 		}

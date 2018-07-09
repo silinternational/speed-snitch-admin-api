@@ -74,37 +74,37 @@ functions:
             private: true
 
         - http:
-            path: /node/{macAddr}
+            path: /node/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
         - http:
-            path: /node/{macAddr}/tag
+            path: /node/{id}/tag
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
         - http:
-            path: /node/{macAddr}
+            path: /node/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
         - http:
-            path: /node/{macAddr}
+            path: /node/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
 
   report:
       handler: bin/report
