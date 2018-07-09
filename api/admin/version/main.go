@@ -32,13 +32,9 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "Missing ID in path")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
@@ -47,22 +43,19 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 	}
 
 	var version domain.Version
-	err := db.DeleteItem(&version, req.PathParameters["id"])
+	err := db.DeleteItem(&version, id)
 	return domain.ReturnJsonOrError(version, err)
 }
 
 func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "Missing ID in path")
-	}
 
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var version domain.Version
-	err := db.GetItem(&version, req.PathParameters["id"])
+	err := db.GetItem(&version, id)
 	return domain.ReturnJsonOrError(version, err)
 }
 
@@ -73,17 +66,16 @@ func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-
 	var version domain.Version
 
 	// If ID is provided, load existing tag for updating, otherwise we'll create a new one
 	if req.PathParameters["id"] != "" {
-		id := domain.GetUintFromString(req.PathParameters["id"])
+		id := domain.GetResourceIDFromRequest(req)
 		if id == 0 {
-			return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 		}
 
-		err := db.GetItem(&version, req.PathParameters["id"])
+		err := db.GetItem(&version, id)
 		if err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return events.APIGatewayProxyResponse{
