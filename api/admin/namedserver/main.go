@@ -37,13 +37,9 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	//	return domain.ClientError(statusCode, errMsg)
 	//}
 
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "Missing ID in path")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var server domain.NamedServer
@@ -52,8 +48,9 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "Missing ID in path")
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var server domain.NamedServer
@@ -77,12 +74,12 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	// If ID is provided, load existing server for updating, otherwise we'll create a new one
 	if req.PathParameters["id"] != "" {
-		id := domain.GetUintFromString(req.PathParameters["id"])
+		id := domain.GetResourceIDFromRequest(req)
 		if id == 0 {
-			return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 		}
 
-		err := db.GetItem(&server, req.PathParameters["id"])
+		err := db.GetItem(&server, id)
 		if err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return events.APIGatewayProxyResponse{

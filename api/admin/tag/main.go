@@ -41,17 +41,13 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	//	return domain.ClientError(statusCode, errMsg)
 	//}
 
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "Missing ID in path")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var tag domain.Tag
-	err := db.GetItem(&tag, req.PathParameters["id"])
+	err := db.GetItem(&tag, id)
 	return domain.ReturnJsonOrError(tag, err)
 }
 
@@ -76,12 +72,12 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	// If ID is provided, load existing tag for updating, otherwise we'll create a new one
 	if req.PathParameters["id"] != "" {
-		id := domain.GetUintFromString(req.PathParameters["id"])
+		id := domain.GetResourceIDFromRequest(req)
 		if id == 0 {
-			return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 		}
 
-		err := db.GetItem(&tag, req.PathParameters["id"])
+		err := db.GetItem(&tag, id)
 		if err != nil {
 			if gorm.IsRecordNotFoundError(err) {
 				return events.APIGatewayProxyResponse{
@@ -118,16 +114,12 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	//	return domain.ClientError(statusCode, errMsg)
 	//}
 
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "Missing ID in path")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var tag domain.Tag
-	err := db.DeleteItem(&tag, req.PathParameters["id"])
+	err := db.DeleteItem(&tag, id)
 	return domain.ReturnJsonOrError(tag, err)
 }

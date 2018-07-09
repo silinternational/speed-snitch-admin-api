@@ -70,13 +70,12 @@ func DropTables() error {
 	return nil
 }
 
-func GetItem(itemObj interface{}, idStr string) error {
+func GetItem(itemObj interface{}, id uint) error {
 	gdb, err := GetDb()
 	if err != nil {
 		return err
 	}
 
-	id := domain.GetUintFromString(idStr)
 	notFound := gdb.Set("gorm:auto_preload", true).First(itemObj, id).RecordNotFound()
 	if notFound {
 		return gorm.ErrRecordNotFound
@@ -110,8 +109,8 @@ func PutItem(itemObj interface{}) error {
 	return gdb.Error
 }
 
-func DeleteItem(itemObj interface{}, idStr string) error {
-	err := GetItem(itemObj, idStr)
+func DeleteItem(itemObj interface{}, id uint) error {
+	err := GetItem(itemObj, id)
 	if err != nil {
 		return err
 	}

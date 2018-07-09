@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -43,17 +44,13 @@ func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	//	return domain.ClientError(statusCode, errMsg)
 	//}
 
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "ID param must be specified")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var user domain.User
-	err := db.DeleteItem(&user, req.PathParameters["id"])
+	err := db.DeleteItem(&user, id)
 	return domain.ReturnJsonOrError(user, err)
 }
 
@@ -71,34 +68,26 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	//	return domain.ClientError(statusCode, errMsg)
 	//}
 
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "ID param must be specified")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var user domain.User
-	err := db.GetItem(&user, req.PathParameters["id"])
+	err := db.GetItem(&user, id)
 	return domain.ReturnJsonOrError(user, err)
 }
 
 func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	// @todo do we need authorization stuff here?
 
-	if req.PathParameters["id"] == "" {
-		return domain.ClientError(http.StatusBadRequest, "ID param must be specified")
-	}
-
-	id := domain.GetUintFromString(req.PathParameters["id"])
+	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
 	var user domain.User
-	err := db.GetItem(&user, req.PathParameters["id"])
+	err := db.GetItem(&user, id)
 	return domain.ReturnJsonOrError(user.Tags, err)
 }
 
@@ -123,14 +112,20 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// If {id} was provided in request, get existing record to update
 	if req.PathParameters["id"] != "" {
-		id := domain.GetUintFromString(req.PathParameters["id"])
+		id := domain.GetResourceIDFromRequest(req)
 		if id == 0 {
-			return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 		}
 
-		err := db.GetItem(&user, req.PathParameters["id"])
+		err := db.GetItem(&user, id)
 		if err != nil {
-			return domain.ReturnJsonOrError(user, err)
+			if gorm.IsRecordNotFoundError(err) {
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Body:       "",
+				}, nil
+			}
+			return domain.ServerError(err)
 		}
 	}
 

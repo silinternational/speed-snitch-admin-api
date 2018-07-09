@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -145,7 +144,7 @@ func TestDeleteTag(t *testing.T) {
 	}
 
 	var user domain.User
-	err = db.GetItem(&user, fmt.Sprintf("%v", changedUser.Model.ID))
+	err = db.GetItem(&user, changedUser.Model.ID)
 	if err != nil {
 		t.Error("Got error trying to get changed user from db: ", err)
 	}
@@ -158,7 +157,7 @@ func TestDeleteTag(t *testing.T) {
 	}
 
 	var node domain.Node
-	err = db.GetItem(&node, fmt.Sprintf("%v", changedNode.Model.ID))
+	err = db.GetItem(&node, changedNode.Model.ID)
 	if err != nil {
 		t.Error("Got error trying to get changed node from db: ", err)
 	}
@@ -172,7 +171,7 @@ func TestDeleteTag(t *testing.T) {
 
 	// Get other user who should not have been changed to ensure they were not
 	var unchangedUser domain.User
-	err = db.GetItem(&unchangedUser, fmt.Sprintf("%v", notChangedUser.Model.ID))
+	err = db.GetItem(&unchangedUser, notChangedUser.Model.ID)
 	if err != nil {
 		t.Error("Got error trying to get unchanged user from db: ", err)
 	}

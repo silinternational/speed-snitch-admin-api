@@ -150,7 +150,7 @@ func (td *TaskData) Scan(value interface{}) error {
 type NamedServer struct {
 	gorm.Model
 	ServerType           string `gorm:"not null"`
-	SpeedTestNetServerID string // Only needed if ServerType is SpeedTestNetServer
+	SpeedTestNetServerID uint   // Only needed if ServerType is SpeedTestNetServer
 	ServerHost           string // Needed for non-SpeedTestNetServers
 	Name                 string `gorm:"not null"`
 	Description          string
@@ -389,30 +389,30 @@ func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
 
 // DoTagsOverlap returns true if there is a tag with the same UID
 //  in both slices of tags.  Otherwise, returns false.
-//func DoTagsOverlap(tags1, tags2 []Tag) bool {
-//	if len(tags1) == 0 || len(tags2) == 0 {
-//		return false
-//	}
-//
-//	for _, tag1 := range tags1 {
-//		for _, tag2 := range tags2 {
-//			if tag1.UID == tag2.UID {
-//				return true
-//			}
-//		}
-//	}
-//
-//	return false
-//}
+func DoTagsOverlap(tags1, tags2 []Tag) bool {
+	if len(tags1) == 0 || len(tags2) == 0 {
+		return false
+	}
+
+	for _, tag1 := range tags1 {
+		for _, tag2 := range tags2 {
+			if tag1.ID == tag2.ID {
+				return true
+			}
+		}
+	}
+
+	return false
+}
 
 // CanUserUseNode returns true if the user has a superAdmin role or
 //   if the user has a tag that the node has
-//func CanUserUseNode(user User, node Node) bool {
-//	if user.Role == UserRoleSuperAdmin {
-//		return true
-//	}
-//	return DoTagsOverlap(user.Tags, node.Tags)
-//}
+func CanUserUseNode(user User, node Node) bool {
+	if user.Role == UserRoleSuperAdmin {
+		return true
+	}
+	return DoTagsOverlap(user.Tags, node.Tags)
+}
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
@@ -491,15 +491,6 @@ func GetSliceSafeJSON(v interface{}) (string, error) {
 	return string(js), nil
 }
 
-func GetDB() (*gorm.DB, error) {
-	host := os.Getenv("MYSQL_HOST")
-	user := os.Getenv("MYSQL_USER")
-	pass := os.Getenv("MYSQL_PASS")
-	db := os.Getenv("MYSQL_DB")
-	dsn := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", user, pass, host, db)
-	return gorm.Open("mysql", dsn)
-}
-
 func GetUintFromString(param string) uint {
 	id, err := strconv.ParseUint(param, 10, 64)
 	if err != nil {
@@ -537,4 +528,14 @@ func GetEnv(name, defaultValue string) string {
 	}
 
 	return value
+}
+
+// Get ID from path paramters as uint, otherwise return 0
+func GetResourceIDFromRequest(req events.APIGatewayProxyRequest) uint {
+	if req.PathParameters["id"] == "" {
+		return 0
+	}
+
+	id := GetUintFromString(req.PathParameters["id"])
+	return id
 }

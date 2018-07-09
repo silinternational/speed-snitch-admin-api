@@ -50,7 +50,7 @@ func TestDeleteUser(t *testing.T) {
 
 	// query db directly to make sure user no longer exists
 	var findUser domain.User
-	err = db.GetItem(&findUser, "1")
+	err = db.GetItem(&findUser, 1)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Error("Did not get a not found error as expected")
 	}
