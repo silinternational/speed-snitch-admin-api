@@ -8,6 +8,9 @@ services:
       dockerfile: Dockerfile
     environment:
       GOOS: linux
+      MYSQL_HOST: db
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
     env_file:
       - ./local.env
     volumes:
@@ -36,6 +39,27 @@ services:
       - AWS_SECRET_ACCESS_KEY=0
       - AWS_DEFAULT_REGION=us-east-1
       - AWS_DYNAMODB_ENDPOINT=http://dynamo:8000
+
+  db:
+    image: silintl/mariadb:latest
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: pass
+      MYSQL_DATABASE: test
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    depends_on:
+      - db
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: user
+      PMA_PASSWORD: pass
 
   test:
     build:

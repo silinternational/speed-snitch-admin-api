@@ -13,7 +13,7 @@ import (
 const SelfType = domain.DataTypeUser
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, userSpecified := req.PathParameters["uid"]
+	_, userSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteUser(req)
@@ -38,34 +38,23 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
+	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	//if statusCode > 0 {
+	//	return domain.ClientError(statusCode, errMsg)
+	//}
+
+	if req.PathParameters["id"] == "" {
+		return domain.ClientError(http.StatusBadRequest, "ID param must be specified")
 	}
 
-	id := req.PathParameters["uid"]
-
-	if id == "" {
-		return domain.ClientError(http.StatusBadRequest, "id param must be specified")
+	id := domain.GetUintFromString(req.PathParameters["id"])
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
 	}
 
-	success, err := db.DeleteItem(domain.DataTable, SelfType, id)
-
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	if !success {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       "",
-		}, nil
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusNoContent,
-		Body:       "",
-	}, nil
+	var user domain.User
+	err := db.DeleteItem(&user, req.PathParameters["id"])
+	return domain.ReturnJsonOrError(user, err)
 }
 
 func viewMe(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -73,120 +62,77 @@ func viewMe(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 	if err != nil {
 		user = domain.User{}
 	}
-
-	js, err := json.Marshal(user)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	return domain.ReturnJsonOrError(user, err)
 }
 
 func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
+	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	//if statusCode > 0 {
+	//	return domain.ClientError(statusCode, errMsg)
+	//}
+
+	if req.PathParameters["id"] == "" {
+		return domain.ClientError(http.StatusBadRequest, "ID param must be specified")
 	}
 
-	uid := req.PathParameters["uid"]
-
-	if uid == "" {
-		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
-	}
-
-	user, err := db.GetUser(uid)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	if user.Name == "" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-		}, nil
-	}
-
-	js, err := json.Marshal(user)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
-}
-
-func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	uid := req.PathParameters["uid"]
-
-	if uid == "" {
-		return domain.ClientError(http.StatusBadRequest, "uid param must be specified")
-	}
-
-	user, err := db.GetUser(uid)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	jsBody, err := domain.GetJSONFromSlice(user.Tags)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       jsBody,
-	}, nil
-}
-
-func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
-	}
-
-	users, err := db.ListUsers()
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	jsBody, err := domain.GetJSONFromSlice(users)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       jsBody,
-	}, nil
-}
-
-func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
+	id := domain.GetUintFromString(req.PathParameters["id"])
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
 	}
 
 	var user domain.User
+	err := db.GetItem(&user, req.PathParameters["id"])
+	return domain.ReturnJsonOrError(user, err)
+}
 
-	// If {uid} was provided in request, get existing record to update
-	if req.PathParameters["uid"] != "" {
-		var err error
-		user, err = db.GetUser(req.PathParameters["uid"])
+func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// @todo do we need authorization stuff here?
+
+	if req.PathParameters["id"] == "" {
+		return domain.ClientError(http.StatusBadRequest, "ID param must be specified")
+	}
+
+	id := domain.GetUintFromString(req.PathParameters["id"])
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+	}
+
+	var user domain.User
+	err := db.GetItem(&user, req.PathParameters["id"])
+	return domain.ReturnJsonOrError(user.Tags, err)
+}
+
+func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	//if statusCode > 0 {
+	//	return domain.ClientError(statusCode, errMsg)
+	//}
+
+	var users []domain.User
+	err := db.ListItems(&users, "name asc")
+	return domain.ReturnJsonOrError(users, err)
+}
+
+func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	//if statusCode > 0 {
+	//	return domain.ClientError(statusCode, errMsg)
+	//}
+
+	var user domain.User
+
+	// If {id} was provided in request, get existing record to update
+	if req.PathParameters["id"] != "" {
+		id := domain.GetUintFromString(req.PathParameters["id"])
+		if id == 0 {
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID in path")
+		}
+
+		err := db.GetItem(&user, req.PathParameters["id"])
 		if err != nil {
-			return domain.ServerError(err)
+			return domain.ReturnJsonOrError(user, err)
 		}
 	}
-
-	// If UID is not set generate a UID
-	if user.UID == "" {
-		user.UID = domain.GetRandString(4)
-	}
-	user.ID = SelfType + "-" + user.UID
 
 	// Get the user struct from the request body
 	var updatedUser domain.User
@@ -209,15 +155,6 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 	// @todo do we need to check if user making api call can use the tags provided?
 
-	// Make sure user does not already exist with different UID
-	exists, err := userAlreadyExists(user.UID, user.Email)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-	if exists {
-		return domain.ClientError(http.StatusConflict, "A user with this email already exists")
-	}
-
 	// Update user attributes
 	user.Email = updatedUser.Email
 	user.Name = updatedUser.Name
@@ -225,21 +162,8 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	user.Tags = updatedUser.Tags
 
 	// Update the user in the database
-	err = db.PutItem(domain.DataTable, user)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	// Return the updated user as json
-	js, err := json.Marshal(user)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	err = db.PutItem(&user)
+	return domain.ReturnJsonOrError(user, err)
 }
 
 func main() {
@@ -252,20 +176,4 @@ func isValidRole(role string) bool {
 	}
 
 	return false
-}
-
-// userAlreadyExist returns true if a user with the same email but different UID already exists
-func userAlreadyExists(uid, email string) (bool, error) {
-	allUsers, err := db.ListUsers()
-	if err != nil {
-		return false, err
-	}
-
-	for _, user := range allUsers {
-		if user.Email == email && user.UID != uid {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }

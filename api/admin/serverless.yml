@@ -132,29 +132,29 @@ functions:
             private: true
 
         - http:
-            path: /tag/{uid}
+            path: /tag/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /tag/{uid}
+            path: /tag/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /tag/{uid}
+            path: /tag/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
   namedserver:
       handler: bin/namedserver
       events:
@@ -167,29 +167,29 @@ functions:
             method: POST
             private: true
         - http:
-            path: /namedserver/{uid}
+            path: /namedserver/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /namedserver/{uid}
+            path: /namedserver/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /namedserver/{uid}
+            path: /namedserver/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
 
   speedtestnetserver:
       handler: bin/speedtestnetserver
@@ -243,38 +243,38 @@ functions:
             private: true
 
         - http:
-            path: /user/{uid}
+            path: /user/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /user/{uid}/tag
+            path: /user/{id}/tag
             method: GET
             private: true
 
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /user/{uid}
+            path: /user/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /user/{uid}
+            path: /user/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
   version:
       handler: bin/version
       events:

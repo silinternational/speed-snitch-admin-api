@@ -1,15 +1,19 @@
 package domain
 
 import (
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -51,7 +55,8 @@ const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
 // Log errors to stderr
 var ErrorLogger = log.New(os.Stderr, "ERROR ", log.Llongfile)
 
-const UserReqHeaderID = "x-user-id"
+const UserReqHeaderUUID = "x-user-uuid"
+const UserReqHeaderEmail = "x-user-mail"
 const UserRoleSuperAdmin = "superAdmin"
 const UserRoleAdmin = "admin"
 
@@ -62,16 +67,230 @@ const ReportingIntervalDaily = "daily"
 const ReportingIntervalWeekly = "weekly"
 const ReportingIntervalMonthly = "monthly"
 
+/***************************************************************
+ *
+ * Define types that will be stored to database using GORM
+ *
+ **************************************************************/
+
 type Contact struct {
-	Name  string `json:"Name"`
-	Email string `json:"Email"`
-	Phone string `json:"Phone"`
+	gorm.Model
+	NodeID uint   `gorm:"not null"`
+	Name   string `gorm:"not null"`
+	Email  string `gorm:"not null"`
+	Phone  string
 }
 
 type Country struct {
-	Code string `json:"Code"`
-	Name string `json:"Name"`
+	gorm.Model
+	Code string `gorm:"type:varchar(4);not null;unique_index"`
+	Name string `gorm:"type:varchar(64);not null"`
 }
+
+type Tag struct {
+	gorm.Model
+	Name        string `gorm:"not null"`
+	Description string `gorm:"not null"`
+	Nodes       []Node `gorm:"many2many:node_tags"`
+	Users       []User `gorm:"many2many:user_tags"`
+}
+
+type Node struct {
+	gorm.Model
+	MacAddr             string  `gorm:"type:varchar(32);not null;unique_index"`
+	OS                  string  `gorm:"type:varchar(16); not null"`
+	Arch                string  `gorm:"type:varchar(8); not null"`
+	RunningVersion      Version `gorm:"foreignkey:RunningVersionID"`
+	RunningVersionID    uint
+	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID"`
+	ConfiguredVersionID uint
+	Uptime              int64 `gorm:"default:0"`
+	LastSeen            time.Time
+	FirstSeen           time.Time
+	Location            string
+	Coordinates         string
+	Network             string
+	IPAddress           string
+	Tasks               []Task
+	Contacts            []Contact
+	Tags                []Tag `gorm:"many2many:node_tags;"`
+	ConfiguredBy        string
+	Nickname            string
+	Notes               string
+}
+
+type Task struct {
+	gorm.Model
+	NodeID               uint   `gorm:"not null"`
+	Type                 string `gorm:"type:varchar(32);not null"`
+	Schedule             string `gorm:"not null"`
+	NamedServer          NamedServer
+	NamedServerID        uint
+	SpeedTestNetServerID string
+	ServerHost           string
+	TaskData             TaskData `json:"Data" gorm:"type:text"`
+}
+
+type TaskData struct {
+	StringValues map[string]string  `json:"StringValues"`
+	IntValues    map[string]int     `json:"IntValues"`
+	FloatValues  map[string]float64 `json:"FloatValues"`
+	IntSlices    map[string][]int   `json:"IntSlices"`
+}
+
+func (td TaskData) Value() (driver.Value, error) {
+	valueString, err := json.Marshal(td)
+	return string(valueString), err
+}
+
+func (td *TaskData) Scan(value interface{}) error {
+	return json.Unmarshal(value.([]byte), &td)
+}
+
+type NamedServer struct {
+	gorm.Model
+	ServerType           string `gorm:"not null"`
+	SpeedTestNetServerID string // Only needed if ServerType is SpeedTestNetServer
+	ServerHost           string // Needed for non-SpeedTestNetServers
+	Name                 string `gorm:"not null"`
+	Description          string
+	Notes                string `gorm:"type:varchar(2048)"`
+}
+
+type User struct {
+	gorm.Model
+	UUID  string
+	Name  string `gorm:"not null"`
+	Email string `gorm:"not null;unique_index"`
+	Role  string `gorm:"not null"`
+	Tags  []Tag  `json:"Tags" gorm:"many2many:user_tags"`
+}
+
+type Version struct {
+	gorm.Model
+	Number      string `gorm:"not null;unique_index"`
+	Description string `gorm:"not null"`
+}
+
+type SpeedTestNetServer struct {
+	gorm.Model
+	Lat         string `xml:"lat,attr"`
+	Lon         string `xml:"lon,attr"`
+	Name        string `xml:"name,attr"`
+	Country     string `xml:"country,attr"`
+	CountryCode string `xml:"cc,attr"`
+	ServerID    string `xml:"id,attr" gorm:"not null"`
+	Host        string `xml:"host,attr" gorm:"not null"`
+}
+
+type TaskLogSpeedTest struct {
+	gorm.Model
+	Node                 Node
+	NodeID               uint      `gorm:"not null"`
+	Timestamp            time.Time `gorm:"not null"`
+	Upload               float64   `gorm:"not null"`
+	Download             float64   `gorm:"not null"`
+	ServerID             string    `gorm:"not null"`
+	ServerCountry        string
+	ServerCoordinates    string
+	ServerName           string
+	NodeLocation         string `gorm:"not null"`
+	NodeCoordinates      string `gorm:"not null"`
+	NodeNetwork          string
+	NodeIPAddress        string  `gorm:"not null"`
+	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
+	NodeRunningVersionID string  `gorm:"not null"`
+}
+
+type TaskLogPingTest struct {
+	gorm.Model
+	Node                 Node
+	NodeID               uint      `gorm:"not null"`
+	Timestamp            time.Time `gorm:"not null"`
+	Latency              float64   `gorm:"not null"`
+	PacketLossPercent    float64   `gorm:"not null"`
+	ServerID             string    `json:"ServerID"`
+	ServerCountry        string    `json:"ServerCountry"`
+	ServerCoordinates    string    `json:"ServerCoordinates"`
+	ServerName           string    `json:"ServerName"`
+	NodeLocation         string    `json:"Location"`
+	NodeCoordinates      string    `json:"Coordinates"`
+	NodeNetwork          string    `json:"Network"`
+	NodeIPAddress        string    `json:"IPAddress"`
+	NodeRunningVersion   Version   `json:"RunningVersion" gorm:"foreignkey:NodeRunningVersionID"`
+	NodeRunningVersionID string    `json:"RunningVersionID"`
+}
+
+type TaskLogError struct {
+	gorm.Model
+	Node                 Node
+	NodeID               uint
+	Timestamp            time.Time `gorm:"not null"`
+	ErrorCode            string    `json:"ErrorCode"`
+	ErrorMessage         string    `json:"ErrorMessage"`
+	ServerID             string    `json:"ServerID"`
+	ServerCountry        string    `json:"ServerCountry"`
+	ServerCoordinates    string    `json:"ServerCoordinates"`
+	ServerName           string    `json:"ServerName"`
+	NodeLocation         string    `json:"Location"`
+	NodeCoordinates      string    `json:"Coordinates"`
+	NodeNetwork          string    `json:"Network"`
+	NodeIPAddress        string    `json:"IPAddress"`
+	NodeRunningVersion   Version   `json:"RunningVersion" gorm:"foreignkey:NodeRunningVersionID"`
+	NodeRunningVersionID string    `json:"RunningVersionID"`
+}
+
+type TaskLogRestart struct {
+	gorm.Model
+	Node      Node
+	NodeID    uint
+	Timestamp time.Time `gorm:"not null"`
+}
+
+type TaskLogNetworkDowntime struct {
+	gorm.Model
+	Node            Node
+	NodeID          uint
+	Timestamp       time.Time `gorm:"not null"`
+	DowntimeStart   string    `json:"DowntimeStart,omitempty"`
+	DowntimeSeconds int64     `json:"DowntimeSeconds,omitempty"`
+	NodeNetwork     string    `json:"Network"`
+	NodeIPAddress   string    `json:"IPAddress"`
+}
+
+type ReportingSnapshot struct {
+	gorm.Model
+	Node                   Node
+	NodeID                 uint  `gorm:"not null"`
+	Timestamp              int64 `gorm:"not null"`
+	UploadAvg              float64
+	UploadMax              float64
+	UploadMin              float64
+	UploadTotal            float64
+	DownloadAvg            float64
+	DownloadMax            float64
+	DownloadMin            float64
+	DownloadTotal          float64
+	LatencyAvg             float64
+	LatencyMax             float64
+	LatencyMin             float64
+	LatencyTotal           float64
+	PacketLossAvg          float64
+	PacketLossMax          float64
+	PacketLossMin          float64
+	PacketLossTotal        float64
+	SpeedTestDataPoints    int64
+	LatencyDataPoints      int64
+	NetworkDowntimeSeconds int64
+	NetworkOutagesCount    int64
+	RestartsCount          int64
+}
+
+/***************************************************************
+ *
+ * Define non-database types
+ *
+ **************************************************************/
 
 type HelloRequest struct {
 	ID      string `json:"ID"`
@@ -79,35 +298,6 @@ type HelloRequest struct {
 	Uptime  int64  `json:"Uptime"`
 	OS      string `json:"OS"`
 	Arch    string `json:"Arch"`
-}
-
-type Tag struct {
-	ID          string `json:"ID"`
-	UID         string `json:"UID"`
-	Name        string `json:"Name"`
-	Description string `json:"Description"`
-}
-
-type Node struct {
-	ID                string    `json:"ID"`
-	MacAddr           string    `json:"MacAddr"`
-	OS                string    `json:"OS"`
-	Arch              string    `json:"Arch"`
-	RunningVersion    string    `json:"RunningVersion"`
-	ConfiguredVersion string    `json:"ConfiguredVersion"`
-	Uptime            int64     `json:"Uptime"`
-	LastSeen          string    `json:"LastSeen"`
-	FirstSeen         string    `json:"FirstSeen"`
-	Location          string    `json:"Location"`
-	Coordinates       string    `json:"Coordinates"`
-	Network           string    `json:"Network"`
-	IPAddress         string    `json:"IPAddress"`
-	Tasks             []Task    `json:"Tasks"`
-	Contacts          []Contact `json:"Contacts"`
-	Tags              []Tag     `json:"Tags"`
-	ConfiguredBy      string    `json:"ConfiguredBy"`
-	Nickname          string    `json:"Nickname"`
-	Notes             string    `json:"Notes"`
 }
 
 type NodeConfig struct {
@@ -118,191 +308,13 @@ type NodeConfig struct {
 	Tasks []Task
 }
 
-type Task struct {
-	Type                 string      `json:"Type"`
-	Schedule             string      `json:"Schedule"`
-	NamedServer          NamedServer `json:"NamedServer"`
-	SpeedTestNetServerID string      `json:"SpeedTestNetServerID,omitempty"`
-	ServerHost           string      `json:"ServerHost,omitempty"`
-	Data                 TaskData    `json:"Data"`
-}
-
-type TaskData struct {
-	StringValues map[string]string  `json:"StringValues"`
-	IntValues    map[string]int     `json:"IntValues"`
-	FloatValues  map[string]float64 `json:"FloatValues"`
-	IntSlices    map[string][]int   `json:"IntSlices"`
-}
-
-type NamedServer struct {
-	ID                   string  `json:"ID"`
-	UID                  string  `json:"UID"`
-	ServerType           string  `json:"ServerType"`
-	SpeedTestNetServerID string  `json:"SpeedTestNetServerID"` // Only needed if ServerType is SpeedTestNetServer
-	ServerHost           string  `json:"ServerHost"`           // Needed for non-SpeedTestNetServers
-	Name                 string  `json:"Name"`
-	Description          string  `json:"Description"`
-	Country              Country `json:"Country"`
-	Notes                string  `json:"Notes"`
-}
-
-type User struct {
-	ID     string `json:"ID"`
-	UID    string `json:"UID"`
-	UserID string `json:"UserID"`
-	Name   string `json:"Name"`
-	Email  string `json:"Email"`
-	Role   string `json:"Role"`
-	Tags   []Tag  `json:"Tags"`
-}
-
-type Version struct {
-	ID          string `json:"ID"`
-	Number      string `json:"Number"`
-	Description string `json:"Description"`
-}
-
-type SpeedTestNetServer struct {
-	Lat         string `xml:"lat,attr" json:"Lat"`
-	Lon         string `xml:"lon,attr" json:"Lon"`
-	Name        string `xml:"name,attr" json:"Name"`
-	Country     string `xml:"country,attr" json:"Country"`
-	CountryCode string `xml:"cc,attr"  json:"CountryCode"`
-	ServerID    string `xml:"id,attr" json:"ServerID"`
-	Host        string `xml:"host,attr" json:"Host"`
-	Timestamp   int64
-}
-
 type STNetServerList struct {
-	ID      string               `json:"ID"`
 	Country Country              `json:"Country"`
 	Servers []SpeedTestNetServer `xml:"server"`
 }
 
-type STNetCountryList struct {
-	ID        string    `json:"ID"`
-	Countries []Country `json:"Countries"`
-}
-
 type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
-}
-
-type TaskLogEntry struct {
-	ID                 string  `json:"ID"`
-	Timestamp          int64   `json:"Timestamp"`
-	ExpirationTime     int64   `json:"ExpirationTime"`
-	MacAddr            string  `json:"MacAddr"`
-	Upload             float64 `json:"Upload"`
-	Download           float64 `json:"Download"`
-	Latency            float64 `json:"Latency"`
-	PacketLossPercent  float64 `json:"PacketLossPercent"`
-	ErrorCode          string  `json:"ErrorCode"`
-	ErrorMessage       string  `json:"ErrorMessage"`
-	DowntimeStart      string  `json:"DowntimeStart,omitempty"`
-	DowntimeSeconds    int64   `json:"DowntimeSeconds,omitempty"`
-	ServerID           string  `json:"ServerID"`
-	ServerCountry      string  `json:"ServerCountry"`
-	ServerCoordinates  string  `json:"ServerCoordinates"`
-	ServerName         string  `json:"ServerName"`
-	NodeLocation       string  `json:"Location"`
-	NodeCoordinates    string  `json:"Coordinates"`
-	NodeNetwork        string  `json:"Network"`
-	NodeIPAddress      string  `json:"IPAddress"`
-	NodeRunningVersion string  `json:"RunningVersion"`
-}
-
-func (e *TaskLogEntry) GetShortPingEntry() ShortPingEntry {
-	short := ShortPingEntry{
-		ID:                 e.ID,
-		Timestamp:          e.Timestamp,
-		MacAddr:            e.MacAddr,
-		Latency:            e.Latency,
-		ErrorCode:          e.ErrorCode,
-		ErrorMessage:       e.ErrorMessage,
-		ServerID:           e.ServerID,
-		NodeLocation:       e.NodeLocation,
-		NodeIPAddress:      e.NodeIPAddress,
-		NodeRunningVersion: e.NodeRunningVersion,
-	}
-	return short
-}
-
-func (e *TaskLogEntry) GetShortSpeedTestEntry() ShortSpeedTestEntry {
-	short := ShortSpeedTestEntry{
-		ID:                 e.ID,
-		Timestamp:          e.Timestamp,
-		MacAddr:            e.MacAddr,
-		Upload:             e.Upload,
-		Download:           e.Download,
-		ErrorCode:          e.ErrorCode,
-		ErrorMessage:       e.ErrorMessage,
-		ServerID:           e.ServerID,
-		NodeLocation:       e.NodeLocation,
-		NodeIPAddress:      e.NodeIPAddress,
-		NodeRunningVersion: e.NodeRunningVersion,
-	}
-	return short
-}
-
-type ShortPingEntry struct {
-	ID                 string  `json:"ID"`
-	Timestamp          int64   `json:"Timestamp"`
-	MacAddr            string  `json:"MacAddr"`
-	Upload             float64 `json:"Upload"`
-	Download           float64 `json:"Download"`
-	Latency            float64 `json:"Latency"`
-	ErrorCode          string  `json:"ErrorCode"`
-	ErrorMessage       string  `json:"ErrorMessage"`
-	ServerID           string  `json:"ServerID"`
-	NodeLocation       string  `json:"Location"`
-	NodeIPAddress      string  `json:"IPAddress"`
-	NodeRunningVersion string  `json:"RunningVersion"`
-}
-
-type ShortSpeedTestEntry struct {
-	ID                 string  `json:"ID"`
-	Timestamp          int64   `json:"Timestamp"`
-	MacAddr            string  `json:"MacAddr"`
-	Upload             float64 `json:"Upload"`
-	Download           float64 `json:"Download"`
-	Latency            float64 `json:"Latency"`
-	ErrorCode          string  `json:"ErrorCode"`
-	ErrorMessage       string  `json:"ErrorMessage"`
-	ServerID           string  `json:"ServerID"`
-	NodeLocation       string  `json:"Location"`
-	NodeIPAddress      string  `json:"IPAddress"`
-	NodeRunningVersion string  `json:"RunningVersion"`
-}
-
-type ReportingSnapshot struct {
-	ID                     string                `json:"ID"`
-	Timestamp              int64                 `json:"Timestamp"`
-	ExpirationTime         int64                 `json:"ExpirationTime"`
-	MacAddr                string                `json:"MacAddr"`
-	UploadAvg              float64               `json:"UploadAvg"`
-	UploadMax              float64               `json:"UploadMax"`
-	UploadMin              float64               `json:"UploadMin"`
-	UploadTotal            float64               `json:"-"`
-	DownloadAvg            float64               `json:"DownloadAvg"`
-	DownloadMax            float64               `json:"DownloadMax"`
-	DownloadMin            float64               `json:"DownloadMin"`
-	DownloadTotal          float64               `json:"-"`
-	LatencyAvg             float64               `json:"LatencyAvg"`
-	LatencyMax             float64               `json:"LatencyMax"`
-	LatencyMin             float64               `json:"LatencyMin"`
-	LatencyTotal           float64               `json:"-"`
-	PacketLossAvg          float64               `json:"PacketLossAvg"`
-	PacketLossMax          float64               `json:"PacketLossMax"`
-	PacketLossMin          float64               `json:"PacketLossMin"`
-	PacketLossTotal        float64               `json:"-"`
-	SpeedTestDataPoints    int64                 `json:"SpeedTestDataPoints"`
-	LatencyDataPoints      int64                 `json:"LatencyDataPoints"`
-	NetworkDowntimeSeconds int64                 `json:"NetworkDowntimeSeconds"`
-	NetworkOutagesCount    int64                 `json:"NetworkOutagesCount"`
-	RestartsCount          int64                 `json:"RestartsCount"`
-	RawPingData            []ShortPingEntry      `json:"RawPingData"`
-	RawSpeedTestData       []ShortSpeedTestEntry `json:"RawSpeedTestData"`
 }
 
 // Add a helper for handling errors. This logs any error to os.Stderr
@@ -310,18 +322,19 @@ type ReportingSnapshot struct {
 // Gateway understands.
 func ServerError(err error) (events.APIGatewayProxyResponse, error) {
 	ErrorLogger.Println(err.Error())
-
+	js, _ := json.Marshal(http.StatusText(http.StatusInternalServerError))
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
-		Body:       http.StatusText(http.StatusInternalServerError),
+		Body:       string(js),
 	}, nil
 }
 
 // Similarly add a helper for send responses relating to client errors.
 func ClientError(status int, body string) (events.APIGatewayProxyResponse, error) {
+	js, _ := json.Marshal(body)
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
-		Body:       body,
+		Body:       string(js),
 	}, nil
 }
 
@@ -376,30 +389,30 @@ func GetUrlForAgentVersion(version, operatingsystem, arch string) string {
 
 // DoTagsOverlap returns true if there is a tag with the same UID
 //  in both slices of tags.  Otherwise, returns false.
-func DoTagsOverlap(tags1, tags2 []Tag) bool {
-	if len(tags1) == 0 || len(tags2) == 0 {
-		return false
-	}
-
-	for _, tag1 := range tags1 {
-		for _, tag2 := range tags2 {
-			if tag1.UID == tag2.UID {
-				return true
-			}
-		}
-	}
-
-	return false
-}
+//func DoTagsOverlap(tags1, tags2 []Tag) bool {
+//	if len(tags1) == 0 || len(tags2) == 0 {
+//		return false
+//	}
+//
+//	for _, tag1 := range tags1 {
+//		for _, tag2 := range tags2 {
+//			if tag1.UID == tag2.UID {
+//				return true
+//			}
+//		}
+//	}
+//
+//	return false
+//}
 
 // CanUserUseNode returns true if the user has a superAdmin role or
 //   if the user has a tag that the node has
-func CanUserUseNode(user User, node Node) bool {
-	if user.Role == UserRoleSuperAdmin {
-		return true
-	}
-	return DoTagsOverlap(user.Tags, node.Tags)
-}
+//func CanUserUseNode(user User, node Node) bool {
+//	if user.Role == UserRoleSuperAdmin {
+//		return true
+//	}
+//	return DoTagsOverlap(user.Tags, node.Tags)
+//}
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const (
@@ -452,9 +465,9 @@ func InArray(needle interface{}, haystack interface{}) (exists bool, index int) 
 	return
 }
 
-// GetJSONFromSlice requires a slice. If the length is 0, returns "[]".
-//  Otherwise, returns the results of json.Marshal(s)
-func GetJSONFromSlice(v interface{}) (string, error) {
+// GetSliceSafeJSON handles special logic for slices. If the length is 0, returns "[]".
+// Otherwise, returns the results of json.Marshal(s)
+func GetSliceSafeJSON(v interface{}) (string, error) {
 	switch reflect.TypeOf(v).Kind() {
 	case reflect.Slice:
 		s := reflect.ValueOf(v)
@@ -470,5 +483,58 @@ func GetJSONFromSlice(v interface{}) (string, error) {
 		return string(js), nil
 	}
 
-	return "", fmt.Errorf("Expected a slice, but got %v.", v)
+	js, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	return string(js), nil
+}
+
+func GetDB() (*gorm.DB, error) {
+	host := os.Getenv("MYSQL_HOST")
+	user := os.Getenv("MYSQL_USER")
+	pass := os.Getenv("MYSQL_PASS")
+	db := os.Getenv("MYSQL_DB")
+	dsn := fmt.Sprintf("%s:%s@(%s)/%s?charset=utf8&parseTime=True&loc=Local", user, pass, host, db)
+	return gorm.Open("mysql", dsn)
+}
+
+func GetUintFromString(param string) uint {
+	id, err := strconv.ParseUint(param, 10, 64)
+	if err != nil {
+		id = 0
+	}
+	return uint(id)
+}
+
+func ReturnJsonOrError(response interface{}, err error) (events.APIGatewayProxyResponse, error) {
+	if err != nil {
+		if gorm.IsRecordNotFoundError(err) {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusNotFound,
+				Body:       "",
+			}, nil
+		}
+		return ServerError(err)
+	}
+
+	js, err := GetSliceSafeJSON(response)
+	if err != nil {
+		return ServerError(err)
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       js,
+	}, nil
+}
+
+func GetEnv(name, defaultValue string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		value = defaultValue
+	}
+
+	return value
 }
