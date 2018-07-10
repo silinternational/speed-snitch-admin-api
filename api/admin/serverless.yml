@@ -251,15 +251,6 @@ functions:
                 paths:
                   id: true
         - http:
-            path: /user/{id}/tag
-            method: GET
-            private: true
-
-            request:
-              parameters:
-                paths:
-                  id: true
-        - http:
             path: /user/{id}
             method: PUT
             private: true
