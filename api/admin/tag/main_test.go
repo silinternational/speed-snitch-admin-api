@@ -43,14 +43,7 @@ func TestDeleteTag(t *testing.T) {
 		changedNode,
 	}
 
-	superAdmin := domain.User{
-		Model: gorm.Model{
-			ID: 1,
-		},
-		UUID:  "1",
-		Email: "super@admin.com",
-		Role:  domain.UserRoleSuperAdmin,
-	}
+	superAdmin := testutils.SuperAdmin
 
 	changedUser := domain.User{
 		Model: gorm.Model{
