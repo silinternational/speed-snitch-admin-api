@@ -250,7 +250,7 @@ func getPingStringValues(task domain.Task) (map[string]string, error) {
 	var namedServer domain.NamedServer
 	err := db.GetItem(&namedServer, task.NamedServer.Model.ID)
 	if err != nil {
-		return stringValues, fmt.Errorf("error getting NamedServer with UID: %s ... %s", task.NamedServer.Model.ID, err.Error())
+		return stringValues, fmt.Errorf("error getting NamedServer with UID: %d ... %s", task.NamedServer.Model.ID, err.Error())
 	}
 
 	// If this does not refer to a SpeedTestNetServer, just use the NamedServer's values

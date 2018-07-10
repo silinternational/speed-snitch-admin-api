@@ -116,7 +116,7 @@ func TestViewNode(t *testing.T) {
 	}
 
 	if node.Model.ID != create.Model.ID {
-		t.Error("Returned node ID (%v) does not match expected node ID (%v)", node.Model.ID, create.Model.ID)
+		t.Errorf("Returned node ID (%v) does not match expected node ID (%v)", node.Model.ID, create.Model.ID)
 	}
 
 	// try to view node that doesnt exist
