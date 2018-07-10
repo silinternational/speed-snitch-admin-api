@@ -147,6 +147,123 @@ func TestViewServer(t *testing.T) {
 
 }
 
+func TestListServersInCountry(t *testing.T) {
+	testutils.ResetDb(t)
+
+	serverInFrance1 := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "paris1.speedtest.orange.fr:8080",
+		ServerID:    "5559",
+	}
+
+	serverInFrance2 := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 4,
+		},
+		Name:        "Massy",
+		Country:     "France",
+		CountryCode: "FR",
+		Host:        "massy.testdebit.info:8080",
+		ServerID:    "2231",
+	}
+
+	serverFixtures := []domain.SpeedTestNetServer{
+		{
+			Model: gorm.Model{
+				ID: 1,
+			},
+			Name:        "New York City, NY",
+			Country:     "United States",
+			CountryCode: "US",
+			Host:        "nyc.speedtest.sbcglobal.net:8080",
+			ServerID:    "10390",
+		},
+		serverInFrance1,
+		{
+			Model: gorm.Model{
+				ID: 3,
+			},
+			Name:        "Miami, FL",
+			Country:     "United States",
+			CountryCode: "US",
+			Host:        "stosat-pomp-01.sys.comcast.net:8080",
+			ServerID:    "1779",
+		},
+		serverInFrance2,
+	}
+
+	err := loadServerFixtures(serverFixtures)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	userFixtures := []domain.User{
+		testutils.SuperAdmin,
+		testutils.AdminUser,
+	}
+
+	for _, fix := range userFixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	method := "GET"
+	// Test that using an invalid version id results in 404 error
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: method,
+		Path:       "/speedtestnetserver/country/mia",
+		PathParameters: map[string]string{
+			"countryCode": "mia",
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+
+	response, err := listServersInCountry(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 404 {
+		t.Error("Wrong status code returned viewing version, expected 404, got", response.StatusCode, response.Body)
+		return
+	}
+
+	// View server
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: method,
+		Path:       "/speedtestnetserver/country/FR",
+		PathParameters: map[string]string{
+			"countryCode": "FR",
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+	response, err = listServersInCountry(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results := response.Body
+	if !strings.Contains(results, serverInFrance1.Host) || !strings.Contains(results, serverInFrance2.Host) {
+		t.Errorf("Error: did not include the requested servers. Got:\n%s\n", results)
+		return
+	}
+
+}
+
 func TestListCountries(t *testing.T) {
 	testutils.ResetDb(t)
 
