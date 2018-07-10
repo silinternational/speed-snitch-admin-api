@@ -171,8 +171,8 @@ func TestViewNode(t *testing.T) {
 	if err != nil {
 		t.Error("Received error trying to view node: ", err.Error())
 	}
-	if resp.StatusCode != http.StatusNotFound {
-		t.Error("Did not get 404 trying to view node that user shouldn't be able to view, got: ", resp.StatusCode, " body: ", resp.Body)
+	if resp.StatusCode != http.StatusForbidden {
+		t.Error("Did not get 403 trying to view node that user shouldn't be able to view, got: ", resp.StatusCode, " body: ", resp.Body)
 	}
 
 }
