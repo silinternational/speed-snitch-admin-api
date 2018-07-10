@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -16,9 +15,6 @@ func TestDeleteUser(t *testing.T) {
 	testutils.ResetDb(t)
 
 	createUser := domain.User{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		Name:  "test",
 		Email: "test@test.com",
 		UUID:  "abc123",
@@ -27,6 +23,17 @@ func TestDeleteUser(t *testing.T) {
 	err := db.PutItem(&createUser)
 	if err != nil {
 		t.Error("Error creating test user: ", err.Error())
+	}
+
+	users := []domain.User{}
+	err = db.ListItems(&users, "id asc")
+	if err != nil {
+		t.Errorf("Error calling list users: %s", err.Error())
+		return
+	}
+	// Including the SuperAdmin
+	if len(users) != 2 {
+		t.Errorf("Wrong number of user fixtures loaded. Expected: 2. But got: %d", len(users))
 	}
 
 	req := events.APIGatewayProxyRequest{
@@ -77,6 +84,17 @@ func TestViewMe(t *testing.T) {
 
 	db.PutItem(&user1)
 	db.PutItem(&user2)
+
+	users := []domain.User{}
+	err := db.ListItems(&users, "id asc")
+	if err != nil {
+		t.Errorf("Error calling list users: %s", err.Error())
+		return
+	}
+
+	if len(users) != 2 {
+		t.Errorf("Wrong number of user fixtures loaded. Expected: 2. But got: %d", len(users))
+	}
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
@@ -162,17 +180,17 @@ func TestViewUser(t *testing.T) {
 
 	user1 := domain.User{
 		Model: gorm.Model{
-			ID: 1,
+			ID: 11,
 		},
-		UUID:  "1",
+		UUID:  "11",
 		Email: "user1@test.com",
 	}
 
 	user2 := domain.User{
 		Model: gorm.Model{
-			ID: 2,
+			ID: 12,
 		},
-		UUID:  "2",
+		UUID:  "12",
 		Email: "user2@test.com",
 	}
 
@@ -181,9 +199,9 @@ func TestViewUser(t *testing.T) {
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/user/1",
+		Path:       "/user/11",
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": "11",
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
@@ -214,10 +232,7 @@ func TestViewUser(t *testing.T) {
 		PathParameters: map[string]string{
 			"id": "404",
 		},
-		Headers: map[string]string{
-			"x-user-uuid": fmt.Sprintf("%v", user1.Model.ID),
-			"x-user-mail": user1.Email,
-		},
+		Headers: testutils.GetSuperAdminReqHeader(),
 	}
 
 	resp, err = viewUser(req)
@@ -230,97 +245,22 @@ func TestViewUser(t *testing.T) {
 	}
 }
 
-func TestListUserTags(t *testing.T) {
-	testutils.ResetDb(t)
-
-	tags := []domain.Tag{
-		{
-			Model: gorm.Model{
-				ID: 1,
-			},
-			Name: "one",
-		},
-		{
-			Model: gorm.Model{
-				ID: 2,
-			},
-			Name: "two",
-		},
-	}
-
-	for _, tag := range tags {
-		err := db.PutItem(&tag)
-		if err != nil {
-			t.Error("Unable to put tag for testing, tag: ", tag.Name, " err: ", err.Error())
-		}
-	}
-
-	user1 := domain.User{
-		Model: gorm.Model{
-			ID: 1,
-		},
-		UUID:  "1",
-		Email: "user1@test.com",
-		Tags:  tags,
-	}
-
-	user2 := domain.User{
-		Model: gorm.Model{
-			ID: 2,
-		},
-		UUID:  "2",
-		Email: "user2@test.com",
-		Tags:  tags,
-	}
-
-	db.PutItem(&user1)
-	db.PutItem(&user2)
-
-	req := events.APIGatewayProxyRequest{
-		HTTPMethod: "GET",
-		Path:       "/user/1/tag",
-		PathParameters: map[string]string{
-			"id": "1",
-		},
-		Headers: testutils.GetSuperAdminReqHeader(),
-	}
-
-	resp, err := listUserTags(req)
-	if err != nil {
-		t.Error("Error calling list user tags: ", err.Error())
-	}
-
-	if resp.StatusCode != 200 {
-		t.Error("Did not get a 200 response for list user tags, got: ", resp.StatusCode)
-	}
-
-	var foundTags []domain.Tag
-	err = json.Unmarshal([]byte(resp.Body), &foundTags)
-	if err != nil {
-		t.Error("Unable to unmarshal body into list of tags. Err: ", err.Error(), " body: ", resp.Body)
-	}
-
-	if len(foundTags) != len(user1.Tags) {
-		t.Error("Did not get back same number of tags as expected. Got: ", len(foundTags))
-	}
-}
-
 func TestListUsers(t *testing.T) {
 	testutils.ResetDb(t)
 
 	user1 := domain.User{
 		Model: gorm.Model{
-			ID: 1,
+			ID: 11,
 		},
-		UUID:  "1",
+		UUID:  "11",
 		Email: "user1@test.com",
 	}
 
 	user2 := domain.User{
 		Model: gorm.Model{
-			ID: 2,
+			ID: 12,
 		},
-		UUID:  "2",
+		UUID:  "12",
 		Email: "user2@test.com",
 	}
 
@@ -348,8 +288,9 @@ func TestListUsers(t *testing.T) {
 		t.Error("Unable to unmarshal json into array of users. Err: ", err.Error(), " body: ", resp.Body)
 	}
 
-	if len(users) != 2 {
-		t.Error("Did not get back number of users expected in list users call, got: ", len(users), " expected: 2")
+	// Includes SuperAdmin
+	if len(users) != 3 {
+		t.Error("Did not get back number of users expected in list users call, got: ", len(users), " expected: 3")
 	}
 }
 

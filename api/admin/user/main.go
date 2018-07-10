@@ -20,9 +20,6 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 		return deleteUser(req)
 	case "GET":
 		if userSpecified {
-			if strings.HasSuffix(req.Path, "/tag") {
-				return listUserTags(req)
-			}
 			return viewUser(req)
 		}
 		if strings.HasSuffix(req.Path, "/me") {
