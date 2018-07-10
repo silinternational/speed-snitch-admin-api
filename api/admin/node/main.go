@@ -54,10 +54,10 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
@@ -82,10 +82,10 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	}
 
 	// Ensure user is authorized ...
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	user, err := db.GetUserFromRequest(req)
 	if err != nil {
@@ -146,10 +146,10 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// authorize request
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	// Get the node struct from the request body
 	var updatedNode domain.Node
@@ -162,7 +162,12 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if !db.AreTagsValid(updatedNode.Tags) {
 		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
 	}
-	// @todo do we need to check if user making api call can use the tags provided?
+
+	// check if user making api call can use the updated tags.
+	statusCode, errMsg = db.GetAuthorizationStatus(req, domain.PermissionTagBased, updatedNode.Tags)
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	cleanMac, err := domain.CleanMACAddress(updatedNode.MacAddr)
 	if err != nil {
