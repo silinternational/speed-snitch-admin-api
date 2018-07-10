@@ -18,28 +18,6 @@ services:
     working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
     command: ["bash"]
 
-  dynamo:
-    image: cnadiminti/dynamodb-local
-    command: "-sharedDb -inMemory"
-    hostname: dynamo
-    ports:
-      - "8000:8000"
-    environment:
-      reschedule: on-node-failure
-
-  init-dynamo:
-    image: garland/aws-cli-docker
-    command: "/init-dynamodb.sh"
-    volumes:
-      - ./codeship/init-dynamodb.sh:/init-dynamodb.sh
-    depends_on:
-      - dynamo
-    environment:
-      - AWS_ACCESS_KEY_ID=0
-      - AWS_SECRET_ACCESS_KEY=0
-      - AWS_DEFAULT_REGION=us-east-1
-      - AWS_DYNAMODB_ENDPOINT=http://dynamo:8000
-
   db:
     image: silintl/mariadb:latest
     ports:
@@ -66,12 +44,9 @@ services:
       context: ./
       dockerfile: Dockerfile
     depends_on:
-      - init-dynamo
+      - db
     environment:
-      AWS_ACCESS_KEY_ID: 0
-      AWS_SECRET_ACCESS_KEY: 0
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_DYNAMODB_ENDPOINT: http://dynamo:8000
+      MYSQL_HOST: db
     volumes:
       - ./:/go/src/github.com/silinternational/speed-snitch-admin-api
     working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api

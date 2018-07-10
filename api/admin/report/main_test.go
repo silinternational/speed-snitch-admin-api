@@ -2,13 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
-	"os"
 	"testing"
 )
 
@@ -163,7 +161,7 @@ func TestViewNodeReport(t *testing.T) {
 		t.Error(err)
 		t.Fail()
 	}
-	fmt.Fprintf(os.Stdout, "Body: %+v\n", response.Body)
+
 	if len(snapResults) != len(taskLogFixtures) {
 		t.Error("Not correct number of snapshots returned. Expected", len(taskLogFixtures), "got", len(snapResults))
 		t.Fail()

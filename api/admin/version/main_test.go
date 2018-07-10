@@ -324,7 +324,7 @@ func TestUpdateVersion(t *testing.T) {
 		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
 	}
 
-	// Update updateme version
+	// Update version
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: method,
 		Path:       "/version/1",

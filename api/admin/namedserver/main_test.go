@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
@@ -115,6 +116,9 @@ func TestUpdateServer(t *testing.T) {
 
 	// Create server record to update
 	createServer := domain.NamedServer{
+		Model: gorm.Model{
+			ID: 1,
+		},
 		Name: "test server",
 	}
 	err := db.PutItem(&createServer)

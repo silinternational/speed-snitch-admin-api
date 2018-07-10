@@ -6,27 +6,10 @@ import (
 	"testing"
 )
 
-func migrateTables(t *testing.T) {
-	err := AutoMigrateTables()
-	if err != nil {
-		t.Error("Error migrating tables: ", err.Error())
-	}
-}
-
-func dropTables(t *testing.T) {
-	err := DropTables()
-	if err != nil {
-		t.Error("Error dropping tables: ", err.Error())
-	}
-}
-
-func resetDb(t *testing.T) {
-	dropTables(t)
-	migrateTables(t)
-}
-
 func TestAreTagsValid(t *testing.T) {
-	resetDb(t)
+	DropTables()
+	AutoMigrateTables()
+
 	validTags := []domain.Tag{
 		{
 			Model: gorm.Model{
