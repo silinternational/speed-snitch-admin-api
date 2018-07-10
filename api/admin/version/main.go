@@ -66,9 +66,15 @@ func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// Verify authorization
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
 	var version domain.Version
 
-	// If ID is provided, load existing tag for updating, otherwise we'll create a new one
+	// If ID is provided, load existing version for updating, otherwise we'll create a new one
 	if req.PathParameters["id"] != "" {
 		id := domain.GetResourceIDFromRequest(req)
 		if id == 0 {
@@ -85,11 +91,6 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 			}
 			return domain.ServerError(err)
 		}
-	}
-
-	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	if statusCode > 0 {
-		return domain.ClientError(statusCode, errMsg)
 	}
 
 	// Parse request body for updated attributes
