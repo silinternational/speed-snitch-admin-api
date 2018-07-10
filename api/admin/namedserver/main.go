@@ -32,10 +32,10 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
@@ -65,10 +65,10 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 }
 
 func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	var server domain.NamedServer
 

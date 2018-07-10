@@ -39,10 +39,10 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
@@ -63,10 +63,10 @@ func viewMe(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
@@ -79,8 +79,6 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	// @todo do we need authorization stuff here?
-
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
 		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
@@ -92,10 +90,10 @@ func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	var users []domain.User
 	err := db.ListItems(&users, "name asc")
@@ -103,10 +101,10 @@ func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	var user domain.User
 
@@ -148,7 +146,6 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if !db.AreTagsValid(updatedUser.Tags) {
 		return domain.ClientError(http.StatusBadRequest, "One or more submitted tags are invalid")
 	}
-	// @todo do we need to check if user making api call can use the tags provided?
 
 	// Update user attributes
 	user.Email = updatedUser.Email

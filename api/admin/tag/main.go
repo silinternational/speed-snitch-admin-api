@@ -36,10 +36,10 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
@@ -52,10 +52,10 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 }
 
 func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	var tags []domain.Tag
 	err := db.ListItems(&tags, "name asc")
@@ -63,10 +63,10 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 }
 
 func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	var tag domain.Tag
 
@@ -109,10 +109,10 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	//statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
-	//if statusCode > 0 {
-	//	return domain.ClientError(statusCode, errMsg)
-	//}
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
 
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
