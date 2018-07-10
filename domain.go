@@ -32,6 +32,7 @@ const DataTypeVersion = "version"
 
 const LogTypeDowntime = "downtime"
 const LogTypeRestart = "restarted"
+const LogTypeError = "error"
 
 const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"
@@ -151,7 +152,9 @@ type NamedServer struct {
 	gorm.Model
 	ServerType           string `gorm:"not null"`
 	SpeedTestNetServerID uint   // Only needed if ServerType is SpeedTestNetServer
+	SpeedTestNetServer   SpeedTestNetServer
 	ServerHost           string // Needed for non-SpeedTestNetServers
+	ServerCountry        string
 	Name                 string `gorm:"not null"`
 	Description          string
 	Notes                string `gorm:"type:varchar(2048)"`
@@ -187,7 +190,7 @@ type TaskLogSpeedTest struct {
 	gorm.Model
 	Node                 Node
 	NodeID               uint    `gorm:"not null"`
-	Timestamp            int64   `type:int(11); gorm:"not null"`
+	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Upload               float64 `gorm:"not null"`
 	Download             float64 `gorm:"not null"`
 	ServerID             string  `gorm:"not null"`
@@ -199,7 +202,7 @@ type TaskLogSpeedTest struct {
 	NodeNetwork          string
 	NodeIPAddress        string  `gorm:"not null"`
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID string  `gorm:"not null"`
+	NodeRunningVersionID uint    `gorm:"not null"`
 }
 
 type TaskLogPingTest struct {
@@ -218,7 +221,7 @@ type TaskLogPingTest struct {
 	NodeNetwork          string
 	NodeIPAddress        string
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID string
+	NodeRunningVersionID uint
 }
 
 type TaskLogError struct {
@@ -237,7 +240,7 @@ type TaskLogError struct {
 	NodeNetwork          string
 	NodeIPAddress        string
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID string
+	NodeRunningVersionID uint
 }
 
 type TaskLogRestart struct {

@@ -95,6 +95,19 @@ func GetItem(itemObj interface{}, id uint) error {
 	return gdb.Error
 }
 
+func GetNodeByMacAddr(macAddr string) (domain.Node, error) {
+	node := domain.Node{
+		MacAddr: macAddr,
+	}
+
+	err := FindOne(&node)
+	if err != nil {
+		return domain.Node{}, err
+	}
+
+	return node, nil
+}
+
 func ListItems(itemObj interface{}, order string) error {
 	gdb, err := GetDb()
 	if err != nil {
