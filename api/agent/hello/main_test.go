@@ -6,10 +6,13 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
 	"testing"
 )
 
 func TestHandler(t *testing.T) {
+	testutils.ResetDb(t)
+
 	version1 := domain.Version{
 		Model: gorm.Model{
 			ID: 1,
