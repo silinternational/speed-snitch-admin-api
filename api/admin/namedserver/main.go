@@ -43,7 +43,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	}
 
 	var server domain.NamedServer
-	err := db.DeleteItem(&server, req.PathParameters["id"])
+	err := db.DeleteItem(&server, id)
 	return domain.ReturnJsonOrError(server, err)
 }
 
@@ -54,7 +54,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	var server domain.NamedServer
-	err := db.GetItem(&server, req.PathParameters["id"])
+	err := db.GetItem(&server, id)
 	return domain.ReturnJsonOrError(server, err)
 }
 

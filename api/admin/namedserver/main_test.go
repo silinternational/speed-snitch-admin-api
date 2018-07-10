@@ -149,7 +149,7 @@ func TestUpdateServer(t *testing.T) {
 
 	// Find server in db and check value was changed
 	var updatedServer domain.NamedServer
-	err = db.GetItem(&updatedServer, fmt.Sprintf("%v", createServer.Model.ID))
+	err = db.GetItem(&updatedServer, createServer.Model.ID)
 	if err != nil {
 		t.Error("Got error trying to get updated test record: ", err.Error())
 	}
