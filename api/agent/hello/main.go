@@ -98,6 +98,7 @@ func main() {
 	lambda.Start(Handler)
 }
 
-func getTimeNow() time.Time {
-	return time.Now().UTC()
+func getTimeNow() int64 {
+	utcNow := time.Now().UTC()
+	return utcNow.Unix()
 }
