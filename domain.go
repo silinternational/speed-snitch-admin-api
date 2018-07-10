@@ -105,8 +105,8 @@ type Node struct {
 	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID"`
 	ConfiguredVersionID uint
 	Uptime              int64 `gorm:"default:0"`
-	LastSeen            time.Time
-	FirstSeen           time.Time
+	LastSeen            int64 `gorm:"type:int(11)"`
+	FirstSeen           int64 `gorm:"type:int(11)"`
 	Location            string
 	Coordinates         string
 	Network             string
@@ -128,14 +128,14 @@ type Task struct {
 	NamedServerID        uint
 	SpeedTestNetServerID string
 	ServerHost           string
-	TaskData             TaskData `json:"Data" gorm:"type:text"`
+	TaskData             TaskData `gorm:"type:text"`
 }
 
 type TaskData struct {
-	StringValues map[string]string  `json:"StringValues"`
-	IntValues    map[string]int     `json:"IntValues"`
-	FloatValues  map[string]float64 `json:"FloatValues"`
-	IntSlices    map[string][]int   `json:"IntSlices"`
+	StringValues map[string]string
+	IntValues    map[string]int
+	FloatValues  map[string]float64
+	IntSlices    map[string][]int
 }
 
 func (td TaskData) Value() (driver.Value, error) {
@@ -163,7 +163,7 @@ type User struct {
 	Name  string `gorm:"not null"`
 	Email string `gorm:"not null;unique_index"`
 	Role  string `gorm:"not null"`
-	Tags  []Tag  `json:"Tags" gorm:"many2many:user_tags"`
+	Tags  []Tag  `gorm:"many2many:user_tags"`
 }
 
 type Version struct {
@@ -186,11 +186,11 @@ type SpeedTestNetServer struct {
 type TaskLogSpeedTest struct {
 	gorm.Model
 	Node                 Node
-	NodeID               uint      `gorm:"not null"`
-	Timestamp            time.Time `gorm:"not null"`
-	Upload               float64   `gorm:"not null"`
-	Download             float64   `gorm:"not null"`
-	ServerID             string    `gorm:"not null"`
+	NodeID               uint    `gorm:"not null"`
+	Timestamp            int64   `type:int(11); gorm:"not null"`
+	Upload               float64 `gorm:"not null"`
+	Download             float64 `gorm:"not null"`
+	ServerID             string  `gorm:"not null"`
 	ServerCountry        string
 	ServerCoordinates    string
 	ServerName           string
@@ -205,64 +205,65 @@ type TaskLogSpeedTest struct {
 type TaskLogPingTest struct {
 	gorm.Model
 	Node                 Node
-	NodeID               uint      `gorm:"not null"`
-	Timestamp            time.Time `gorm:"not null"`
-	Latency              float64   `gorm:"not null"`
-	PacketLossPercent    float64   `gorm:"not null"`
-	ServerID             string    `json:"ServerID"`
-	ServerCountry        string    `json:"ServerCountry"`
-	ServerCoordinates    string    `json:"ServerCoordinates"`
-	ServerName           string    `json:"ServerName"`
-	NodeLocation         string    `json:"Location"`
-	NodeCoordinates      string    `json:"Coordinates"`
-	NodeNetwork          string    `json:"Network"`
-	NodeIPAddress        string    `json:"IPAddress"`
-	NodeRunningVersion   Version   `json:"RunningVersion" gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID string    `json:"RunningVersionID"`
+	NodeID               uint    `gorm:"not null"`
+	Timestamp            int64   `gorm:"type:int(11); not null"`
+	Latency              float64 `gorm:"not null"`
+	PacketLossPercent    float64 `gorm:"not null"`
+	ServerID             string
+	ServerCountry        string
+	ServerCoordinates    string
+	ServerName           string
+	NodeLocation         string
+	NodeCoordinates      string
+	NodeNetwork          string
+	NodeIPAddress        string
+	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
+	NodeRunningVersionID string
 }
 
 type TaskLogError struct {
 	gorm.Model
 	Node                 Node
 	NodeID               uint
-	Timestamp            time.Time `gorm:"not null"`
-	ErrorCode            string    `json:"ErrorCode"`
-	ErrorMessage         string    `json:"ErrorMessage"`
-	ServerID             string    `json:"ServerID"`
-	ServerCountry        string    `json:"ServerCountry"`
-	ServerCoordinates    string    `json:"ServerCoordinates"`
-	ServerName           string    `json:"ServerName"`
-	NodeLocation         string    `json:"Location"`
-	NodeCoordinates      string    `json:"Coordinates"`
-	NodeNetwork          string    `json:"Network"`
-	NodeIPAddress        string    `json:"IPAddress"`
-	NodeRunningVersion   Version   `json:"RunningVersion" gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID string    `json:"RunningVersionID"`
+	Timestamp            int64 `gorm:"type:int(11); not null"`
+	ErrorCode            string
+	ErrorMessage         string
+	ServerID             string
+	ServerCountry        string
+	ServerCoordinates    string
+	ServerName           string
+	NodeLocation         string
+	NodeCoordinates      string
+	NodeNetwork          string
+	NodeIPAddress        string
+	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
+	NodeRunningVersionID string
 }
 
 type TaskLogRestart struct {
 	gorm.Model
 	Node      Node
 	NodeID    uint
-	Timestamp time.Time `gorm:"not null"`
+	Timestamp int64 `gorm:"type:int(11); not null"`
 }
 
 type TaskLogNetworkDowntime struct {
 	gorm.Model
 	Node            Node
 	NodeID          uint
-	Timestamp       time.Time `gorm:"not null"`
-	DowntimeStart   string    `json:"DowntimeStart,omitempty"`
-	DowntimeSeconds int64     `json:"DowntimeSeconds,omitempty"`
-	NodeNetwork     string    `json:"Network"`
-	NodeIPAddress   string    `json:"IPAddress"`
+	Timestamp       int64 `gorm:"type:int(11); not null"`
+	DowntimeStart   string
+	DowntimeSeconds int64
+	NodeNetwork     string
+	NodeIPAddress   string
 }
 
 type ReportingSnapshot struct {
 	gorm.Model
 	Node                   Node
 	NodeID                 uint  `gorm:"not null"`
-	Timestamp              int64 `gorm:"not null"`
+	Timestamp              int64 `gorm:"type:int(11); not null"`
+	Interval               string
 	UploadAvg              float64
 	UploadMax              float64
 	UploadMin              float64
@@ -293,11 +294,11 @@ type ReportingSnapshot struct {
  **************************************************************/
 
 type HelloRequest struct {
-	ID      string `json:"ID"`
-	Version string `json:"Version"`
-	Uptime  int64  `json:"Uptime"`
-	OS      string `json:"OS"`
-	Arch    string `json:"Arch"`
+	ID      string
+	Version string
+	Uptime  int64
+	OS      string
+	Arch    string
 }
 
 type NodeConfig struct {
@@ -309,7 +310,7 @@ type NodeConfig struct {
 }
 
 type STNetServerList struct {
-	Country Country              `json:"Country"`
+	Country Country
 	Servers []SpeedTestNetServer `xml:"server"`
 }
 

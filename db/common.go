@@ -6,6 +6,7 @@ import (
 	"github.com/fillup/semver"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"log"
 	"net/http"
 	"os"
 )
@@ -33,6 +34,9 @@ func GetDb() (*gorm.DB, error) {
 		}
 		db = gdb
 		db.SingularTable(true)
+		db.LogMode(false)
+		db.SetLogger(log.New(os.Stdout, "\r\n", 0))
+
 	}
 	return db, nil
 }
@@ -145,6 +149,19 @@ func FindOne(itemObj interface{}) error {
 	if notFound {
 		return gorm.ErrRecordNotFound
 	}
+
+	return gdb.Error
+}
+
+func GetTaskLogForRange(itemObj interface{}, nodeId uint, rangeStart, rangeEnd int64) error {
+	gdb, err := GetDb()
+	if err != nil {
+		return err
+	}
+
+	order := fmt.Sprintf("timestamp asc")
+	where := fmt.Sprintf("node_id = ? AND timestamp between ? AND ?")
+	gdb.Set("gorm:auto_preload", true).Order(order).Where(where, nodeId, rangeStart, rangeEnd).Find(itemObj)
 
 	return gdb.Error
 }
@@ -850,47 +867,19 @@ func GetAuthorizationStatus(req events.APIGatewayProxyRequest, permissionType st
 	return http.StatusInternalServerError, "Invalid permission type requested: " + permissionType
 }
 
-//
-//func GetSnapshotsForRange(interval, nodeMacAddr string, rangeStart, rangeEnd int64) ([]domain.ReportingSnapshot, error) {
-//	tableName := domain.GetDbTableName(domain.TaskLogTable)
-//	taskLogID := fmt.Sprintf("%s-%s", interval, nodeMacAddr)
-//
-//	rangeExpression := expression.KeyBetween(expression.Key("Timestamp"), expression.Value(rangeStart), expression.Value(rangeEnd))
-//	keyExpression := expression.Key("ID").Equal(expression.Value(taskLogID)).And(rangeExpression)
-//
-//	cond, err := expression.NewBuilder().WithKeyCondition(keyExpression).Build()
-//	if err != nil {
-//		return []domain.ReportingSnapshot{}, err
-//	}
-//
-//	input := &dynamodb.QueryInput{
-//		TableName:                 &tableName,
-//		KeyConditionExpression:    cond.KeyCondition(),
-//		ExpressionAttributeNames:  cond.Names(),
-//		ExpressionAttributeValues: cond.Values(),
-//	}
-//
-//	db := GetDb()
-//	var results []domain.ReportingSnapshot
-//	err = db.QueryPages(input,
-//		func(page *dynamodb.QueryOutput, lastPage bool) bool {
-//			var pageResults []domain.ReportingSnapshot
-//			err := dynamodbattribute.UnmarshalListOfMaps(page.Items, &pageResults)
-//			if err != nil {
-//				fmt.Fprintln(os.Stdout, "Unable to unmarshal results into list of ReportingSnapshots")
-//				return false
-//			}
-//
-//			results = append(results, pageResults...)
-//			return !lastPage
-//		})
-//
-//	if err != nil {
-//		return results, err
-//	}
-//
-//	return results, nil
-//}
+func GetSnapshotsForRange(interval string, nodeId uint, rangeStart, rangeEnd int64) ([]domain.ReportingSnapshot, error) {
+	gdb, err := GetDb()
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	var snapshots []domain.ReportingSnapshot
+	where := "`node_id` = ? AND `interval` = ? AND `timestamp` between ? AND ?"
+	gdb.Set("gorm:auto_preload", true).Order("timestamp asc").Where(where, nodeId, interval, rangeStart, rangeEnd).Find(&snapshots)
+
+	return snapshots, gdb.Error
+}
+
 //
 //// Iterate through all users and remove given tag from any that have it
 //func RemoveTagFromUsers(removeTag domain.Tag) error {
