@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -15,46 +16,140 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	macAddr := req.PathParameters["macAddr"]
 	entryType := req.PathParameters["entryType"]
 
-	var taskLogEntry domain.TaskLogEntry
-	err := json.Unmarshal([]byte(req.Body), &taskLogEntry)
+	cleanMac, err := domain.CleanMACAddress(macAddr)
 	if err != nil {
 		return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 	}
 
-	// Set required attributes that are not part of post body
-	taskLogEntry.ID = entryType + "-" + macAddr
-	taskLogEntry.MacAddr = macAddr
-	taskLogEntry.ExpirationTime = taskLogEntry.Timestamp + 31557600 // expire one year after log entry was created
+	node, err := db.GetNodeByMacAddr(cleanMac)
+	if gorm.IsRecordNotFoundError(err) {
+		return domain.ClientError(http.StatusNotFound, err.Error())
+	} else if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
 
-	// Enrich log entry with node metadata details
-	node, err := db.GetNode(macAddr)
-	if err != nil {
-		return domain.ClientError(http.StatusBadRequest, "Invalid Node MacAddr")
-	} else {
+	switch entryType {
+	case domain.TaskTypeSpeedTest:
+		var taskLogEntry domain.TaskLogSpeedTest
+		err := json.Unmarshal([]byte(req.Body), &taskLogEntry)
+		if err != nil {
+			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
+		}
+		taskLogEntry.NodeID = node.Model.ID
 		taskLogEntry.NodeLocation = node.Location
 		taskLogEntry.NodeCoordinates = node.Coordinates
 		taskLogEntry.NodeNetwork = node.Network
 		taskLogEntry.NodeIPAddress = node.IPAddress
 		taskLogEntry.NodeRunningVersion = node.RunningVersion
-	}
 
-	// Enrich speed test log entries with SpeedTestNet server details
-	if entryType == domain.TaskTypeSpeedTest {
-		speedTestServer, err := db.GetSTNetServer(taskLogEntry.ServerCountry, taskLogEntry.ServerID)
-		if err != nil {
-			// Just log it and not error out for now
-			fmt.Fprintf(
-				os.Stdout,
-				"\nUnable to enrich task log entry for node %s. Country: %s, ServerID: %s. Err: %s",
-				macAddr, taskLogEntry.ServerCountry, taskLogEntry.ServerID, err.Error())
-		} else {
-			taskLogEntry.ServerCountry = speedTestServer.Country
-			taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", speedTestServer.Lat, speedTestServer.Lon)
-			taskLogEntry.ServerName = speedTestServer.Name
+		if taskLogEntry.ServerID != "" {
+			id := domain.GetUintFromString(taskLogEntry.ServerID)
+			if id != 0 {
+				var namedServer domain.NamedServer
+				err = db.GetItem(&namedServer, id)
+				if err != nil {
+					// Just log it and not error out for now
+					fmt.Fprintf(
+						os.Stdout,
+						"\nUnable to enrich task log entry for node %s. Country: %s, ServerID: %s. Err: %s",
+						macAddr, taskLogEntry.ServerCountry, taskLogEntry.ServerID, err.Error())
+				} else {
+					taskLogEntry.ServerCountry = namedServer.SpeedTestNetServer.CountryCode
+					taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", namedServer.SpeedTestNetServer.Lat, namedServer.SpeedTestNetServer.Lon)
+					taskLogEntry.ServerName = namedServer.SpeedTestNetServer.Name
+				}
+			}
 		}
-	}
 
-	err = db.PutItem(domain.TaskLogTable, taskLogEntry)
+		err = db.PutItem(&taskLogEntry)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+
+	case domain.TaskTypePing:
+		var taskLogEntry domain.TaskLogPingTest
+		err := json.Unmarshal([]byte(req.Body), &taskLogEntry)
+		if err != nil {
+			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
+		}
+		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeLocation = node.Location
+		taskLogEntry.NodeCoordinates = node.Coordinates
+		taskLogEntry.NodeNetwork = node.Network
+		taskLogEntry.NodeIPAddress = node.IPAddress
+		taskLogEntry.NodeRunningVersionID = node.RunningVersionID
+
+		err = db.PutItem(&taskLogEntry)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+
+	case domain.LogTypeDowntime:
+		var taskLogEntry domain.TaskLogNetworkDowntime
+		err := json.Unmarshal([]byte(req.Body), &taskLogEntry)
+		if err != nil {
+			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
+		}
+		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeNetwork = node.Network
+		taskLogEntry.NodeIPAddress = node.IPAddress
+
+		err = db.PutItem(&taskLogEntry)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+
+	case domain.LogTypeRestart:
+		var taskLogEntry domain.TaskLogRestart
+		err := json.Unmarshal([]byte(req.Body), &taskLogEntry)
+		if err != nil {
+			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
+		}
+		taskLogEntry.NodeID = node.Model.ID
+
+		err = db.PutItem(&taskLogEntry)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+
+	case domain.LogTypeError:
+		var taskLogEntry domain.TaskLogError
+		err := json.Unmarshal([]byte(req.Body), &taskLogEntry)
+		if err != nil {
+			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
+		}
+		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeLocation = node.Location
+		taskLogEntry.NodeCoordinates = node.Coordinates
+		taskLogEntry.NodeNetwork = node.Network
+		taskLogEntry.NodeIPAddress = node.IPAddress
+		taskLogEntry.NodeRunningVersionID = node.RunningVersionID
+
+		if taskLogEntry.ServerID != "" {
+			id := domain.GetUintFromString(taskLogEntry.ServerID)
+			if id != 0 {
+				var namedServer domain.NamedServer
+				err = db.GetItem(&namedServer, id)
+				if err != nil {
+					// Just log it and not error out for now
+					fmt.Fprintf(
+						os.Stdout,
+						"\nUnable to enrich task log entry for node %s. Country: %s, ServerID: %s. Err: %s",
+						macAddr, taskLogEntry.ServerCountry, taskLogEntry.ServerID, err.Error())
+				} else {
+					taskLogEntry.ServerCountry = namedServer.SpeedTestNetServer.CountryCode
+					taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", namedServer.SpeedTestNetServer.Lat, namedServer.SpeedTestNetServer.Lon)
+					taskLogEntry.ServerName = namedServer.SpeedTestNetServer.Name
+				}
+			}
+		}
+
+		err = db.PutItem(&taskLogEntry)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+
+	}
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
