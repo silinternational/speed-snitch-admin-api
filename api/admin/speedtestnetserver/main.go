@@ -14,6 +14,7 @@ const SelfType = domain.DataTypeSTNetServerList
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["ID"]
 	_, countrySpecified := req.PathParameters["countryCode"]
+
 	switch req.HTTPMethod {
 	case "GET":
 		if strings.HasSuffix(req.Path, "/country") {
@@ -65,15 +66,19 @@ func listServersInCountry(req events.APIGatewayProxyRequest) (events.APIGatewayP
 		return domain.ServerError(err)
 	}
 
-	var servers domain.SpeedTestNetServer
+	var servers []domain.SpeedTestNetServer
 
 	gdb.Set("gorm:auto_preload", true).
-		Where("countrycode = ?", countryCode).
+		Where("country_code = ?", countryCode).
 		Order("name asc").
 		Find(&servers)
 
 	if gdb.Error != nil {
 		return domain.ServerError(gdb.Error)
+	}
+
+	if len(servers) == 0 {
+		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
 	return domain.ReturnJsonOrError(servers, err)
