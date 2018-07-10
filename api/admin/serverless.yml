@@ -207,7 +207,7 @@ functions:
                 paths:
                   countryCode: true
         - http:
-            path: speedtestnetserver/country/{countryCode}/{serverID}
+            path: speedtestnetserver/country/{countryCode}/{ID}
             method: GET
             private: true
             request:
