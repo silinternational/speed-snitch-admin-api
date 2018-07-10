@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -17,40 +17,36 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
 
-	node, err := db.GetNode(macAddr)
-	if err != nil {
+	node := domain.Node{
+		MacAddr: macAddr,
+	}
+
+	err = db.FindOne(&node)
+	if err == gorm.ErrRecordNotFound {
+		return domain.ClientError(http.StatusNoContent, "Could not find node for macAddr: "+node.MacAddr)
+	} else if err != nil {
 		return domain.ServerError(err)
 	}
 
-	// If node was not found in db, return 204 No Content
-	if node.Arch == "" {
-		return domain.ClientError(http.StatusNoContent, "")
-	}
-
-	if node.ConfiguredVersion == "" || node.ConfiguredVersion == "latest" {
+	if node.ConfiguredVersion.Number == "" || node.ConfiguredVersion.Number == "latest" {
 		latestVersion, err := db.GetLatestVersion()
 		if err != nil {
 			return domain.ServerError(err)
 		}
-		node.ConfiguredVersion = latestVersion.Number
+		node.ConfiguredVersion = latestVersion
 	}
 
-	downloadUrl := domain.GetUrlForAgentVersion(node.ConfiguredVersion, node.OS, node.Arch)
-
-	newTasks, err := db.GetUpdatedTasks(node.Tasks)
-	if err != nil {
-		return domain.ServerError(fmt.Errorf("Error updating tasks for node %s\n%s", macAddr, err.Error()))
-	}
+	downloadUrl := domain.GetUrlForAgentVersion(node.ConfiguredVersion.Number, node.OS, node.Arch)
 
 	config := domain.NodeConfig{
 		Version: struct {
 			Number string
 			URL    string
 		}{
-			Number: node.ConfiguredVersion,
+			Number: node.ConfiguredVersion.Number,
 			URL:    downloadUrl,
 		},
-		Tasks: newTasks,
+		Tasks: node.Tasks,
 	}
 
 	js, err := json.Marshal(config)
