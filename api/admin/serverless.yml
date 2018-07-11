@@ -68,6 +68,13 @@ functions:
       events:
         - schedule: cron(0 1 * * ? *) # every day at 1 AM UTC
 
+  migrations:
+      handler: bin/migrations
+      events:
+        - schedule:
+            rate: rate(365 days)
+            enabled: true
+
   node:
       handler: bin/node
       events:
