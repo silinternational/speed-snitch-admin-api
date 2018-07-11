@@ -20,27 +20,6 @@ provider:
       - ${env:VPC_SUBNET1}
       - ${env:VPC_SUBNET2}
       - ${env:VPC_SUBNET3}
-# you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
-
-  # you can add statements to the Lambda function's IAM Role here
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "dynamodb:DeleteItem"
-#        - "dynamodb:GetItem"
-#        - "dynamodb:PutItem"
-#        - "dynamodb:Query"
-#        - "dynamodb:Scan"
-#        - "dynamodb:UpdateItem"
-#      Resource:
-#        - Fn::GetAtt:
-#          - dataTable
-#          - Arn
-#        - Fn::GetAtt:
-#          - taskLogTable
-#          - Arn
 
   # you can define service wide environment variables here
   environment:
@@ -230,8 +209,7 @@ functions:
       handler: bin/speedtestnetserverupdate
       events:
         # - schedule: cron(10 * * * ? *)
-
-          # cron(1 0 ? * SUN *) = Sunday at 00:01
+        # cron(1 0 ? * SUN *) = Sunday at 00:01
         - schedule: cron(1 0 ? * SUN *)
 
   user:
@@ -313,6 +291,3 @@ functions:
               parameters:
                 paths:
                   id: true
-
-resources:
-  Resources:
