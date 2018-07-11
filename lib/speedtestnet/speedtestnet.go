@@ -102,40 +102,9 @@ func getSTNetNamedServers() (map[string]domain.NamedServer, error) {
 	return mappedNamedServers, nil
 }
 
-// updateNamedServers updates the NamedServer entries with a new Host value
-//  based on data from the new set of SpeedTestNetServers
-func updateNamedServers(
-	newServers map[string]domain.SpeedTestNetServer,
-	namedServers map[string]domain.NamedServer,
-) {
-
-	for serverID, namedServer := range namedServers {
-		if namedServer.ServerType != domain.ServerTypeSpeedTestNet {
-			continue
-		}
-
-		newServer, exists := newServers[serverID]
-		if !exists {
-			continue
-		}
-
-		// Found a match, so check if it needs to be modified
-		if namedServer.ServerHost != newServer.Host {
-			namedServer.ServerHost = newServer.Host
-			err := db.PutItem(&namedServer)
-			if err != nil {
-				errMsg := fmt.Sprintf(
-					"\nError updating Named Server %s with new host: %s",
-					namedServer.ID,
-					err.Error(),
-				)
-
-				domain.ErrorLogger.Println(errMsg)
-			}
-		}
-	}
-}
-
+// updateCountries expects the keys of the map to be countryCodes.
+//   Upates the database with the new Countries.
+//   Deletes the old countries in the db that don't match a new Country.
 func updateCountries(newCountries map[string]domain.Country) {
 
 	var oldCountries []domain.Country
@@ -146,9 +115,27 @@ func updateCountries(newCountries map[string]domain.Country) {
 	}
 
 	for countryCode, country := range newCountries {
-		err := db.PutItem(&country)
+		dbCountry, err := db.GetCountryByCode(countryCode)
+
+		if err != nil && err != gorm.ErrRecordNotFound {
+			domain.ErrorLogger.Println(
+				"\nCould not save or update Country in db. Country: ",
+				countryCode,
+				"\n",
+				err.Error(),
+			)
+			continue
+		}
+
+		if dbCountry.Name == country.Name {
+			continue
+		}
+
+		dbCountry.Name = country.Name
+
+		err = db.PutItem(&dbCountry)
 		if err != nil {
-			domain.ErrorLogger.Println("\nError updating Country with code ", countryCode)
+			domain.ErrorLogger.Println("\nError updating Country: ", dbCountry.ID, "  ", countryCode)
 		}
 	}
 
@@ -197,14 +184,36 @@ func UpdateSTNetServers(serverURL string) ([]string, error) {
 	staleServerIDs := deleteOutdatedSTNetServers(oldSTNetServers, newServers, namedServers)
 	fmt.Fprintf(os.Stdout, "\nFound %v outdated servers that still have a matching NamedServer", len(staleServerIDs))
 
-	// Where necessary, make the Named Servers' Host values match those in the corresponding new SpeedTestNetServers
-	updateNamedServers(newServers, namedServers)
-
 	updateCountries(newCountries)
 
 	// Save changes to the new set of SpeedTestNetServers
-	for serverID, server := range newServers {
-		err := db.PutItem(&server)
+	for serverID, newServer := range newServers {
+
+		dbServer, err := db.GetSpeedTestNetServerByServerID(serverID)
+
+		if err == gorm.ErrRecordNotFound {
+			err = db.PutItem(&newServer)
+			if err != nil && err != gorm.ErrRecordNotFound {
+				errMsg := fmt.Sprintf("\nCould not save speedtest.net server in db. ServerID: %s\n%s", serverID, err.Error())
+				domain.ErrorLogger.Println(errMsg)
+			}
+			continue
+		}
+
+		if err != nil {
+			errMsg := fmt.Sprintf("\nCould not update speedtest.net server in db. ServerID: %s\n%s", serverID, err.Error())
+			domain.ErrorLogger.Println(errMsg)
+			continue
+		}
+
+		dbServer.Host = newServer.Host
+		dbServer.Country = newServer.Country
+		dbServer.CountryCode = newServer.CountryCode
+		dbServer.Lat = newServer.Lat
+		dbServer.Lon = newServer.Lon
+		dbServer.Name = newServer.Name
+
+		err = db.PutItem(&dbServer)
 		if err != nil && err != gorm.ErrRecordNotFound {
 			domain.ErrorLogger.Println(
 				"\nCould not save or update speedtest.net server in db. ServerID: ",
