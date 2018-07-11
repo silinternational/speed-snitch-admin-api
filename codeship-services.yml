@@ -4,31 +4,18 @@ app:
   encrypted_env_file: aws.env.encrypted
   cached: true
   depends_on:
-    - init-dynamo
+    - db
   environment:
-    AWS_DYNAMODB_ENDPOINT: http://dynamo:8000
+    MYSQL_HOST: db
   working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
 
-dynamo:
-  image: cnadiminti/dynamodb-local
-  command: "-sharedDb -inMemory"
-  hostname: dynamo
-  ports:
-    - "8000"
+db:
+  image: silintl/mariadb:latest
   environment:
-    reschedule: on-node-failure
-
-init-dynamo:
-  image: garland/aws-cli-docker
-  command: "/init-dynamodb.sh"
-  volumes:
-    - "./codeship/init-dynamodb.sh:/init-dynamodb.sh"
-  depends_on:
-    - dynamo
-  environment:
-    AWS_ACCESS_KEY_ID: 0
-    AWS_SECRET_ACCESS_KEY: 0
-    AWS_DEFAULT_REGION: us-east-1
+    MYSQL_ROOT_PASSWORD: pass
+    MYSQL_DATABASE: test
+    MYSQL_USER: user
+    MYSQL_PASSWORD: pass
 
 tracker:
     image: silintl/app-deployment-tracker-ga:latest

@@ -18,9 +18,6 @@ import (
 	"time"
 )
 
-const DataTable = "dataTable"
-const TaskLogTable = "taskLogTable"
-
 const DataTypeNamedServer = "namedserver"
 const DataTypeNode = "node"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
@@ -69,10 +66,10 @@ const ReportingIntervalWeekly = "weekly"
 const ReportingIntervalMonthly = "monthly"
 
 /***************************************************************
- *
- * Define types that will be stored to database using GORM
- *
- **************************************************************/
+/*
+/* Define types that will be stored to database using GORM
+/*
+/**************************************************************/
 
 type Contact struct {
 	gorm.Model
@@ -191,8 +188,8 @@ type TaskLogSpeedTest struct {
 	Node                 Node
 	NodeID               uint    `gorm:"not null"`
 	Timestamp            int64   `gorm:"type:int(11); not null"`
-	Upload               float64 `gorm:"not null"`
-	Download             float64 `gorm:"not null"`
+	Upload               float64 `gorm:"not null;default:0"`
+	Download             float64 `gorm:"not null;default:0"`
 	ServerID             string  `gorm:"not null"`
 	ServerCountry        string
 	ServerCoordinates    string
@@ -210,9 +207,9 @@ type TaskLogPingTest struct {
 	Node                 Node
 	NodeID               uint    `gorm:"not null"`
 	Timestamp            int64   `gorm:"type:int(11); not null"`
-	Latency              float64 `gorm:"not null"`
-	PacketLossPercent    float64 `gorm:"not null"`
-	ServerID             string
+	Latency              float64 `gorm:"not null;default:0"`
+	PacketLossPercent    float64 `gorm:"not null;default:0"`
+	ServerID             string  `gorm:"not null"`
 	ServerCountry        string
 	ServerCoordinates    string
 	ServerName           string
@@ -221,13 +218,13 @@ type TaskLogPingTest struct {
 	NodeNetwork          string
 	NodeIPAddress        string
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID uint
+	NodeRunningVersionID uint    `gorm:"not null"`
 }
 
 type TaskLogError struct {
 	gorm.Model
 	Node                 Node
-	NodeID               uint
+	NodeID               uint  `gorm:"not null"`
 	Timestamp            int64 `gorm:"type:int(11); not null"`
 	ErrorCode            string
 	ErrorMessage         string
@@ -246,17 +243,17 @@ type TaskLogError struct {
 type TaskLogRestart struct {
 	gorm.Model
 	Node      Node
-	NodeID    uint
+	NodeID    uint  `gorm:"not null"`
 	Timestamp int64 `gorm:"type:int(11); not null"`
 }
 
 type TaskLogNetworkDowntime struct {
 	gorm.Model
 	Node            Node
-	NodeID          uint
-	Timestamp       int64 `gorm:"type:int(11); not null"`
-	DowntimeStart   string
-	DowntimeSeconds int64
+	NodeID          uint   `gorm:"not null"`
+	Timestamp       int64  `gorm:"type:int(11); not null;default:0"`
+	DowntimeStart   string `gorm:"not null"`
+	DowntimeSeconds int64  `gorm:"not null;default:0"`
 	NodeNetwork     string
 	NodeIPAddress   string
 }
@@ -264,37 +261,37 @@ type TaskLogNetworkDowntime struct {
 type ReportingSnapshot struct {
 	gorm.Model
 	Node                   Node
-	NodeID                 uint  `gorm:"not null"`
-	Timestamp              int64 `gorm:"type:int(11); not null"`
-	Interval               string
-	UploadAvg              float64
-	UploadMax              float64
-	UploadMin              float64
-	UploadTotal            float64
-	DownloadAvg            float64
-	DownloadMax            float64
-	DownloadMin            float64
-	DownloadTotal          float64
-	LatencyAvg             float64
-	LatencyMax             float64
-	LatencyMin             float64
-	LatencyTotal           float64
-	PacketLossAvg          float64
-	PacketLossMax          float64
-	PacketLossMin          float64
-	PacketLossTotal        float64
-	SpeedTestDataPoints    int64
-	LatencyDataPoints      int64
-	NetworkDowntimeSeconds int64
-	NetworkOutagesCount    int64
-	RestartsCount          int64
+	NodeID                 uint    `gorm:"not null"`
+	Timestamp              int64   `gorm:"type:int(11); not null"`
+	Interval               string  `gorm:"not null"`
+	UploadAvg              float64 `gorm:"not null;default:0"`
+	UploadMax              float64 `gorm:"not null;default:0"`
+	UploadMin              float64 `gorm:"not null;default:0"`
+	UploadTotal            float64 `gorm:"not null;default:0"`
+	DownloadAvg            float64 `gorm:"not null;default:0"`
+	DownloadMax            float64 `gorm:"not null;default:0"`
+	DownloadMin            float64 `gorm:"not null;default:0"`
+	DownloadTotal          float64 `gorm:"not null;default:0"`
+	LatencyAvg             float64 `gorm:"not null;default:0"`
+	LatencyMax             float64 `gorm:"not null;default:0"`
+	LatencyMin             float64 `gorm:"not null;default:0"`
+	LatencyTotal           float64 `gorm:"not null;default:0"`
+	PacketLossAvg          float64 `gorm:"not null;default:0"`
+	PacketLossMax          float64 `gorm:"not null;default:0"`
+	PacketLossMin          float64 `gorm:"not null;default:0"`
+	PacketLossTotal        float64 `gorm:"not null;default:0"`
+	SpeedTestDataPoints    int64   `gorm:"not null;default:0"`
+	LatencyDataPoints      int64   `gorm:"not null;default:0"`
+	NetworkDowntimeSeconds int64   `gorm:"not null;default:0"`
+	NetworkOutagesCount    int64   `gorm:"not null;default:0"`
+	RestartsCount          int64   `gorm:"not null;default:0"`
 }
 
 /***************************************************************
- *
- * Define non-database types
- *
- **************************************************************/
+/*
+/* Define non-database types
+/*
+/**************************************************************/
 
 type HelloRequest struct {
 	ID      string

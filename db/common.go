@@ -256,7 +256,7 @@ func AreTagsValid(tags []domain.Tag) bool {
 // GetLatestVersion iterates through version in db to return only the latest version
 func GetLatestVersion() (domain.Version, error) {
 	var versions []domain.Version
-	err := ListItems(&versions, "name asc")
+	err := ListItems(&versions, "number asc")
 	if err != nil {
 		return domain.Version{}, err
 	}
