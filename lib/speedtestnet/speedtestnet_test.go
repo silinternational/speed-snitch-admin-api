@@ -1,27 +1,69 @@
 package speedtestnet
 
-//
-//import (
-//	"fmt"
-//	"github.com/silinternational/speed-snitch-admin-api"
-//	"github.com/silinternational/speed-snitch-admin-api/db"
-//	"net/http"
-//	"net/http/httptest"
-//	"sort"
-//	"testing"
-//)
-//
-//// See the host values on these ("missing" is missing intentionally)
-//const ServerListResponse = `<?xml version="1.0" encoding="UTF-8"?>
-//<settings>
-//<servers>
-// <server lat="23.2559" lon="-80.9898" name="Miami" country="United States" cc="US" sponsor="STP" id="fine" host="fine.host.com:8080" />
-// <server lat="38.6266" lon="-106.6539" name="Denver" country="United States" cc="US" sponsor="Dial" id="updating" host="outdated.host.com:8080" />
-// <server lat="47.3472" lon="3.3851" name="Paris" country="France" cc="FR" sponsor="Eltele AS" id="good"  host="good.host.com:8080" />
-// <server lat="46.1428" lon="5.1430" name="Lyon" country="France" cc="FR" sponsor="Broadnet" id="no-named-server"  host="no.namedserver.com:8080" />
-//</servers>
-//</settings>`
-//
+import (
+	"fmt"
+	"github.com/jinzhu/gorm"
+	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-admin-api/db"
+	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
+
+// See the host values on these ("missing" is missing intentionally)
+const ServerListResponse = `<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+<servers>
+<server lat="23.2559" lon="-80.9898" name="Miami" country="United States" cc="US" sponsor="STP" id="fine" host="fine.host.com:8080" />
+<server lat="38.6266" lon="-106.6539" name="Denver" country="United States" cc="US" sponsor="Dial" id="updating" host="outdated.host.com:8080" />
+<server lat="47.3472" lon="3.3851" name="Paris" country="France" cc="FR" sponsor="Eltele AS" id="good"  host="good.host.com:8080" />
+<server lat="46.1428" lon="5.1430" name="Lyon" country="France" cc="FR" sponsor="Broadnet" id="no-named-server"  host="no.namedserver.com:8080" />
+</servers>
+</settings>`
+
+func loadServerFixtures(fixtures []domain.SpeedTestNetServer) error {
+	for _, fix := range fixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			return err
+		}
+	}
+
+	expectedLength := len(fixtures)
+
+	err := db.ListItems(&fixtures, "")
+	if err != nil {
+		return fmt.Errorf("Error calling list items: %s", err.Error())
+	}
+	if len(fixtures) != expectedLength {
+		return fmt.Errorf("Wrong number of server fixtures. Expected: %d. But got: %d", expectedLength, len(fixtures))
+	}
+
+	return nil
+}
+
+func loadNamedServerFixtures(fixtures []domain.NamedServer) error {
+	for _, fix := range fixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			return err
+		}
+	}
+
+	expectedLength := len(fixtures)
+
+	err := db.ListItems(&fixtures, "")
+	if err != nil {
+		return fmt.Errorf("Error calling list items: %s", err.Error())
+	}
+	if len(fixtures) != expectedLength {
+		return fmt.Errorf("Wrong number of NamedServer fixtures. Expected: %d. But got: %d.\n%+v", expectedLength, len(fixtures), fixtures)
+	}
+
+	return nil
+}
+
 //func deleteNamedServers(t *testing.T) {
 //	items, err := db.ListNamedServers()
 //	if err != nil {
@@ -114,49 +156,233 @@ package speedtestnet
 //		}
 //	}
 //}
-//
-//func setUpMuxForServerList() *httptest.Server {
-//	mux := http.NewServeMux()
-//
-//	testServer := httptest.NewServer(mux)
-//
-//	respBody := ServerListResponse
-//
-//	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-//		w.Header().Set("Content-type", "test/xml")
-//		w.WriteHeader(200)
-//		fmt.Fprintf(w, respBody)
-//	})
-//
-//	return testServer
-//}
-//
-//func TestGetSTNetServers(t *testing.T) {
-//	testServer := setUpMuxForServerList()
-//
-//	servers, err := GetSTNetServers(testServer.URL)
-//	if err != nil {
-//		t.Errorf(err.Error())
-//		t.Fail()
-//	}
-//
-//	expectedLen := 4
-//	resultsLen := len(servers)
-//	if resultsLen != 4 {
-//		t.Errorf("Wrong number of servers. Expected: %d. Got: %d", expectedLen, resultsLen)
-//		t.Fail()
-//	}
-//
-//	expectedIDs := []string{"fine", "updating", "good", "no-named-server"}
-//	for _, nextID := range expectedIDs {
-//		_, ok := servers[nextID]
-//		if !ok {
-//			t.Errorf("Results servers are missing a key: %s.\n Got: %v", nextID, servers)
-//			return
-//		}
-//	}
-//}
-//
+
+func setUpMuxForServerList() *httptest.Server {
+	mux := http.NewServeMux()
+
+	testServer := httptest.NewServer(mux)
+
+	respBody := ServerListResponse
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-type", "test/xml")
+		w.WriteHeader(200)
+		fmt.Fprintf(w, respBody)
+	})
+
+	return testServer
+}
+
+func TestGetSTNetServers(t *testing.T) {
+	testServer := setUpMuxForServerList()
+
+	servers, countries, err := GetSTNetServers(testServer.URL)
+	if err != nil {
+		t.Errorf(err.Error())
+		t.Fail()
+	}
+
+	if len(servers) != 4 {
+		t.Errorf("Wrong number of servers. Expected: 4. Got: %d", len(servers))
+	}
+
+	expectedIDs := []string{"fine", "updating", "good", "no-named-server"}
+	for _, nextID := range expectedIDs {
+		_, ok := servers[nextID]
+		if !ok {
+			t.Errorf("Results servers are missing a key: %s.\n Got: %v", nextID, servers)
+			return
+		}
+	}
+
+	if len(countries) != 2 {
+		t.Errorf("Wrong number of countries. Expected: 2. Got: %d", len(countries))
+	}
+
+	expectedCodes := []string{"US", "FR"}
+	for _, nextCode := range expectedCodes {
+		_, ok := countries[nextCode]
+		if !ok {
+			t.Errorf("Results countries are missing a key: %s.\n Got: %v", nextCode, servers)
+			return
+		}
+	}
+}
+
+func TestDeleteOutdatedSTNetServers(t *testing.T) {
+	testutils.ResetDb(t)
+
+	goodServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Name:        "New York City, NY",
+		Country:     "United States",
+		CountryCode: "US",
+		Host:        "good.host.ny:8080",
+		ServerID:    "1111",
+	}
+
+	outdatedServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "outdated.host.com:8080",
+		ServerID:    "2222",
+	}
+
+	// Has a NamedServer, so shouldn't get deleted
+	missingServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 3,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "missing.host.com:8080",
+		ServerID:    "3333",
+	}
+
+	deleteMeServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 6,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "deleteme.host.com:8080",
+		ServerID:    "6666",
+	}
+
+	serverFixtures := []domain.SpeedTestNetServer{
+		goodServer,
+		outdatedServer,
+		missingServer,
+		deleteMeServer,
+	}
+
+	err := loadServerFixtures(serverFixtures)
+	if err != nil {
+		t.Errorf("Error loading speedtest.net fixtures.\n%s\n", err.Error())
+		return
+	}
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			Model: gorm.Model{
+				ID: 9,
+			},
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: "custom.server.org:8080",
+		},
+		{
+			Model: gorm.Model{
+				ID: 1,
+			},
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServerID: 1,
+			ServerHost:           goodServer.Host,
+			Name:                 "Good Host NY",
+			Description:          "No update needed",
+		},
+		{
+			Model: gorm.Model{
+				ID: 2,
+			},
+			ServerType:         domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServer: outdatedServer,
+			ServerHost:         "outdated.host.com:8080",
+			Name:               "Outdated Host",
+			Description:        "Needs to get its host updated",
+		},
+		{
+			Model: gorm.Model{
+				ID: 666,
+			},
+			ServerType:         domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServer: missingServer,
+			ServerHost:         missingServer.Host,
+			Name:               "Missing Server",
+			Description:        "Needs to remain as is, since no new server",
+		},
+	}
+
+	err = loadNamedServerFixtures(namedServerFixtures)
+	if err != nil {
+		t.Errorf("Error loading NamedServer fixtures.\n%s\n", err.Error())
+		return
+	}
+	namedServers := map[string]domain.NamedServer{}
+	for _, nSrv := range namedServerFixtures[1:] {
+		namedServers[nSrv.SpeedTestNetServer.ServerID] = nSrv
+	}
+
+	var oldServers []domain.SpeedTestNetServer
+
+	err = db.ListItems(&oldServers, "country_code asc")
+	if err != nil {
+		t.Errorf("Error getting speedtest.net servers from database: %s", err.Error())
+	}
+
+	newServers := map[string]domain.SpeedTestNetServer{
+		goodServer.ServerID: {
+			Name:        goodServer.Name,
+			Country:     goodServer.Country,
+			CountryCode: goodServer.CountryCode,
+			Host:        goodServer.Host,
+			ServerID:    goodServer.ServerID,
+		},
+		outdatedServer.ServerID: {
+			Name:        "Modified Server",
+			Country:     outdatedServer.Country,
+			CountryCode: outdatedServer.CountryCode,
+			Host:        "modified.host.com:8080",
+			ServerID:    outdatedServer.ServerID,
+		},
+		"7777": {
+			Name:        "Brand New Server",
+			Country:     "FR",
+			CountryCode: "France",
+			Host:        "new.host.com:8080",
+			ServerID:    "7777",
+		},
+	}
+
+	expected := []string{missingServer.ServerID}
+	results := deleteOutdatedSTNetServers(oldServers, newServers, namedServers)
+	if len(results) != 1 || results[0] != expected[0] {
+		t.Errorf("Wrong Stale Server IDs. Expected: %v. \n\tBut Got %v.", expected, results)
+	}
+
+	var updatedServers []domain.SpeedTestNetServer
+	err = db.ListItems(&updatedServers, "server_id asc")
+	if err != nil {
+		t.Errorf("Error calling list items to get updated servers: \n%s", err.Error())
+		return
+	}
+
+	expectedLength := len(serverFixtures) - 1
+	if len(updatedServers) != expectedLength {
+		t.Errorf("Wrong number of updated servers. Expected: %d. But got: %d", expectedLength, len(updatedServers))
+		return
+	}
+
+	expectedIDs := []string{goodServer.ServerID, outdatedServer.ServerID, missingServer.ServerID}
+	for index, expected := range expectedIDs {
+		if updatedServers[index].ServerID != expected {
+			updatedIDs := []string{}
+			for _, updatedS := range updatedServers {
+				updatedIDs = append(updatedIDs, updatedS.ServerID)
+			}
+			t.Errorf("Bad updated server IDs. \nExpected: %v\n But Got: %+v", expectedIDs, updatedIDs)
+		}
+	}
+
+}
+
 //func getNamedServerFixtures() []domain.NamedServer {
 //	return []domain.NamedServer{
 //		{
@@ -267,53 +493,7 @@ package speedtestnet
 //
 //	return serverLists
 //}
-//
-//func TestHasAHostChangedFalse(t *testing.T) {
-//	oldList := []domain.SpeedTestNetServer{
-//		{ServerID: "0000", Host: "acme.com:8080"},
-//		{ServerID: "1111", Host: "beta.com:8080"},
-//	}
-//
-//	newList := []domain.SpeedTestNetServer{
-//		{ServerID: "0000", Host: "acme.com:8080"},
-//		{ServerID: "1111", Host: "beta.com:8080"},
-//	}
-//
-//	if hasAHostChanged(oldList, newList) {
-//		t.Errorf("Didn't expect to see that a host had changed, but did.")
-//	}
-//}
-//
-//func TestHasAHostChangedTrue(t *testing.T) {
-//	oldList := []domain.SpeedTestNetServer{
-//		{ServerID: "0000", Host: "acme.com:8080"},
-//		{ServerID: "1111", Host: "beta.com:8080"},
-//	}
-//
-//	newList := []domain.SpeedTestNetServer{
-//		{ServerID: "0000", Host: "acme-new.com:8080"},
-//		{ServerID: "1111", Host: "beta.com:8080"},
-//	}
-//
-//	if !hasAHostChanged(oldList, newList) {
-//		t.Errorf("Expected to see that a host had changed, but didn't.")
-//	}
-//}
-//
-//func TestHasAHostChangedTrueDifferentLengths(t *testing.T) {
-//	oldList := []domain.SpeedTestNetServer{
-//		{ServerID: "1111", Host: "beta.com:8080"},
-//	}
-//
-//	newList := []domain.SpeedTestNetServer{
-//		{ServerID: "0000", Host: "acme.com:8080"},
-//		{ServerID: "1111", Host: "beta.com:8080"},
-//	}
-//
-//	if !hasAHostChanged(oldList, newList) {
-//		t.Errorf("Expected to see that a host had changed, but didn't.")
-//	}
-//}
+
 //
 //func TestRefreshSTNetServersByCountry(t *testing.T) {
 //	deleteSTNetServerLists(t)
@@ -331,7 +511,7 @@ package speedtestnet
 //	}
 //
 //	// This changes the entries in the database
-//	err := refreshSTNetServersByCountry(newServers)
+//	err := refreshSTNetServers(newServers)
 //	if err != nil {
 //		t.Errorf("Unexpected error: %s", err.Error())
 //		return
@@ -416,7 +596,7 @@ package speedtestnet
 //	}
 //
 //	// This changes the entries in the database
-//	err := refreshSTNetServersByCountry(newServers)
+//	err := refreshSTNetServers(newServers)
 //	if err != nil {
 //		t.Errorf("Unexpected error: %s", err.Error())
 //		return
