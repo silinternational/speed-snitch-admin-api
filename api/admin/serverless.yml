@@ -13,45 +13,48 @@ provider:
   timeout: 300
   apiKeys:
     - ${self:custom.namespace}-admin
+  vpc:
+    securityGroupIds:
+      - ${env:VPC_SG_ID}
+    subnetIds:
+      - ${env:VPC_SUBNET1}
+      - ${env:VPC_SUBNET2}
+      - ${env:VPC_SUBNET3}
 # you can overwrite defaults here
 #  stage: dev
 #  region: us-east-1
 
   # you can add statements to the Lambda function's IAM Role here
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "dynamodb:DeleteItem"
-        - "dynamodb:GetItem"
-        - "dynamodb:PutItem"
-        - "dynamodb:Query"
-        - "dynamodb:Scan"
-        - "dynamodb:UpdateItem"
-      Resource:
-        - Fn::GetAtt:
-          - dataTable
-          - Arn
-        - Fn::GetAtt:
-          - taskLogTable
-          - Arn
+#  iamRoleStatements:
+#    - Effect: "Allow"
+#      Action:
+#        - "dynamodb:DeleteItem"
+#        - "dynamodb:GetItem"
+#        - "dynamodb:PutItem"
+#        - "dynamodb:Query"
+#        - "dynamodb:Scan"
+#        - "dynamodb:UpdateItem"
+#      Resource:
+#        - Fn::GetAtt:
+#          - dataTable
+#          - Arn
+#        - Fn::GetAtt:
+#          - taskLogTable
+#          - Arn
 
   # you can define service wide environment variables here
   environment:
     stage: ${self:custom.stage}
     namespace: ${self:custom.namespace}
-    dataTable: ${self:custom.dataTable}
-    taskLogTable: ${self:custom.taskLogTable}
     downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
+    MYSQL_HOST: ${env:MYSQL_HOST}
+    MYSQL_USER: ${env:MYSQL_USER}
+    MYSQL_PASS: ${env:MYSQL_PASS}
+    MYSQL_DB: ${env:MYSQL_DB}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
-  dataTable: ${self:custom.namespace}_data
-  taskLogTable: speedsnitch_${self:custom.stage}_task_log
-  maxRcu: 100
-  minRcu: 5
-  maxWcu: 100
-  minWcu: 5
 
 package:
  exclude:
@@ -110,13 +113,13 @@ functions:
       handler: bin/report
       events:
         - http:
-            path: /report/node/{macAddr}
+            path: /report/node/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
 
   tag:
       handler: bin/tag
@@ -280,204 +283,29 @@ functions:
             private: true
 
         - http:
-            path: /version/{number}
+            path: /version/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  number: true
+                  id: true
         - http:
-            path: /version/{number}
+            path: /version/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  number: true
+                  id: true
         - http:
-            path: /version/{number}
+            path: /version/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  number: true
+                  id: true
 
 resources:
   Resources:
-    dataTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: '${self:custom.dataTable}'
-        AttributeDefinitions:
-          - AttributeName: ID
-            AttributeType: S
-        KeySchema:
-          - AttributeName: ID
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 8
-          WriteCapacityUnits: 8
-    taskLogTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: '${self:custom.taskLogTable}'
-        AttributeDefinitions:
-          - AttributeName: ID
-            AttributeType: S
-          - AttributeName: Timestamp
-            AttributeType: N
-        KeySchema:
-          - AttributeName: ID
-            KeyType: HASH
-          - AttributeName: Timestamp
-            KeyType: RANGE
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-        TimeToLiveSpecification:
-          AttributeName: ExpirationTime
-          Enabled: true
-
-    ScalingRole:
-      Type: "AWS::IAM::Role"
-      Properties:
-       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-         -
-          Effect: Allow
-          Principal:
-           Service:
-            -
-             "application-autoscaling.amazonaws.com"
-          Action:
-           -
-            "sts:AssumeRole"
-       Path: "/"
-       Policies:
-        -
-         PolicyName: root
-         PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-           -
-            Effect: Allow
-            Action:
-             - "dynamodb:DescribeTable"
-             - "dynamodb:UpdateTable"
-             - "cloudwatch:PutMetricAlarm"
-             - "cloudwatch:DescribeAlarms"
-             - "cloudwatch:GetMetricStatistics"
-             - "cloudwatch:SetAlarmState"
-             - "cloudwatch:DeleteAlarms"
-            Resource: "*"
-
-    DataTableReadCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxRcu}
-       MinCapacity: ${self:custom.minRcu}
-       ResourceId: 'table/${self:custom.dataTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:ReadCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    DataTableWriteCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxWcu}
-       MinCapacity: ${self:custom.minWcu}
-       ResourceId: 'table/${self:custom.dataTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:WriteCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    DataTableReadScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: ReadAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: DataTableReadCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBReadCapacityUtilization
-
-    DataTableWriteScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: WriteAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: DataTableWriteCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBWriteCapacityUtilization
-
-    TaskLogTableReadCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxRcu}
-       MinCapacity: ${self:custom.minRcu}
-       ResourceId: 'table/${self:custom.taskLogTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:ReadCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    TaskLogTableWriteCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxWcu}
-       MinCapacity: ${self:custom.minWcu}
-       ResourceId: 'table/${self:custom.taskLogTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:WriteCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    TaskLogTableReadScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: ReadAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: TaskLogTableReadCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBReadCapacityUtilization
-
-    TaskLogTableWriteScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: WriteAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: TaskLogTableWriteCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBWriteCapacityUtilization
