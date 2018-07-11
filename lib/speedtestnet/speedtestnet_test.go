@@ -34,7 +34,7 @@ func loadServerFixtures(fixtures []domain.SpeedTestNetServer) error {
 
 	err := db.ListItems(&fixtures, "")
 	if err != nil {
-		return fmt.Errorf("Error calling list items: %s", err.Error())
+		return fmt.Errorf("Error calling list Servers: %s", err.Error())
 	}
 	if len(fixtures) != expectedLength {
 		return fmt.Errorf("Wrong number of server fixtures. Expected: %d. But got: %d", expectedLength, len(fixtures))
@@ -55,7 +55,7 @@ func loadNamedServerFixtures(fixtures []domain.NamedServer) error {
 
 	err := db.ListItems(&fixtures, "")
 	if err != nil {
-		return fmt.Errorf("Error calling list items: %s", err.Error())
+		return fmt.Errorf("Error calling list NamedServers: %s", err.Error())
 	}
 	if len(fixtures) != expectedLength {
 		return fmt.Errorf("Wrong number of NamedServer fixtures. Expected: %d. But got: %d.\n%+v", expectedLength, len(fixtures), fixtures)
@@ -64,105 +64,36 @@ func loadNamedServerFixtures(fixtures []domain.NamedServer) error {
 	return nil
 }
 
-//func deleteNamedServers(t *testing.T) {
-//	items, err := db.ListNamedServers()
-//	if err != nil {
-//		t.Errorf("Could not get list of NamedServers for test preparations. Got error: %s", err.Error())
-//		t.Fail()
-//	}
-//
-//	for _, nextItem := range items {
-//		success, err := db.DeleteItem(domain.DataTable, domain.DataTypeNamedServer, nextItem.UID)
-//		if err != nil || !success {
-//			t.Errorf("Could not delete NamedServer from db for test preparations.  UID: %s. %s", nextItem.UID, err.Error())
-//			t.Fail()
-//		}
-//	}
-//
-//	items, err = db.ListNamedServers()
-//	if err != nil {
-//		t.Errorf("Could not get list of NamedServers for test preparations. Got error: %s", err.Error())
-//		t.Fail()
-//	}
-//
-//	if len(items) > 0 {
-//		t.Errorf("Did not succeed in deleting NamedServers for test preparations. Got %d items", len(items))
-//		t.Fail()
-//	}
-//}
-//
-//func deleteSTNetServerLists(t *testing.T) {
-//	items, err := db.ListSTNetServerLists()
-//	if err != nil {
-//		t.Errorf("Could not get list of SpeedTestNetServers for test preparations. Got error: %s", err.Error())
-//		t.Fail()
-//	}
-//
-//	for _, nextItem := range items {
-//		success, err := db.DeleteItem(domain.DataTable, domain.DataTypeSTNetServerList, nextItem.Country.Code)
-//		if err != nil || !success {
-//			t.Errorf("Could not delete SpeedTestNetServers from db for test preparations.  Country Code: %s. %s", nextItem.Country.Code, err.Error())
-//			t.Fail()
-//		}
-//	}
-//
-//	items, err = db.ListSTNetServerLists()
-//	if err != nil {
-//		t.Errorf("Could not get list of SpeedTestNetServers for test preparations. Got error: %s", err.Error())
-//		t.Fail()
-//	}
-//
-//	if len(items) > 0 {
-//		t.Errorf("Did not succeed in deleting SpeedTestNetServers for test preparations. Got %d items", len(items))
-//		t.Fail()
-//	}
-//}
-//
-//func loadNamedServers(namedServers []domain.NamedServer, t *testing.T) {
-//	for _, namedServer := range namedServers {
-//		err := db.PutItem(domain.DataTable, &namedServer)
-//		if err != nil {
-//			t.Errorf(
-//				"Could not load NamedServer into db for test preparations. UID: %s. \nError: %s",
-//				namedServer.UID,
-//				err.Error(),
-//			)
-//			t.Fail()
-//		}
-//	}
-//}
-//
-//func loadAndGetNamedServers(t *testing.T) map[string]domain.NamedServer {
-//	loadNamedServers(getNamedServerFixtures(), t)
-//	namedServers, err := getSTNetNamedServers()
-//	if err != nil {
-//		t.Errorf("Could not get NamedServers from the db to prepare for the test.\n%s", err.Error())
-//		t.Fail()
-//	}
-//
-//	return namedServers
-//}
-//
-//func loadSTNetServerLists(stNetServerLists []domain.STNetServerList, t *testing.T) {
-//	for _, server := range stNetServerLists {
-//		err := db.PutItem(domain.DataTable, &server)
-//		if err != nil {
-//			t.Errorf(
-//				"Could not load NamedServer into db for test preparations. ID: %s. \nError: %s",
-//				server.ID,
-//				err.Error(),
-//			)
-//			t.Fail()
-//		}
-//	}
-//}
+func loadCountryFixtures(fixtures []domain.Country) error {
+	for _, fix := range fixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			return err
+		}
+	}
 
-func setUpMuxForServerList() *httptest.Server {
+	expectedLength := len(fixtures)
+
+	err := db.ListItems(&fixtures, "")
+	if err != nil {
+		return fmt.Errorf("Error calling list Countries: %s", err.Error())
+	}
+	if len(fixtures) != expectedLength {
+		return fmt.Errorf("Wrong number of Country fixtures. Expected: %d. But got: %d.\n%+v", expectedLength, len(fixtures), fixtures)
+	}
+
+	return nil
+}
+
+func setUpMuxForServerList(serverListResponse string) *httptest.Server {
 	mux := http.NewServeMux()
 
 	testServer := httptest.NewServer(mux)
 
-	respBody := ServerListResponse
+	if serverListResponse == "" {
+		serverListResponse = ServerListResponse
+	}
+	respBody := serverListResponse
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-type", "test/xml")
@@ -174,7 +105,7 @@ func setUpMuxForServerList() *httptest.Server {
 }
 
 func TestGetSTNetServers(t *testing.T) {
-	testServer := setUpMuxForServerList()
+	testServer := setUpMuxForServerList("")
 
 	servers, countries, err := GetSTNetServers(testServer.URL)
 	if err != nil {
@@ -378,6 +309,7 @@ func TestDeleteOutdatedSTNetServers(t *testing.T) {
 				updatedIDs = append(updatedIDs, updatedS.ServerID)
 			}
 			t.Errorf("Bad updated server IDs. \nExpected: %v\n But Got: %+v", expectedIDs, updatedIDs)
+			return
 		}
 	}
 
@@ -649,36 +581,110 @@ func TestDeleteOutdatedSTNetServers(t *testing.T) {
 //		}
 //	}
 //}
-//
-//func TestGetSTNetNamedServers(t *testing.T) {
-//	deleteNamedServers(t)
-//	loadNamedServers(getNamedServerFixtures(), t)
-//
-//	allResults, err := getSTNetNamedServers()
-//	if err != nil {
-//		t.Errorf("Unexpected error: %s", err.Error())
-//		return
-//	}
-//
-//	results := len(allResults)
-//	expected := 3
-//	if results != expected {
-//		t.Errorf("Bad results. Expected list with %d elements.\n But got %d: %v", expected, results, allResults)
-//		return
-//	}
-//
-//	expectedServerIDs := []string{"updating", "good", "missing"}
-//
-//	for _, expected := range expectedServerIDs {
-//		_, ok := allResults[expected]
-//		if !ok {
-//			t.Errorf("Missing NamedServer entry with UID: %s. \n Got: %v", expected, allResults)
-//			return
-//		}
-//	}
-//
-//}
-//
+
+func TestGetSTNetNamedServers(t *testing.T) {
+	testutils.ResetDb(t)
+
+	goodServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Name:        "New York City, NY",
+		Country:     "United States",
+		CountryCode: "US",
+		Host:        "good.host.ny:8080",
+		ServerID:    "1111",
+	}
+
+	outdatedServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "outdated.host.com:8080",
+		ServerID:    "2222",
+	}
+
+	serverFixtures := []domain.SpeedTestNetServer{
+		goodServer,
+		outdatedServer,
+	}
+
+	err := loadServerFixtures(serverFixtures)
+	if err != nil {
+		t.Errorf("Error loading speedtest.net fixtures.\n%s\n", err.Error())
+		return
+	}
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			Model: gorm.Model{
+				ID: 9,
+			},
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: "custom.server.org:8080",
+		},
+		{
+			Model: gorm.Model{
+				ID: 1,
+			},
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServerID: 1,
+			Name:                 "Good Host NY",
+			Description:          "No update needed",
+		},
+		{
+			Model: gorm.Model{
+				ID: 2,
+			},
+			ServerType:           domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServerID: 2,
+			Name:                 "Outdated Host",
+			Description:          "Needs to get its host updated",
+		},
+	}
+
+	err = loadNamedServerFixtures(namedServerFixtures)
+	if err != nil {
+		t.Errorf("Error loading NamedServer fixtures.\n%s\n", err.Error())
+		return
+	}
+	expectedServers := map[string]domain.NamedServer{}
+	for _, nSrv := range namedServerFixtures[1:] {
+		expectedServers[nSrv.SpeedTestNetServer.ServerID] = nSrv
+	}
+
+	allResults, err := getSTNetNamedServers()
+	if err != nil {
+		t.Errorf("Unexpected error: %s", err.Error())
+		return
+	}
+
+	results := len(allResults)
+	expected := 2
+	if results != expected {
+		t.Errorf("Bad results. Expected list with %d elements.\n But got %d: %v", expected, results, allResults)
+		return
+	}
+
+	expectedIDs := []string{goodServer.ServerID, outdatedServer.ServerID}
+
+	for _, expected := range expectedIDs {
+		_, ok := allResults[expected]
+		if !ok {
+			resultsIDs := []string{}
+			for serverID := range allResults {
+				resultsIDs = append(resultsIDs, serverID)
+			}
+			t.Errorf("Bad NamedServer serverIDs. \nExpected: %v\n But Got: %+v", expectedIDs, resultsIDs)
+			return
+		}
+	}
+
+}
+
 //func TestGetSTNetServersToKeep(t *testing.T) {
 //	deleteNamedServers(t)
 //	deleteSTNetServerLists(t)
@@ -854,3 +860,228 @@ func TestDeleteOutdatedSTNetServers(t *testing.T) {
 //		)
 //	}
 //}
+
+func TestUpdateCountries(t *testing.T) {
+	testutils.ResetDb(t)
+
+	goodCountry := domain.Country{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Code: "GC",
+		Name: "Good Country",
+	}
+
+	deleteMeCountry := domain.Country{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Code: "DC",
+		Name: "Delete Me Country",
+	}
+
+	outdatedCountry := domain.Country{
+		Model: gorm.Model{
+			ID: 3,
+		},
+		Code: "OC",
+		Name: "Outdated Country",
+	}
+
+	fixtures := []domain.Country{goodCountry, deleteMeCountry, outdatedCountry}
+	err := loadCountryFixtures(fixtures)
+	if err != nil {
+		t.Errorf("Error loading Country fixtures.\n%s\n", err.Error())
+		return
+	}
+
+	newCountries := map[string]domain.Country{
+		"GC": goodCountry,
+		"OC": domain.Country{Code: outdatedCountry.Code, Name: "Updated Country"},
+	}
+
+	updateCountries(newCountries)
+
+	var updatedCountries []domain.Country
+	err = db.ListItems(&updatedCountries, "code asc")
+	if err != nil {
+		t.Errorf("Error calling list Countries: %s", err.Error())
+		return
+	}
+
+	if len(updatedCountries) != 2 {
+		t.Errorf("Wrong number of Country entries after update. Expected: 2. But Got: %d.\n%+v",
+			len(updatedCountries),
+			updatedCountries,
+		)
+		return
+	}
+
+	expectedCountries := []domain.Country{goodCountry, newCountries["OC"]}
+
+	for index := range []int{0, 1} {
+		if expectedCountries[index].Code != updatedCountries[index].Code ||
+			expectedCountries[index].Name != updatedCountries[index].Name {
+			t.Errorf("Updated Country results not as expected at index %d. \nExpected: %+v.\n But Got: %+v.",
+				index,
+				expectedCountries[index],
+				updatedCountries[index],
+			)
+			return
+		}
+	}
+}
+
+func TestUpdateSTNetServers(t *testing.T) {
+	testutils.ResetDb(t)
+	serverListResponse := `<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+<servers>
+<server lat="23.2" lon="-80.9" name="Miami" country="United States" cc="US" sponsor="STP" id="7777" host="new.host.com:8080" />
+<server lat="38.6" lon="-106.6" name="New York City, NY" country="United States" cc="US" sponsor="Dial" id="1111" host="good.host.com:8080" />
+</servers>
+</settings>`
+
+	testServer := setUpMuxForServerList(serverListResponse)
+
+	goodServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Name:        "New York City, NY",
+		Country:     "United States",
+		CountryCode: "US",
+		Host:        "good.host.ny:8080",
+		ServerID:    "1111",
+	}
+
+	// Has a NamedServer, so shouldn't get deleted
+	missingServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "missing.host.com:8080",
+		ServerID:    "2222",
+	}
+
+	deleteMeServer := domain.SpeedTestNetServer{
+		Model: gorm.Model{
+			ID: 6,
+		},
+		Name:        "Paris",
+		Country:     "France",
+		CountryCode: "fr",
+		Host:        "deleteme.host.com:8080",
+		ServerID:    "6666",
+	}
+
+	serverFixtures := []domain.SpeedTestNetServer{
+		goodServer,
+		missingServer,
+		deleteMeServer,
+	}
+
+	err := loadServerFixtures(serverFixtures)
+	if err != nil {
+		t.Errorf("Error loading speedtest.net fixtures.\n%s\n", err.Error())
+		return
+	}
+
+	namedServerFixtures := []domain.NamedServer{
+		{
+			Model: gorm.Model{
+				ID: 9,
+			},
+			ServerType: domain.ServerTypeCustom,
+			ServerHost: "custom.server.org:8080",
+		},
+		{
+			Model: gorm.Model{
+				ID: 1,
+			},
+			ServerType:         domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServer: goodServer,
+			ServerHost:         goodServer.Host,
+			Name:               "Good Host NY",
+			Description:        "No update needed",
+		},
+		{
+			Model: gorm.Model{
+				ID: 2,
+			},
+			ServerType:         domain.ServerTypeSpeedTestNet,
+			SpeedTestNetServer: missingServer,
+			ServerHost:         missingServer.Host,
+			Name:               "Missing Server",
+			Description:        "Needs to remain as is, since no new server",
+		},
+	}
+
+	err = loadNamedServerFixtures(namedServerFixtures)
+	if err != nil {
+		t.Errorf("Error loading NamedServer fixtures.\n%s\n", err.Error())
+		return
+	}
+
+	usCountry := domain.Country{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Code: "US",
+		Name: "United States",
+	}
+
+	deleteMeCountry := domain.Country{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Code: "DC",
+		Name: "Delete Me Country",
+	}
+
+	fixtures := []domain.Country{usCountry, deleteMeCountry}
+	err = loadCountryFixtures(fixtures)
+	if err != nil {
+		t.Errorf("Error loading Country fixtures.\n%s\n", err.Error())
+		return
+	}
+
+	staleServerIDs, err := UpdateSTNetServers(testServer.URL)
+	if err != nil {
+		t.Errorf("Unexpected error ... %s", err.Error())
+		return
+	}
+
+	expected := []string{missingServer.ServerID}
+	if len(staleServerIDs) != 1 || staleServerIDs[0] != expected[0] {
+		t.Errorf("Bad staleServerID results. Expected: %v.\n\t But got: %v", expected, staleServerIDs)
+	}
+
+	var updatedServers []domain.SpeedTestNetServer
+	err = db.ListItems(&updatedServers, "server_id asc")
+	if err != nil {
+		t.Errorf("Error calling list items to get updated servers: \n%s", err.Error())
+		return
+	}
+
+	expectedLength := len(serverFixtures)
+	if len(updatedServers) != expectedLength {
+		t.Errorf("Wrong number of updated servers. Expected: %d. But got: %d\n%+v", expectedLength, len(updatedServers), updatedServers)
+		return
+	}
+
+	expectedIDs := []string{goodServer.ServerID, missingServer.ServerID, "7777"}
+	for index, expected := range expectedIDs {
+		if updatedServers[index].ServerID != expected {
+			updatedIDs := []string{}
+			for _, updatedS := range updatedServers {
+				updatedIDs = append(updatedIDs, updatedS.ServerID)
+			}
+			t.Errorf("Bad updated server IDs. \nExpected: %v\n But Got: %+v", expectedIDs, updatedIDs)
+			return
+		}
+	}
+}
