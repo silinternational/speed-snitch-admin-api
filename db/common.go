@@ -119,6 +119,19 @@ func GetSpeedTestNetServerByServerID(serverID string) (domain.SpeedTestNetServer
 	return server, nil
 }
 
+func GetCountryByCode(countryCode string) (domain.Country, error) {
+	country := domain.Country{
+		Code: countryCode,
+	}
+
+	err := FindOne(&country)
+	if err != nil {
+		return domain.Country{}, err
+	}
+
+	return country, nil
+}
+
 func ListItems(itemObj interface{}, order string) error {
 	gdb, err := GetDb()
 	if err != nil {
