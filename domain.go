@@ -8,21 +8,19 @@ import (
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"log"
-	"math/rand"
 	"net/http"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 )
 
 const DataTypeNamedServer = "namedserver"
 const DataTypeNode = "node"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
 const DataTypeSTNetServerList = "stnetserverlist"
-const DataTypeSTNetCountryList = "stnetcountrylist"
+
 const DataTypeTag = "tag"
 const DataTypeUser = "user"
 const DataTypeVersion = "version"
@@ -35,8 +33,6 @@ const ServerTypeSpeedTestNet = "speedTestNet"
 const ServerTypeCustom = "custom"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
-
-const STNetCountryListUID = "1"
 
 const TaskTypePing = "ping"
 const TaskTypeSpeedTest = "speedTest"
@@ -340,16 +336,6 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 	}, nil
 }
 
-// GetTableName returns the env var value of the string passed in or the string itself
-func GetDbTableName(table string) string {
-	envOverride := os.Getenv(table)
-	if envOverride != "" {
-		return envOverride
-	}
-
-	return table
-}
-
 // IsValidMacAddress checks whether the input is ...
 //   - 12 hexacedimal digits OR
 //   - 6 pairs of hexadecimal digits separated by colons and/or hyphens
@@ -422,26 +408,6 @@ const (
 	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
 	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
 )
-
-// GetRandString returns a random string of given length
-func GetRandString(length int) string {
-	var src = rand.NewSource(time.Now().UnixNano())
-	b := make([]byte, length)
-	// A src.Int63() generates 63 random bits, enough for letterIdxMax characters!
-	for i, cache, remain := length-1, src.Int63(), letterIdxMax; i >= 0; {
-		if remain == 0 {
-			cache, remain = src.Int63(), letterIdxMax
-		}
-		if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i--
-		}
-		cache >>= letterIdxBits
-		remain--
-	}
-
-	return string(b)
-}
 
 // This function will search element inside array with any type.
 // Will return boolean and index for matched element.
