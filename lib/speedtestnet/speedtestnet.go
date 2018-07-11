@@ -118,12 +118,8 @@ func updateCountries(newCountries map[string]domain.Country) {
 		dbCountry, err := db.GetCountryByCode(countryCode)
 
 		if err != nil && err != gorm.ErrRecordNotFound {
-			domain.ErrorLogger.Println(
-				"\nCould not save or update Country in db. Country: ",
-				countryCode,
-				"\n",
-				err.Error(),
-			)
+			errMsg := fmt.Sprintf("\nCould not save or update Country in db. Country: %s\n%s", countryCode, err.Error())
+			domain.ErrorLogger.Println(errMsg)
 			continue
 		}
 
@@ -148,7 +144,8 @@ func updateCountries(newCountries map[string]domain.Country) {
 
 		err = db.DeleteItem(&oldCountry, oldCountry.ID)
 		if err != nil {
-			domain.ErrorLogger.Println("\nError deleting Country with ID %v.", oldCountry.ID)
+			errMsg := fmt.Sprintf("\nError deleting Country with ID %v.", oldCountry.ID)
+			domain.ErrorLogger.Println(errMsg)
 		}
 	}
 }
@@ -215,12 +212,8 @@ func UpdateSTNetServers(serverURL string) ([]string, error) {
 
 		err = db.PutItem(&dbServer)
 		if err != nil && err != gorm.ErrRecordNotFound {
-			domain.ErrorLogger.Println(
-				"\nCould not save or update speedtest.net server in db. ServerID: ",
-				serverID,
-				"\n",
-				err.Error(),
-			)
+			errMsg := fmt.Sprintf("\nCould not save or update speedtest.net server in db. ServerID: %s\n%s", serverID, err.Error())
+			domain.ErrorLogger.Println(errMsg)
 		}
 	}
 
