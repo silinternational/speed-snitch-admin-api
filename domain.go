@@ -317,6 +317,7 @@ type STNetServerList struct {
 	Servers []SpeedTestNetServer `xml:"server"`
 }
 
+// This relates to the xml response from the external url where we get the list of speedtest.net servers
 type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
 }
