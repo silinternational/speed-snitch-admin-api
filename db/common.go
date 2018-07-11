@@ -106,6 +106,19 @@ func GetNodeByMacAddr(macAddr string) (domain.Node, error) {
 	return node, nil
 }
 
+func GetSpeedTestNetServerByServerID(serverID string) (domain.SpeedTestNetServer, error) {
+	server := domain.SpeedTestNetServer{
+		ServerID: serverID,
+	}
+
+	err := FindOne(&server)
+	if err != nil {
+		return domain.SpeedTestNetServer{}, err
+	}
+
+	return server, nil
+}
+
 func ListItems(itemObj interface{}, order string) error {
 	gdb, err := GetDb()
 	if err != nil {
