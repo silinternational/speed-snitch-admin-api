@@ -92,7 +92,7 @@ func TestHandler(t *testing.T) {
 
 	// fetch node from db to check for update
 	var node domain.Node
-	err = db.GetItem(&node, node1.Model.ID)
+	err = db.GetItem(&node, node1.ID)
 	if err != nil {
 		t.Error("Unable to get node, err: ", err.Error())
 		return

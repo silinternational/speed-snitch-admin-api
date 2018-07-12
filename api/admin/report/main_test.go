@@ -79,7 +79,7 @@ func TestViewNodeReport(t *testing.T) {
 			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527811200, // 2018-06-01 00:00:00
-			NodeID:      nodeFixtures[0].Model.ID,
+			NodeID:      nodeFixtures[0].ID,
 			UploadAvg:   20,
 			UploadMax:   30,
 			UploadMin:   10,
@@ -96,7 +96,7 @@ func TestViewNodeReport(t *testing.T) {
 			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527897600, // 2018-06-02 00:00:00
-			NodeID:      nodeFixtures[0].Model.ID,
+			NodeID:      nodeFixtures[0].ID,
 			UploadAvg:   20,
 			UploadMax:   30,
 			UploadMin:   10,
@@ -113,7 +113,7 @@ func TestViewNodeReport(t *testing.T) {
 			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527984000, // 2018-06-03 00:00:00
-			NodeID:      nodeFixtures[0].Model.ID,
+			NodeID:      nodeFixtures[0].ID,
 			UploadAvg:   20,
 			UploadMax:   30,
 			UploadMin:   10,

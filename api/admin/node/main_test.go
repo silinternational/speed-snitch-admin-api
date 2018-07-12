@@ -49,7 +49,7 @@ func TestDeleteNode(t *testing.T) {
 
 	// try to find node via db to ensure doesn't exist
 	var find domain.Node
-	err = db.GetItem(&find, create.Model.ID)
+	err = db.GetItem(&find, create.ID)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Error("node still exists after deletion")
 	}
@@ -115,8 +115,8 @@ func TestViewNode(t *testing.T) {
 		t.Error("Unable to unmarshal body into node, err: ", err.Error(), " body: ", resp.Body)
 	}
 
-	if node.Model.ID != create.Model.ID {
-		t.Errorf("Returned node ID (%v) does not match expected node ID (%v)", node.Model.ID, create.Model.ID)
+	if node.ID != create.ID {
+		t.Errorf("Returned node ID (%v) does not match expected node ID (%v)", node.ID, create.ID)
 	}
 
 	// try to view node that doesnt exist
@@ -318,8 +318,8 @@ func TestListNodes(t *testing.T) {
 
 	for _, i := range found {
 		for _, j := range invisibleNodes {
-			if i.Model.ID == j.Model.ID {
-				t.Error("Found node in list nodes result that should not have been present, ID: ", i.Model.ID)
+			if i.ID == j.ID {
+				t.Error("Found node in list nodes result that should not have been present, ID: ", i.ID)
 			}
 		}
 	}
@@ -494,7 +494,7 @@ func TestUpdateNode(t *testing.T) {
 		},
 		Name:                 "example",
 		Description:          "test example",
-		SpeedTestNetServerID: speedTestNetServer.Model.ID,
+		SpeedTestNetServerID: speedTestNetServer.ID,
 	}
 	db.PutItem(&namedServer)
 
@@ -522,7 +522,7 @@ func TestUpdateNode(t *testing.T) {
 		Tasks: []domain.Task{
 			{
 				Type:          domain.TaskTypeSpeedTest,
-				NamedServerID: namedServer.Model.ID,
+				NamedServerID: namedServer.ID,
 				Schedule:      "* * * * *",
 				ServerHost:    namedServer.ServerHost,
 			},
@@ -555,7 +555,7 @@ func TestUpdateNode(t *testing.T) {
 
 	// fetch node from db to check for updates
 	var node domain.Node
-	err = db.GetItem(&node, node1.Model.ID)
+	err = db.GetItem(&node, node1.ID)
 	if err != nil {
 		t.Error("Unable to get node, err: ", err.Error())
 	}

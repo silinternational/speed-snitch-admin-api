@@ -27,9 +27,9 @@ func TestDeleteServer(t *testing.T) {
 	// Now call viewServer again to try to get newly created record
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
-		Path:       fmt.Sprintf("/namedserver/%v", createServer.Model.ID),
+		Path:       fmt.Sprintf("/namedserver/%v", createServer.ID),
 		PathParameters: map[string]string{
-			"id": fmt.Sprintf("%v", createServer.Model.ID),
+			"id": fmt.Sprintf("%v", createServer.ID),
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
@@ -45,9 +45,9 @@ func TestDeleteServer(t *testing.T) {
 	// Make sure record was actually deleted
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       fmt.Sprintf("/namedserver/%v", createServer.Model.ID),
+		Path:       fmt.Sprintf("/namedserver/%v", createServer.ID),
 		PathParameters: map[string]string{
-			"id": fmt.Sprintf("%v", createServer.Model.ID),
+			"id": fmt.Sprintf("%v", createServer.ID),
 		},
 		Headers: map[string]string{
 			"x-user-id": "super_admin",
@@ -135,9 +135,9 @@ func TestUpdateServer(t *testing.T) {
 	// Call API to update record
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "PUT",
-		Path:       fmt.Sprintf("/namedserver/%v", createServer.Model.ID),
+		Path:       fmt.Sprintf("/namedserver/%v", createServer.ID),
 		PathParameters: map[string]string{
-			"id": fmt.Sprintf("%v", createServer.Model.ID),
+			"id": fmt.Sprintf("%v", createServer.ID),
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 		Body:    string(js),
@@ -153,7 +153,7 @@ func TestUpdateServer(t *testing.T) {
 
 	// Find server in db and check value was changed
 	var updatedServer domain.NamedServer
-	err = db.GetItem(&updatedServer, createServer.Model.ID)
+	err = db.GetItem(&updatedServer, createServer.ID)
 	if err != nil {
 		t.Error("Got error trying to get updated test record: ", err.Error())
 	}
@@ -210,9 +210,9 @@ func TestViewServer(t *testing.T) {
 	// Now call viewServer again to try to get newly created record
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       fmt.Sprintf("/namedserver/%v", createServer.Model.ID),
+		Path:       fmt.Sprintf("/namedserver/%v", createServer.ID),
 		PathParameters: map[string]string{
-			"id": fmt.Sprintf("%v", createServer.Model.ID),
+			"id": fmt.Sprintf("%v", createServer.ID),
 		},
 		Headers: map[string]string{
 			"x-user-id": "super_admin",
@@ -224,7 +224,7 @@ func TestViewServer(t *testing.T) {
 		t.Error("Got error trying to view newly created server: ", err.Error())
 	}
 	if resp.StatusCode == http.StatusNotFound {
-		t.Error("Got back error 404 for record that should exist, id: ", createServer.Model.ID, "response: ", resp.Body)
+		t.Error("Got back error 404 for record that should exist, id: ", createServer.ID, "response: ", resp.Body)
 	}
 
 }

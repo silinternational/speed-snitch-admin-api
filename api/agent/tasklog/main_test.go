@@ -48,7 +48,7 @@ func TestHandlerSpeedTest(t *testing.T) {
 			ID: 1,
 		},
 		ServerType:           domain.DataTypeSpeedTestNetServer,
-		SpeedTestNetServerID: speedTestNetServer.Model.ID,
+		SpeedTestNetServerID: speedTestNetServer.ID,
 		Name:                 "test example",
 	}
 	db.PutItem(&namedServer)
@@ -56,19 +56,19 @@ func TestHandlerSpeedTest(t *testing.T) {
 	logsToSend := []domain.TaskLogSpeedTest{
 		{
 			Timestamp: 1531246102,
-			ServerID:  fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:  fmt.Sprintf("%v", namedServer.ID),
 			Upload:    10,
 			Download:  10,
 		},
 		{
 			Timestamp: 1531246103,
-			ServerID:  fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:  fmt.Sprintf("%v", namedServer.ID),
 			Upload:    20,
 			Download:  20,
 		},
 		{
 			Timestamp: 1531246104,
-			ServerID:  fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:  fmt.Sprintf("%v", namedServer.ID),
 			Upload:    30,
 			Download:  30,
 		},
@@ -101,7 +101,7 @@ func TestHandlerSpeedTest(t *testing.T) {
 	}
 
 	var taskLogEntry domain.TaskLogSpeedTest
-	err := db.GetTaskLogForRange(&taskLogEntry, node1.Model.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
+	err := db.GetTaskLogForRange(&taskLogEntry, node1.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
 	if err != nil {
 		t.Error("Unable to retrieve task log for first entry, err: ", err.Error())
 	}
@@ -145,19 +145,19 @@ func TestHandlerPing(t *testing.T) {
 	logsToSend := []domain.TaskLogPingTest{
 		{
 			Timestamp:         1531246102,
-			ServerID:          fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:          fmt.Sprintf("%v", namedServer.ID),
 			Latency:           0.5,
 			PacketLossPercent: 1,
 		},
 		{
 			Timestamp:         1531246103,
-			ServerID:          fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:          fmt.Sprintf("%v", namedServer.ID),
 			Latency:           1,
 			PacketLossPercent: 2,
 		},
 		{
 			Timestamp:         1531246104,
-			ServerID:          fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:          fmt.Sprintf("%v", namedServer.ID),
 			Latency:           3,
 			PacketLossPercent: 0,
 		},
@@ -190,7 +190,7 @@ func TestHandlerPing(t *testing.T) {
 	}
 
 	var taskLogEntry domain.TaskLogPingTest
-	err := db.GetTaskLogForRange(&taskLogEntry, node1.Model.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
+	err := db.GetTaskLogForRange(&taskLogEntry, node1.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
 	if err != nil {
 		t.Error("Unable to retrieve task log for first entry, err: ", err.Error())
 	}
@@ -265,7 +265,7 @@ func TestHandlerDowntime(t *testing.T) {
 	}
 
 	var taskLogEntry domain.TaskLogNetworkDowntime
-	err := db.GetTaskLogForRange(&taskLogEntry, node1.Model.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
+	err := db.GetTaskLogForRange(&taskLogEntry, node1.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
 	if err != nil {
 		t.Error("Unable to retrieve task log for first entry, err: ", err.Error())
 	}
@@ -334,7 +334,7 @@ func TestHandlerRestart(t *testing.T) {
 	}
 
 	var taskLogEntry []domain.TaskLogRestart
-	err := db.GetTaskLogForRange(&taskLogEntry, node1.Model.ID, logsToSend[0].Timestamp, logsToSend[2].Timestamp)
+	err := db.GetTaskLogForRange(&taskLogEntry, node1.ID, logsToSend[0].Timestamp, logsToSend[2].Timestamp)
 	if err != nil {
 		t.Error("Unable to retrieve task log for first entry, err: ", err.Error())
 	}
@@ -380,7 +380,7 @@ func TestHandlerError(t *testing.T) {
 			ID: 1,
 		},
 		ServerType:           domain.DataTypeSpeedTestNetServer,
-		SpeedTestNetServerID: speedTestNetServer.Model.ID,
+		SpeedTestNetServerID: speedTestNetServer.ID,
 		Name:                 "test example",
 	}
 	db.PutItem(&namedServer)
@@ -388,19 +388,19 @@ func TestHandlerError(t *testing.T) {
 	logsToSend := []domain.TaskLogError{
 		{
 			Timestamp:    1531246102,
-			ServerID:     fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:     fmt.Sprintf("%v", namedServer.ID),
 			ErrorCode:    "abc123",
 			ErrorMessage: "error message",
 		},
 		{
 			Timestamp:    1531246103,
-			ServerID:     fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:     fmt.Sprintf("%v", namedServer.ID),
 			ErrorCode:    "abc123",
 			ErrorMessage: "error message",
 		},
 		{
 			Timestamp:    1531246104,
-			ServerID:     fmt.Sprintf("%v", namedServer.Model.ID),
+			ServerID:     fmt.Sprintf("%v", namedServer.ID),
 			ErrorCode:    "abc123",
 			ErrorMessage: "error message",
 		},
@@ -433,7 +433,7 @@ func TestHandlerError(t *testing.T) {
 	}
 
 	var taskLogEntry domain.TaskLogError
-	err := db.GetTaskLogForRange(&taskLogEntry, node1.Model.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
+	err := db.GetTaskLogForRange(&taskLogEntry, node1.ID, logsToSend[0].Timestamp, logsToSend[0].Timestamp)
 	if err != nil {
 		t.Error("Unable to retrieve task log for first entry, err: ", err.Error())
 	}

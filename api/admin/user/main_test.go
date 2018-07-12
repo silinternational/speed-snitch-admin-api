@@ -120,7 +120,7 @@ func TestViewMe(t *testing.T) {
 		t.Error("Unable to unmarshal response into user, err: ", err.Error(), " body: ", resp.Body)
 	}
 
-	if respUser.Model.ID != user1.Model.ID {
+	if respUser.ID != user1.ID {
 		t.Error("Returned user does not match expected user")
 	}
 
@@ -145,7 +145,7 @@ func TestViewMe(t *testing.T) {
 		t.Error("Unable to unmarshal response into user, err: ", err.Error(), " body: ", resp2.Body)
 	}
 
-	if respUser2.Model.ID != user2.Model.ID {
+	if respUser2.ID != user2.ID {
 		t.Errorf("Returned user does not match expected user. Expected: %+v, got %+v", user2, respUser2)
 	}
 

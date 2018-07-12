@@ -35,7 +35,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		if err != nil {
 			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 		}
-		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeID = node.ID
 		taskLogEntry.NodeLocation = node.Location
 		taskLogEntry.NodeCoordinates = node.Coordinates
 		taskLogEntry.NodeNetwork = node.Network
@@ -72,7 +72,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		if err != nil {
 			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 		}
-		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeID = node.ID
 		taskLogEntry.NodeLocation = node.Location
 		taskLogEntry.NodeCoordinates = node.Coordinates
 		taskLogEntry.NodeNetwork = node.Network
@@ -90,7 +90,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		if err != nil {
 			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 		}
-		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeID = node.ID
 		taskLogEntry.NodeNetwork = node.Network
 		taskLogEntry.NodeIPAddress = node.IPAddress
 
@@ -105,7 +105,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		if err != nil {
 			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 		}
-		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeID = node.ID
 
 		err = db.PutItem(&taskLogEntry)
 		if err != nil {
@@ -118,7 +118,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		if err != nil {
 			return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 		}
-		taskLogEntry.NodeID = node.Model.ID
+		taskLogEntry.NodeID = node.ID
 		taskLogEntry.NodeLocation = node.Location
 		taskLogEntry.NodeCoordinates = node.Coordinates
 		taskLogEntry.NodeNetwork = node.Network
