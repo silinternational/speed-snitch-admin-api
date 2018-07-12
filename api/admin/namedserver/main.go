@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 const SelfType = domain.DataTypeNamedServer
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, serverSpecified := req.PathParameters["uid"]
+	_, serverSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteServer(req)
@@ -36,65 +37,31 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	uid := req.PathParameters["uid"]
-
-	success, err := db.DeleteItem(domain.DataTable, SelfType, uid)
-
-	if err != nil {
-		return domain.ServerError(err)
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
-	if !success {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       "",
-		}, nil
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusNoContent,
-		Body:       "",
-	}, nil
+	var server domain.NamedServer
+	err := db.DeleteItem(&server, id)
+	return domain.ReturnJsonOrError(server, err)
 }
 
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	uid := req.PathParameters["uid"]
-
-	server, err := db.GetNamedServer(uid)
-	if err != nil {
-		return domain.ServerError(err)
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
-	if server.Name == "" {
-		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
-	}
-
-	js, err := json.Marshal(server)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	var server domain.NamedServer
+	err := db.GetItem(&server, id)
+	return domain.ReturnJsonOrError(server, err)
 }
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	servers, err := db.ListNamedServers()
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	jsBody, err := domain.GetJSONFromSlice(servers)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       jsBody,
-	}, nil
+	var servers []domain.NamedServer
+	err := db.ListItems(&servers, "name asc")
+	return domain.ReturnJsonOrError(servers, err)
 }
 
 func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -105,19 +72,23 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	var server domain.NamedServer
 
-	// If {uid} was provided in request, get existing record to update
-	if req.PathParameters["uid"] != "" {
-		var err error
-		server, err = db.GetNamedServer(req.PathParameters["uid"])
+	// If ID is provided, load existing server for updating, otherwise we'll create a new one
+	if req.PathParameters["id"] != "" {
+		id := domain.GetResourceIDFromRequest(req)
+		if id == 0 {
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+		}
+
+		err := db.GetItem(&server, id)
 		if err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Body:       "",
+				}, nil
+			}
 			return domain.ServerError(err)
 		}
-	}
-
-	// If UID is not set generate a UID
-	if server.UID == "" {
-		server.UID = domain.GetRandString(4)
-		server.ID = SelfType + "-" + server.UID
 	}
 
 	// Get the NamedServer struct from the request body
@@ -132,25 +103,11 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	server.ServerHost = updatedServer.ServerHost
 	server.Name = updatedServer.Name
 	server.Description = updatedServer.Description
-	server.Country = updatedServer.Country
 	server.Notes = updatedServer.Notes
 
 	// Update the namedserver in the database
-	err = db.PutItem(domain.DataTable, server)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	// Return the updated namedserver as json
-	js, err := json.Marshal(server)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	err = db.PutItem(&server)
+	return domain.ReturnJsonOrError(server, err)
 }
 
 func main() {

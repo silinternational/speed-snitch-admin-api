@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"github.com/jinzhu/gorm"
 	"testing"
 )
 
@@ -68,28 +69,32 @@ func TestCleanMACAddress(t *testing.T) {
 func getTestTags() []Tag {
 	return []Tag{
 		{
-			"tag-000",
-			"000",
-			"",
-			"",
+			Model: gorm.Model{
+				ID: 1,
+			},
+			Name:        "000",
+			Description: "",
 		},
 		{
-			"tag-111",
-			"111",
-			"",
-			"",
+			Model: gorm.Model{
+				ID: 2,
+			},
+			Name:        "111",
+			Description: "",
 		},
 		{
-			"tag-222",
-			"222",
-			"",
-			"",
+			Model: gorm.Model{
+				ID: 3,
+			},
+			Name:        "222",
+			Description: "",
 		},
 		{
-			"tag-333",
-			"333",
-			"",
-			"",
+			Model: gorm.Model{
+				ID: 3,
+			},
+			Name:        "333",
+			Description: "",
 		},
 	}
 }
@@ -145,8 +150,6 @@ func TestDoTagsOverlap(t *testing.T) {
 func TestCanUserUseNode(t *testing.T) {
 	allTags := getTestTags()
 	user := User{
-		ID:    "123",
-		UID:   "AA123",
 		Name:  "Andy Admin",
 		Email: "andy_admin@some.org",
 		Role:  "admin",
@@ -186,7 +189,7 @@ func TestCanUserUseNode(t *testing.T) {
 
 func TestGetJSONFromSliceEmpty(t *testing.T) {
 	testData := []Country{}
-	results, err := GetJSONFromSlice(testData)
+	results, err := GetSliceSafeJSON(testData)
 	expected := "[]"
 
 	if err != nil {
@@ -200,9 +203,17 @@ func TestGetJSONFromSliceEmpty(t *testing.T) {
 }
 
 func TestGetJSONFromSliceGood(t *testing.T) {
-	testData := []Country{{Code: "FR", Name: "France"}}
-	results, err := GetJSONFromSlice(testData)
-	expected := `[{"Code":"FR","Name":"France"}]`
+	testData := []Country{
+		{
+			Model: gorm.Model{
+				ID: 1,
+			},
+			Code: "FR",
+			Name: "France",
+		},
+	}
+	results, err := GetSliceSafeJSON(testData)
+	expected := `[{"ID":1,"CreatedAt":"0001-01-01T00:00:00Z","UpdatedAt":"0001-01-01T00:00:00Z","DeletedAt":null,"Code":"FR","Name":"France"}]`
 
 	if err != nil {
 		t.Errorf("Got an unexpected error: %s", err.Error())
@@ -211,22 +222,5 @@ func TestGetJSONFromSliceGood(t *testing.T) {
 
 	if results != expected {
 		t.Errorf("Bad results. Expected: %s. But got: %s", expected, results)
-	}
-}
-
-func TestGetJSONFromError(t *testing.T) {
-	testData := map[string]string{"A": "aaa"}
-	_, err := GetJSONFromSlice(testData)
-
-	if err == nil {
-		t.Errorf("Expected an error, but didn't get one")
-		return
-	}
-
-	expected := "Expected a slice, but got map[A:aaa]."
-	results := err.Error()
-
-	if expected != results {
-		t.Errorf("Didn't get the expected error message. \nExpected: %s\n But got: %s", expected, results)
 	}
 }

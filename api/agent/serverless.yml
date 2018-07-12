@@ -12,49 +12,24 @@ provider:
   runtime: go1.x
   apiKeys:
     - ${self:custom.namespace}-agent
-# you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
-
-  # you can add statements to the Lambda function's IAM Role here
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "dynamodb:GetItem"
-        - "dynamodb:PutItem"
-        - "dynamodb:Scan"
-        - "dynamodb:UpdateItem"
-      Resource:
-        - Fn::Join:
-          - ":"
-          - - "arn:aws:dynamodb"
-            - Ref: 'AWS::Region'
-            - Ref: 'AWS::AccountId'
-            - Fn::Join:
-              - ""
-              - - "table/"
-                - ${self:custom.dataTable}
-    - Effect: "Allow"
-      Action:
-        - "dynamodb:PutItem"
-      Resource:
-        - Fn::Join:
-          - ":"
-          - - "arn:aws:dynamodb"
-            - Ref: 'AWS::Region'
-            - Ref: 'AWS::AccountId'
-            - Fn::Join:
-              - ""
-              - - "table/"
-                - ${self:custom.taskLogTable}
+  vpc:
+    securityGroupIds:
+      - ${env:VPC_SG_ID}
+    subnetIds:
+      - ${env:VPC_SUBNET1}
+      - ${env:VPC_SUBNET2}
+      - ${env:VPC_SUBNET3}
 
   # you can define service wide environment variables here
   environment:
     stage: ${self:custom.stage}
     namespace: ${self:custom.namespace}
-    dataTable: ${self:custom.dataTable}
-    taskLogTable: ${self:custom.taskLogTable}
     downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
+    MYSQL_HOST: ${env:MYSQL_HOST}
+    MYSQL_USER: ${env:MYSQL_USER}
+    MYSQL_PASS: ${env:MYSQL_PASS}
+    MYSQL_DB: ${env:MYSQL_DB}
+
 
 plugins:
   - serverless-domain-manager
@@ -62,8 +37,6 @@ plugins:
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
-  dataTable: speedsnitch_${self:custom.stage}_data
-  taskLogTable: speedsnitch_${self:custom.stage}_task_log
   customDomain:
     domainName: ${env:CUSTOM_DOMAIN_NAME}
     basePath: ''
