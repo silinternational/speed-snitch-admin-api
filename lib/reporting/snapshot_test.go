@@ -30,31 +30,31 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 
 	speedInRange := []domain.TaskLogSpeedTest{
 		{
-			NodeID:    node1.Model.ID,
+			NodeID:    node1.ID,
 			Timestamp: 1528145185,
 			Upload:    10.0,
 			Download:  10.0,
 		},
 		{
-			NodeID:    node1.Model.ID,
+			NodeID:    node1.ID,
 			Timestamp: 1528145285,
 			Upload:    20.0,
 			Download:  20.0,
 		},
 		{
-			NodeID:    node1.Model.ID,
+			NodeID:    node1.ID,
 			Timestamp: 1528145385,
 			Upload:    30.0,
 			Download:  30.0,
 		},
 		{
-			NodeID:    node1.Model.ID,
+			NodeID:    node1.ID,
 			Timestamp: 1528145485,
 			Upload:    40.0,
 			Download:  40.0,
 		},
 		{
-			NodeID:    node2.Model.ID,
+			NodeID:    node2.ID,
 			Timestamp: 1528145488,
 			Upload:    10.0,
 			Download:  10.0,
@@ -67,26 +67,26 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 
 	pingInRange := []domain.TaskLogPingTest{
 		{
-			NodeID:            node1.Model.ID,
+			NodeID:            node1.ID,
 			Timestamp:         1528145485,
 			Latency:           5,
 			PacketLossPercent: 1,
 		},
 		{
-			NodeID:            node1.Model.ID,
+			NodeID:            node1.ID,
 			Timestamp:         1528145486,
 			Latency:           10,
 			PacketLossPercent: 2,
 		},
 		{
-			NodeID:            node1.Model.ID,
+			NodeID:            node1.ID,
 			Timestamp:         1528145487,
 			Latency:           15,
 			PacketLossPercent: 3,
 		},
 
 		{
-			NodeID:            node2.Model.ID,
+			NodeID:            node2.ID,
 			Timestamp:         1528145489,
 			Latency:           15,
 			PacketLossPercent: 0,
@@ -99,12 +99,12 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 
 	downtimeInRange := []domain.TaskLogNetworkDowntime{
 		{
-			NodeID:          node1.Model.ID,
+			NodeID:          node1.ID,
 			Timestamp:       1528145490,
 			DowntimeSeconds: 240,
 		},
 		{
-			NodeID:          node1.Model.ID,
+			NodeID:          node1.ID,
 			Timestamp:       1528145491,
 			DowntimeSeconds: 60,
 		},
@@ -116,11 +116,11 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 
 	restartsInRange := []domain.TaskLogRestart{
 		{
-			NodeID:    node1.Model.ID,
+			NodeID:    node1.ID,
 			Timestamp: 1528145490,
 		},
 		{
-			NodeID:    node1.Model.ID,
+			NodeID:    node1.ID,
 			Timestamp: 1528145491,
 		},
 	}
@@ -141,7 +141,7 @@ func TestGenerateDailySnapshotsForDate(t *testing.T) {
 
 	// Get snapshot for MacAddr aa:aa:aa:aa:aa:aa and make sure averages are right
 	startTime, endTime, err := GetStartEndTimestampsForDate(date)
-	results, err := db.GetSnapshotsForRange(domain.ReportingIntervalDaily, node1.Model.ID, startTime, endTime)
+	results, err := db.GetSnapshotsForRange(domain.ReportingIntervalDaily, node1.ID, startTime, endTime)
 	if err != nil {
 		t.Error(err)
 	}

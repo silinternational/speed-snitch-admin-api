@@ -17,9 +17,9 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 	}
 
 	for _, n := range nodes {
-		err = GenerateDailySnapshotsForNode(n.Model.ID, date)
+		err = GenerateDailySnapshotsForNode(n.ID, date)
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "%v - error generating snapshot for node %v - %s. err: %s", date, n.Model.ID, n.Nickname, err.Error())
+			fmt.Fprintf(os.Stdout, "%v - error generating snapshot for node %v - %s. err: %s", date, n.ID, n.Nickname, err.Error())
 		}
 	}
 

@@ -249,7 +249,7 @@ func AreTagsValid(tags []domain.Tag) bool {
 
 	ids := []uint{}
 	for _, tag := range tags {
-		ids = append(ids, tag.Model.ID)
+		ids = append(ids, tag.ID)
 	}
 
 	db, err := GetDb()
