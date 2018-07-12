@@ -231,7 +231,7 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 			return user, err
 		}
 	} else if user.UUID != uuid {
-		return domain.User{}, fmt.Errorf("user with email address %s exists, but UUID does not match. Received %s, expect %s", user.Email, uuid, user.UUID)
+		return domain.User{}, fmt.Errorf("user with email address %s exists, but UUID does not match. Received %s", user.Email, uuid)
 	}
 
 	return user, nil

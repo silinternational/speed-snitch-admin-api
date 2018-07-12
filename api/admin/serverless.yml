@@ -10,7 +10,7 @@ service: speedsnitch
 provider:
   name: aws
   runtime: go1.x
-  timeout: 300
+  timeout: 30
   apiKeys:
     - ${self:custom.namespace}-admin
   vpc:
@@ -30,6 +30,10 @@ provider:
     MYSQL_USER: ${env:MYSQL_USER}
     MYSQL_PASS: ${env:MYSQL_PASS}
     MYSQL_DB: ${env:MYSQL_DB}
+
+  stackTags:
+    app: speedsnitch
+    app_env: ${opt:stage, self:provider.stage}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
