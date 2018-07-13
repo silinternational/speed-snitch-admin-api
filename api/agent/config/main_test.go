@@ -65,24 +65,12 @@ func TestGetConfig(t *testing.T) {
 	}
 
 	task1 := domain.Task{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		Type:       domain.TaskTypePing,
 		Schedule:   "*/5 * * * *",
 		ServerHost: "www.google.com",
 	}
 
-	err := db.PutItem(&task1)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
 	node1 := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		MacAddr:           "11:12:13:14:15:16",
 		OS:                "linux",
 		Arch:              "arn",
@@ -93,9 +81,6 @@ func TestGetConfig(t *testing.T) {
 	}
 
 	node2 := domain.Node{
-		Model: gorm.Model{
-			ID: 2,
-		},
 		MacAddr:           "21:22:23:24:25:26",
 		OS:                "linux",
 		Arch:              "arn",
@@ -114,7 +99,7 @@ func TestGetConfig(t *testing.T) {
 		}
 	}
 
-	_, err = listVersionsCheckLength(2)
+	_, err := listVersionsCheckLength(2)
 	if err != nil {
 		t.Error(err.Error())
 		return

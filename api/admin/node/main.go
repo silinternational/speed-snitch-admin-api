@@ -185,7 +185,6 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	node.ConfiguredVersion = updatedNode.ConfiguredVersion
 	node.Tasks = updatedNode.Tasks
 	node.Contacts = updatedNode.Contacts
-	node.Tags = updatedNode.Tags
 	node.Nickname = updatedNode.Nickname
 	node.Notes = updatedNode.Notes
 
@@ -194,8 +193,23 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ReturnJsonOrError(domain.Node{}, err)
 	}
 
+	replaceAssoc := []domain.AssociationReplacement{
+		{
+			Replacement:     updatedNode.Tags,
+			AssociationName: "Tags",
+		},
+		{
+			Replacement:     updatedNode.Contacts,
+			AssociationName: "Contacts",
+		},
+		{
+			Replacement:     updatedNode.Tasks,
+			AssociationName: "Tasks",
+		},
+	}
+
 	// Update the node in the database
-	err = db.PutItem(&node)
+	err = db.PutItemWithAssociations(&node, replaceAssoc)
 	return domain.ReturnJsonOrError(node, err)
 }
 

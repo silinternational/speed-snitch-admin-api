@@ -148,10 +148,16 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	user.Email = updatedUser.Email
 	user.Name = updatedUser.Name
 	user.Role = updatedUser.Role
-	user.Tags = updatedUser.Tags
+
+	replacements := []domain.AssociationReplacement{
+		{
+			Replacement:     updatedUser.Tags,
+			AssociationName: "Tags",
+		},
+	}
 
 	// Update the user in the database
-	err = db.PutItem(&user)
+	err = db.PutItemWithAssociations(&user, replacements)
 	return domain.ReturnJsonOrError(user, err)
 }
 
