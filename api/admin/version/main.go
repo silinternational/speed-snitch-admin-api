@@ -48,7 +48,6 @@ func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 }
 
 func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
 		return domain.ClientError(http.StatusBadRequest, "Invalid ID")

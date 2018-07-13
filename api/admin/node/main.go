@@ -182,9 +182,6 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Apply updates to node
-	node.ConfiguredVersion = updatedNode.ConfiguredVersion
-	node.Tasks = updatedNode.Tasks
-	node.Contacts = updatedNode.Contacts
 	node.Nickname = updatedNode.Nickname
 	node.Notes = updatedNode.Notes
 
@@ -205,6 +202,10 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		{
 			Replacement:     updatedNode.Tasks,
 			AssociationName: "Tasks",
+		},
+		{
+			Replacement:     updatedNode.ConfiguredVersion,
+			AssociationName: "ConfiguredVersion",
 		},
 	}
 
