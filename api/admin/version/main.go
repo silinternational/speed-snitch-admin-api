@@ -13,7 +13,7 @@ import (
 const SelfType = domain.DataTypeVersion
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, versionSpecified := req.PathParameters["number"]
+	_, versionSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteVersion(req)
