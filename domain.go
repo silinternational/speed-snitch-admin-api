@@ -114,7 +114,7 @@ type Node struct {
 
 type Task struct {
 	gorm.Model
-	NodeID               uint   `gorm:"default:null"`
+	NodeID               uint
 	Type                 string `gorm:"type:varchar(32);not null"`
 	Schedule             string `gorm:"not null"`
 	NamedServer          NamedServer

@@ -37,7 +37,7 @@ func GetDb() (*gorm.DB, error) {
 		}
 		db = gdb
 		db.SingularTable(true)
-		db.LogMode(true)
+		db.LogMode(false)
 		db.SetLogger(log.New(os.Stdout, "\r\n", 0))
 
 	}
@@ -319,10 +319,17 @@ func PutItemWithAssociations(itemObj interface{}, replacements []domain.Associat
 
 	tx := gdb.Begin()
 
-	notFound := tx.Save(itemObj).RecordNotFound()
-	if notFound {
+	newGdb := tx.Save(itemObj)
+	if newGdb.RecordNotFound() {
 		tx.Rollback()
 		return gorm.ErrRecordNotFound
+	}
+
+	errs := newGdb.GetErrors()
+	if len(errs) > 0 {
+		tx.Rollback()
+		fmt.Fprintf(os.Stdout, "errors: %+v", errs)
+		return errs[0]
 	}
 
 	for _, replace := range replacements {

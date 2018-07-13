@@ -105,8 +105,15 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	server.Description = updatedServer.Description
 	server.Notes = updatedServer.Notes
 
+	replacement := []domain.AssociationReplacement{
+		{
+			Replacement:     updatedServer.SpeedTestNetServer,
+			AssociationName: "SpeedTestNetServer",
+		},
+	}
+
 	// Update the namedserver in the database
-	err = db.PutItem(&server)
+	err = db.PutItemWithAssociations(&server, replacement)
 	return domain.ReturnJsonOrError(server, err)
 }
 
