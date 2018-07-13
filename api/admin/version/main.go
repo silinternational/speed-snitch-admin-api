@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 const SelfType = domain.DataTypeVersion
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, versionSpecified := req.PathParameters["number"]
+	_, versionSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteVersion(req)
@@ -31,84 +32,40 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 }
 
 func deleteVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+	}
+
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	number := req.PathParameters["number"]
-
-	if number == "" {
-		return domain.ClientError(http.StatusBadRequest, "number param must be specified")
-	}
-
-	success, err := db.DeleteItem(domain.DataTable, SelfType, number)
-
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	if !success {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       "",
-		}, nil
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusNoContent,
-		Body:       "",
-	}, nil
+	var version domain.Version
+	err := db.DeleteItem(&version, id)
+	return domain.ReturnJsonOrError(version, err)
 }
 
 func viewVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	number := req.PathParameters["number"]
-
-	if number == "" {
-		return domain.ClientError(http.StatusBadRequest, "Number param must be specified")
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
-	version, err := db.GetVersion(number)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	if version.Description == "" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-		}, nil
-	}
-
-	js, err := json.Marshal(version)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	var version domain.Version
+	err := db.GetItem(&version, id)
+	return domain.ReturnJsonOrError(version, err)
 }
 
 func listVersions(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	versions, err := db.ListVersions()
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	js, err := json.Marshal(versions)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	var versions []domain.Version
+	err := db.ListItems(&versions, "number asc")
+	return domain.ReturnJsonOrError(versions, err)
 }
 
 func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	// Verify authorization
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
@@ -116,47 +73,45 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 
 	var version domain.Version
 
-	// If {number} was provided in request, get existing record to update
-	if req.PathParameters["number"] != "" {
-		var err error
-		version, err = db.GetVersion(req.PathParameters["number"])
+	// If ID is provided, load existing version for updating, otherwise we'll create a new one
+	if req.PathParameters["id"] != "" {
+		id := domain.GetResourceIDFromRequest(req)
+		if id == 0 {
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+		}
+
+		err := db.GetItem(&version, id)
 		if err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Body:       "",
+				}, nil
+			}
 			return domain.ServerError(err)
 		}
 	}
 
-	// Get the version struct from the request body
+	// Parse request body for updated attributes
 	var updatedVersion domain.Version
 	err := json.Unmarshal([]byte(req.Body), &updatedVersion)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	if version.Number == "" {
-		version.Number = updatedVersion.Number
+	if updatedVersion.Number == "" || updatedVersion.Description == "" {
+		return domain.ClientError(http.StatusUnprocessableEntity, "Number and Description are required")
 	}
 
+	// Update tag record attributes for persistence
+	version.Number = updatedVersion.Number
 	version.Description = updatedVersion.Description
 
-	version.ID = SelfType + "-" + version.Number
-	// Update the version in the database
-	err = db.PutItem(domain.DataTable, version)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	// Return the updated version as json
-	js, err := json.Marshal(version)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	err = db.PutItem(&version)
+	return domain.ReturnJsonOrError(version, err)
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

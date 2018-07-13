@@ -1,513 +1,666 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
+	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
+	"net/http"
 	"testing"
 )
 
-const TestHostForSpeedTestNet = "SpeedTestNetFixtureHost"
-const TestServerIDForSpeedTestNet = "111"
+func TestDeleteNode(t *testing.T) {
+	testutils.ResetDb(t)
 
-func getCustomNamedServerFixtures(uid, serverHost string) []domain.NamedServer {
-	namedServerFixtures := []domain.NamedServer{
-		{
-			ID:         domain.DataTypeNamedServer + "-" + uid,
-			UID:        uid,
-			ServerType: domain.ServerTypeCustom,
-			ServerHost: serverHost,
+	create := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+		Contacts: []domain.Contact{
+			{
+				Name:  "test",
+				Email: "test@test.com",
+			},
 		},
 	}
-	return namedServerFixtures
+	db.PutItem(&create)
+
+	idStr := fmt.Sprintf("%v", create.ID)
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "DELETE",
+		Path:       "/node/" + idStr,
+		PathParameters: map[string]string{
+			"id": idStr,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+
+	resp, err := deleteNode(req)
+	if err != nil {
+		t.Error("Unable to delete node, err: ", err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response deleting node, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	var node domain.Node
+	err = json.Unmarshal([]byte(resp.Body), &node)
+	if err != nil {
+		t.Error("Unable to unmarshal body into node, err: ", err.Error(), " body: ", resp.Body)
+	}
+
+	// try to find node via db to ensure doesn't exist
+	var find domain.Node
+	err = db.GetItem(&find, create.ID)
+	if !gorm.IsRecordNotFoundError(err) {
+		t.Error("node still exists after deletion")
+	}
+
+	// Check if contact was removed too
+	var contact domain.Contact
+	err = db.GetItem(&contact, create.Contacts[0].ID)
+	if !gorm.IsRecordNotFoundError(err) {
+		t.Errorf("contact still exists after node deletion: %+v", contact)
+	}
+
+	// try to delete node that doesnt exist
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "DELETE",
+		Path:       "/node/404",
+		PathParameters: map[string]string{
+			"id": "404",
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+
+	resp, err = deleteNode(req)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Error("Did not get 404 trying to delete node that doesnt exist, got: ", resp.StatusCode)
+	}
 }
 
-func getNodeFixtures() []domain.Node {
-	nodeFixtures := []domain.Node{
-		{
-			ID:      "node-aa:aa:aa:aa:aa:aa",
-			Arch:    "arm",
-			MacAddr: "aa:aa:aa:aa:aa:aa",
-			Tags:    []domain.Tag{getTagFixtures()[0]},
+func TestViewNode(t *testing.T) {
+	testutils.ResetDb(t)
+
+	create := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+		Tags: []domain.Tag{
+			{
+				Name:        "test",
+				Description: "test",
+			},
 		},
 	}
-	return nodeFixtures
-}
 
-func getTagFixtures() []domain.Tag {
+	db.PutItem(&create)
 
-	tagFixtures := []domain.Tag{
-		{ID: "tag-pass", UID: "pass", Name: "Pass"},
-		{ID: "tag-fail", UID: "fail", Name: "Fail"},
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/1",
+		PathParameters: map[string]string{
+			"id": "1",
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
 	}
-	return tagFixtures
+
+	resp, err := viewNode(req)
+	if err != nil {
+		t.Error("Unable to view node, err: ", err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response viewing node, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	var node domain.Node
+	err = json.Unmarshal([]byte(resp.Body), &node)
+	if err != nil {
+		t.Error("Unable to unmarshal body into node, err: ", err.Error(), " body: ", resp.Body)
+	}
+
+	if node.ID != create.ID {
+		t.Errorf("Returned node ID (%v) does not match expected node ID (%v)", node.ID, create.ID)
+	}
+
+	// try to view node that doesnt exist
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/404",
+		PathParameters: map[string]string{
+			"id": "404",
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+
+	resp, err = viewNode(req)
+	if resp.StatusCode != http.StatusNotFound {
+		t.Error("Did not get 404 trying to view node that doesnt exist, got: ", resp.StatusCode)
+	}
+
+	// try to view node not authorized to see due to tags not matching
+	adminUser := domain.User{
+		Role:  domain.UserRoleAdmin,
+		Name:  "not super admin",
+		Email: "admin@test.com",
+		UUID:  "014BF02D-75E6-444B-9231-7BF9C17D42A1",
+		Tags: []domain.Tag{
+			{
+				Name:        "doesnt-match",
+				Description: "tag doesn't match",
+			},
+		},
+	}
+	db.PutItem(&adminUser)
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/1",
+		PathParameters: map[string]string{
+			"id": "1",
+		},
+		Headers: map[string]string{
+			"x-user-uuid": adminUser.UUID,
+			"x-user-mail": adminUser.Email,
+		},
+	}
+
+	resp, err = viewNode(req)
+	if err != nil {
+		t.Error("Received error trying to view node: ", err.Error())
+	}
+	if resp.StatusCode != http.StatusForbidden {
+		t.Error("Did not get 403 trying to view node that user shouldn't be able to view, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
 }
 
-func getUserFixtures() []domain.User {
-	tagFixtures := getTagFixtures()
+func TestListNodes(t *testing.T) {
+	testutils.ResetDb(t)
 
-	userFixtures := []domain.User{
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	db.PutItem(&version)
+
+	tag := domain.Tag{
+		Name:        "test",
+		Description: "test",
+	}
+	err := db.PutItem(&tag)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	visibleNodes := []domain.Node{
 		{
-			ID:     "user-superadmin",
-			UID:    "superadmin",
-			UserID: "super_admin",
-			Role:   domain.UserRoleSuperAdmin,
+			MacAddr:             "aa:aa:aa:aa:aa:aa",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
+			Tags: []domain.Tag{
+				tag,
+			},
 		},
 		{
-			ID:     "user-pass",
-			UID:    "pass",
-			UserID: "pass_test",
-			Role:   domain.UserRoleAdmin,
-			Tags:   []domain.Tag{tagFixtures[0]},
+			MacAddr:             "bb:bb:bb:bb:bb:bb",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
+			Tags: []domain.Tag{
+				tag,
+			},
 		},
 		{
-			ID:     "user-fail",
-			UID:    "fail",
-			UserID: "fail_test",
-			Role:   domain.UserRoleAdmin,
-			Tags:   []domain.Tag{tagFixtures[1]},
+			MacAddr:             "cc:cc:cc:cc:cc:cc",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
+			Tags: []domain.Tag{
+				tag,
+			},
 		},
 	}
 
-	return userFixtures
-}
-
-func areStringMapsEqual(expected, results map[string]string) bool {
-	if len(expected) != len(results) {
-		return false
+	invisibleNodes := []domain.Node{
+		{
+			MacAddr:             "dd:dd:dd:dd:dd:dd",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
+			Tags: []domain.Tag{
+				{
+					Name:        "hide1",
+					Description: "hide1",
+				},
+			},
+		},
+		{
+			MacAddr:             "ee:ee:ee:ee:ee:ee",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
+			Tags: []domain.Tag{
+				{
+					Name:        "hide2",
+					Description: "hide2",
+				},
+			},
+		},
 	}
 
-	for key, expectedValue := range expected {
-		resultValue, ok := results[key]
-		if !ok {
-			return false
-		}
-		if resultValue != expectedValue {
-			return false
-		}
-	}
-
-	return true
-}
-
-func areIntMapsEqual(expected, results map[string]int) bool {
-	if len(expected) != len(results) {
-		return false
-	}
-
-	for key, expectedValue := range expected {
-		resultValue, ok := results[key]
-		if !ok {
-			return false
-		}
-		if resultValue != expectedValue {
-			return false
+	for _, i := range visibleNodes {
+		err := db.PutItem(&i)
+		if err != nil {
+			t.Error(err)
+			return
 		}
 	}
 
-	return true
-}
-
-func areIntSliceMapsEqual(expected, results map[string][]int) bool {
-	if len(expected) != len(results) {
-		return false
+	for _, i := range invisibleNodes {
+		err := db.PutItem(&i)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
-	for key, expectedValue := range expected {
-		resultValue, ok := results[key]
-		if !ok {
-			return false
-		}
-		if len(resultValue) != len(expectedValue) {
-			return false
-		}
-		for index, nextExpected := range expectedValue {
-			if resultValue[index] != nextExpected {
-				return false
+	adminUser := domain.User{
+		Role:  domain.UserRoleAdmin,
+		Name:  "not super admin",
+		Email: "admin@test.com",
+		UUID:  "014BF02D-75E6-444B-9231-7BF9C17D42A1",
+		Tags: []domain.Tag{
+			tag,
+		},
+	}
+	err = db.PutItem(&adminUser)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node",
+		Headers: map[string]string{
+			"x-user-uuid": adminUser.UUID,
+			"x-user-mail": adminUser.Email,
+		},
+	}
+
+	resp, err := listNodes(req)
+	if err != nil {
+		t.Error("Received error trying to view node: ", err.Error())
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Error("Did not get 200 trying to list nodes, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	var found []domain.Node
+	err = json.Unmarshal([]byte(resp.Body), &found)
+	if err != nil {
+		t.Error("Unable to unmarshal list of nodes, err: ", err.Error(), " body: ", resp.Body)
+	}
+
+	if len(found) != len(visibleNodes) {
+		t.Error("Did not get back correct number of nodes, expected: ", len(visibleNodes), " got: ", len(found))
+	}
+
+	for _, i := range found {
+		for _, j := range invisibleNodes {
+			if i.ID == j.ID {
+				t.Error("Found node in list nodes result that should not have been present, ID: ", i.ID)
 			}
 		}
 	}
 
-	return true
 }
 
-func areFloatMapsEqual(expected, results map[string]float64) bool {
-	if len(expected) != len(results) {
-		return false
+func TestListNodeTags(t *testing.T) {
+	testutils.ResetDb(t)
+
+	version := domain.Version{
+		Number: "1.0.0",
 	}
-
-	for key, expectedValue := range expected {
-		resultValue, ok := results[key]
-		if !ok {
-			return false
-		}
-		if resultValue != expectedValue {
-			return false
-		}
-	}
-
-	return true
-}
-
-func TestGetSpeedTestStringValuesWithoutNamedServer(t *testing.T) {
-	task := domain.Task{}
-	task.NamedServer = domain.NamedServer{}
-
-	results, err := getSpeedTestStringValues(task)
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: domain.DefaultSpeedTestNetServerHost,
-		ServerIDKey:   domain.DefaultSpeedTestNetServerID,
-	}
-
+	err := db.PutItem(&version)
 	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
+		t.Error(err)
 	}
 
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-}
-
-func TestGetSpeedTestStringValuesWithNamedServerCustomServer(t *testing.T) {
-	serverHost := "SpeedTestHost"
-	namedServerUID := "nst21"
-
-	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
-	db.LoadNamedServerFixtures(namedServerFixtures, t)
-
-	task := domain.Task{}
-	task.NamedServer = namedServerFixtures[0]
-
-	results, err := getSpeedTestStringValues(task)
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: serverHost,
-		ServerIDKey:   namedServerUID,
+	tag1 := domain.Tag{
+		Name:        "test1",
+		Description: "test1",
 	}
 
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
+	tag2 := domain.Tag{
+		Name:        "test2",
+		Description: "test2",
 	}
 
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
+	tag3 := domain.Tag{
+		Name:        "test3",
+		Description: "test3",
 	}
-}
 
-func TestGetSpeedTestStringValuesWithSpeedTestServer(t *testing.T) {
-	serverID := "111"
-	serverHost := "SpeedTestHost"
-	country := domain.Country{Code: "US", Name: "United States"}
+	tag4 := domain.Tag{
+		Name:        "test4",
+		Description: "test4",
+	}
 
-	sTNetServerListFixtures := []domain.STNetServerList{
-		{
-			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
-			Country: country,
-			Servers: []domain.SpeedTestNetServer{
-				domain.SpeedTestNetServer{Host: serverHost, ServerID: serverID},
-			},
+	for _, nextTag := range []*domain.Tag{&tag1, &tag2, &tag3, &tag4} {
+		err = db.PutItem(nextTag)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	node1 := domain.Node{
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		Tags: []domain.Tag{
+			tag1,
+			tag2,
+			tag3,
 		},
 	}
 
-	db.LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
-
-	namedServerUID := "nst22"
-
-	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
-	namedServerFixtures[0].ServerType = domain.ServerTypeSpeedTestNet
-	namedServerFixtures[0].Country = country
-	namedServerFixtures[0].SpeedTestNetServerID = serverID
-
-	db.LoadNamedServerFixtures(namedServerFixtures, t)
-
-	task := domain.Task{}
-	task.NamedServer = namedServerFixtures[0]
-
-	results, err := getSpeedTestStringValues(task)
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: serverHost,
-		ServerIDKey:   serverID,
-	}
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-}
-
-func TestUpdateTaskSpeedTestWithoutNamedServer(t *testing.T) {
-	task := domain.Task{}
-	task.NamedServer = domain.NamedServer{}
-
-	resultsTask, err := updateTaskSpeedTest(task)
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	results := resultsTask.Data.StringValues
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: domain.DefaultSpeedTestNetServerHost,
-		ServerIDKey:   domain.DefaultSpeedTestNetServerID,
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{TimeOutKey: DefaultSpeedTestTimeoutInSeconds}
-
-	if !areIntMapsEqual(expectedInts, resultsInts) {
-		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
-	}
-
-	resultsFloats := resultsTask.Data.FloatValues
-	expectedFloats := map[string]float64{MaxSecondsKey: DefaultSpeedTestMaxSeconds}
-
-	if !areFloatMapsEqual(expectedFloats, resultsFloats) {
-		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedFloats, resultsFloats)
-	}
-
-	resultsIntSlices := resultsTask.Data.IntSlices
-	expectedIntSlices := map[string][]int{
-		DownloadSizesKey: GetDefaultSpeedTestDownloadSizes(),
-		UploadSizesKey:   GetDefaultSpeedTestUploadSizes(),
-	}
-
-	if !areIntSliceMapsEqual(expectedIntSlices, resultsIntSlices) {
-		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedIntSlices, resultsIntSlices)
-	}
-}
-
-func TestUpdateTaskSpeedTestWithNamedServerCustomServer(t *testing.T) {
-	serverHost := "SpeedTestHost"
-	namedServerUID := "nst23"
-
-	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
-	db.LoadNamedServerFixtures(namedServerFixtures, t)
-
-	task := domain.Task{}
-	task.NamedServer = namedServerFixtures[0]
-
-	resultsTask, err := updateTaskSpeedTest(task)
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	results := resultsTask.Data.StringValues
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: serverHost,
-		ServerIDKey:   namedServerUID,
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{TimeOutKey: DefaultSpeedTestTimeoutInSeconds}
-
-	if !areIntMapsEqual(expectedInts, resultsInts) {
-		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
-	}
-
-	resultsFloats := resultsTask.Data.FloatValues
-	expectedFloats := map[string]float64{MaxSecondsKey: DefaultSpeedTestMaxSeconds}
-
-	if !areFloatMapsEqual(expectedFloats, resultsFloats) {
-		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedFloats, resultsFloats)
-	}
-
-	resultsIntSlices := resultsTask.Data.IntSlices
-	expectedIntSlices := map[string][]int{
-		DownloadSizesKey: GetDefaultSpeedTestDownloadSizes(),
-		UploadSizesKey:   GetDefaultSpeedTestUploadSizes(),
-	}
-
-	if !areIntSliceMapsEqual(expectedIntSlices, resultsIntSlices) {
-		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedIntSlices, resultsIntSlices)
-	}
-}
-
-func TestUpdateTaskSpeedTestWithSpeedTestNetServer(t *testing.T) {
-	serverID := "111"
-	serverHost := "SpeedTestHost"
-	country := domain.Country{Code: "US", Name: "United States"}
-
-	sTNetServerListFixtures := []domain.STNetServerList{
-		{
-			ID:      domain.DataTypeSTNetServerList + "-" + country.Code,
-			Country: country,
-			Servers: []domain.SpeedTestNetServer{
-				domain.SpeedTestNetServer{Host: serverHost, ServerID: serverID},
-			},
+	node2 := domain.Node{
+		MacAddr:             "bb:bb:bb:bb:bb:bb",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		Tags: []domain.Tag{
+			tag1,
+			tag4,
 		},
 	}
 
-	db.LoadSTNetServerListFixtures(sTNetServerListFixtures, t)
-
-	namedServerUID := "nst23"
-
-	namedServerFixtures := getCustomNamedServerFixtures(namedServerUID, serverHost)
-	namedServerFixtures[0].ServerType = domain.ServerTypeSpeedTestNet
-	namedServerFixtures[0].Country = country
-	namedServerFixtures[0].SpeedTestNetServerID = serverID
-
-	db.LoadNamedServerFixtures(namedServerFixtures, t)
-
-	task := domain.Task{}
-	task.NamedServer = namedServerFixtures[0]
-
-	resultsTask, err := updateTaskSpeedTest(task)
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
+	for _, nextNode := range []*domain.Node{&node1, &node2} {
+		err = db.PutItem(&nextNode)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
-	results := resultsTask.Data.StringValues
-	expected := map[string]string{
-		TestTypeKey:   domain.TestConfigSpeedTest,
-		ServerHostKey: serverHost,
-		ServerIDKey:   serverID,
-	}
-
-	if !areStringMapsEqual(expected, results) {
-		t.Errorf("Bad StringValues.\nExpected: %v.\n But got: %v", expected, results)
-	}
-	resultsInts := resultsTask.Data.IntValues
-	expectedInts := map[string]int{TimeOutKey: DefaultSpeedTestTimeoutInSeconds}
-
-	if !areIntMapsEqual(expectedInts, resultsInts) {
-		t.Errorf("Bad IntValues.\nExpected: %v.\n But got: %v", expectedInts, resultsInts)
-	}
-
-	resultsFloats := resultsTask.Data.FloatValues
-	expectedFloats := map[string]float64{MaxSecondsKey: DefaultSpeedTestMaxSeconds}
-
-	if !areFloatMapsEqual(expectedFloats, resultsFloats) {
-		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedFloats, resultsFloats)
-	}
-
-	resultsIntSlices := resultsTask.Data.IntSlices
-	expectedIntSlices := map[string][]int{
-		DownloadSizesKey: GetDefaultSpeedTestDownloadSizes(),
-		UploadSizesKey:   GetDefaultSpeedTestUploadSizes(),
-	}
-
-	if !areIntSliceMapsEqual(expectedIntSlices, resultsIntSlices) {
-		t.Errorf("Bad FloatValues.\nExpected: %v.\n But got: %v", expectedIntSlices, resultsIntSlices)
-	}
-}
-
-func TestUpdateNodeTasksWithPingWithoutNamedServer(t *testing.T) {
-	task := domain.Task{}
-	task.Type = domain.TaskTypePing
-	task.NamedServer = domain.NamedServer{
-		UID:        "test",
-		Name:       "test",
-		ServerHost: "www.google.com",
-	}
-	node := domain.Node{}
-
-	node.Tasks = []domain.Task{task}
-
-	resultsNode, err := updateNodeTasks(node)
-
-	if err != nil {
-		t.Errorf("Got an unexpected error: %s", err.Error())
-		return
-	}
-
-	if resultsNode.Tasks[0].NamedServer.ServerHost != task.NamedServer.ServerHost {
-		t.Errorf("Node was not updated properly with ping task")
-		t.Fail()
-	}
-}
-
-func TestNodeAuthorization(t *testing.T) {
-	db.FlushTables(t)
-	db.LoadTagFixtures(getTagFixtures(), t)
-
-	users := getUserFixtures()
-	db.LoadUserFixtures(users, t)
-
-	nodeFixtures := getNodeFixtures()
-	db.LoadNodeFixtures(nodeFixtures, t)
-
-	// Superadmin user
+	node1Id := fmt.Sprintf("%v", node1.ID)
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/node/aa:aa:aa:aa:aa:aa",
+		Path:       "/node/" + node1Id + "/tag",
 		PathParameters: map[string]string{
-			"macAddr": "aa:aa:aa:aa:aa:aa",
+			"id": node1Id,
 		},
-		Headers: map[string]string{
-			"x-user-id": "super_admin",
-		},
+		Headers: testutils.GetSuperAdminReqHeader(),
 	}
 
-	response, err := viewNode(req)
+	resp, err := listNodeTags(req)
 	if err != nil {
-		t.Error(err)
-		t.Fail()
-	}
-	if response.StatusCode != 200 {
-		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		t.Error("Unable to list node tags, err: ", err.Error())
 	}
 
-	// Authorized admin user
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response listing node tags, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	var node1Tags []domain.Tag
+	err = json.Unmarshal([]byte(resp.Body), &node1Tags)
+	if err != nil {
+		t.Error("Unable to unmarshal tag list. err: ", err.Error(), " body: ", resp.Body)
+	}
+
+	if len(node1Tags) != len(node1.Tags) {
+		t.Error("Did not get back right numer of tags for node 1")
+	}
+
+	node2Id := fmt.Sprintf("%v", node2.ID)
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/node/aa:aa:aa:aa:aa:aa",
+		Path:       "/node/" + node2Id + "/tag",
 		PathParameters: map[string]string{
-			"macAddr": "aa:aa:aa:aa:aa:aa",
+			"id": node2Id,
 		},
-		Headers: map[string]string{
-			"x-user-id": "pass_test",
-		},
+		Headers: testutils.GetSuperAdminReqHeader(),
 	}
 
-	response, err = viewNode(req)
+	resp, err = listNodeTags(req)
+	if err != nil {
+		t.Error("Unable to list node2 tags, err: ", err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response listing node2 tags, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	var node2Tags []domain.Tag
+	err = json.Unmarshal([]byte(resp.Body), &node2Tags)
+	if err != nil {
+		t.Error("Unable to unmarshal tag list. err: ", err.Error(), " body: ", resp.Body)
+	}
+
+	if len(node2Tags) != len(node2.Tags) {
+		t.Error("Did not get back right numer of tags for node 2")
+	}
+}
+
+func TestUpdateNode(t *testing.T) {
+	testutils.ResetDb(t)
+
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	err := db.PutItem(&version)
 	if err != nil {
 		t.Error(err)
-		t.Fail()
-	}
-	if response.StatusCode != 200 {
-		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
 	}
 
-	// Unauthorized admin user should be rejected
-	req = events.APIGatewayProxyRequest{
-		HTTPMethod: "GET",
-		Path:       "/report/node/aa:aa:aa:aa:aa:aa",
-		PathParameters: map[string]string{
-			"macAddr": "aa:aa:aa:aa:aa:aa",
-		},
-		Headers: map[string]string{
-			"x-user-id": "fail_test",
-		},
+	tag1 := domain.Tag{
+		Name:        "test1",
+		Description: "test1",
 	}
 
-	response, err = viewNode(req)
+	tag2 := domain.Tag{
+		Name:        "test2",
+		Description: "test2",
+	}
+
+	tag3 := domain.Tag{
+		Name:        "test3",
+		Description: "test3",
+	}
+
+	for _, nextTag := range []*domain.Tag{&tag1, &tag2, &tag3} {
+		err = db.PutItem(nextTag)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+	node1 := domain.Node{
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		Tags: []domain.Tag{
+			tag1,
+			tag2,
+			tag3,
+		},
+	}
+	err = db.PutItem(&node1)
 	if err != nil {
 		t.Error(err)
-		t.Fail()
-	}
-	if response.StatusCode != 403 {
-		t.Error("Wrong status code returned, expected 403, got", response.StatusCode, response.Body)
 	}
 
+	speedTestNetServer := domain.SpeedTestNetServer{
+		Name:        "test stn server",
+		ServerID:    "1234",
+		Country:     "United States",
+		CountryCode: "US",
+		Host:        "example.com:8080",
+	}
+	err = db.PutItem(&speedTestNetServer)
+	if err != nil {
+		t.Error(err)
+	}
+
+	namedServer := domain.NamedServer{
+		Name:                 "example",
+		Description:          "test example",
+		SpeedTestNetServerID: speedTestNetServer.ID,
+	}
+	err = db.PutItem(&namedServer)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// remove one tag, add tasks, nickname, and notes
+	update1 := domain.Node{
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		Tags: []domain.Tag{
+			tag1,
+			tag2,
+		},
+		Nickname: "updated-test",
+		Notes:    "created this node via testing",
+		Tasks: []domain.Task{
+			{
+				Type:          domain.TaskTypeSpeedTest,
+				NamedServerID: namedServer.ID,
+				Schedule:      "* * * * *",
+				ServerHost:    namedServer.ServerHost,
+			},
+		},
+	}
+
+	js, err := json.Marshal(update1)
+	if err != nil {
+		t.Error("Unable to marshal update into json for api call, err: ", err.Error())
+	}
+
+	node1Id := fmt.Sprintf("%v", node1.ID)
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "PUT",
+		Path:       "/node/" + node1Id,
+		PathParameters: map[string]string{
+			"id": node1Id,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		Body:    string(js),
+	}
+
+	resp, err := updateNode(req)
+	if err != nil {
+		t.Error("Unable to update node, err: ", err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response updating node, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	// fetch node from db to check for updates
+	var node domain.Node
+	err = db.GetItem(&node, node1.ID)
+	if err != nil {
+		t.Error("Unable to get node, err: ", err.Error())
+	}
+
+	if node.Nickname != update1.Nickname {
+		t.Error("Nickname was not updated")
+	}
+
+	if len(node.Tags) != len(update1.Tags) {
+		t.Error("Tags not updated as expected")
+	}
+}
+
+func TestRemoveAssociations(t *testing.T) {
+	testutils.ResetDb(t)
+
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	db.PutItem(&version)
+
+	node1 := domain.Node{
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		Nickname:            "before",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		Tags: []domain.Tag{
+			{
+				Name:        "test1",
+				Description: "test1",
+			},
+			{
+				Name:        "test2",
+				Description: "test2",
+			},
+			{
+				Name:        "test3",
+				Description: "test3",
+			},
+		},
+		Contacts: []domain.Contact{
+			{
+				Name:  "contact 1",
+				Email: "contact1@domain.com",
+			},
+			{
+				Name:  "contact 2",
+				Email: "contact2@domain.com",
+			},
+		},
+		Tasks: []domain.Task{
+			{
+				Type: domain.TaskTypePing,
+			},
+		},
+	}
+	db.PutItem(&node1)
+	node1Id := fmt.Sprintf("%v", node1.ID)
+
+	js := `{"MacAddr": "aa:aa:aa:aa:aa:aa", "Nickname": "after", "Tags": [], "Contacts": [], "Tasks": []}`
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "PUT",
+		Path:       "/node/" + node1Id,
+		PathParameters: map[string]string{
+			"id": node1Id,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		Body:    string(js),
+	}
+
+	resp, err := updateNode(req)
+	if err != nil {
+		t.Error("Unable to update node, err: ", err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response updating node, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	// fetch node from db to check for updates
+	var node domain.Node
+	err = db.GetItem(&node, node1.ID)
+	if err != nil {
+		t.Error("Unable to get node, err: ", err.Error())
+	}
+
+	if node.Nickname != "after" {
+		t.Error("Nickname not changed after update")
+	}
+
+	if len(node.Tags) != 0 {
+		t.Error("Tags still present after update")
+	}
+
+	if len(node.Contacts) != 0 {
+		t.Error("Contacts still present after update")
+	}
+
+	if len(node.Tasks) != 0 {
+		t.Error("Tasks still present after update")
+	}
 }

@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 
 # Exit script with error if any step fails.
-#set -e
-go get github.com/fillup/semver
+set -e
 
-sleep 10
-AWS_ACCESS_KEY_ID=0 AWS_SECRET_ACCESS_KEY=0 go test ./...
-# Because DynamoDB local is flaky, run again to be sure
-AWS_ACCESS_KEY_ID=0 AWS_SECRET_ACCESS_KEY=0 go test ./...
+# Wait until db is ready for testing
+/usr/local/bin/whenavail db 3306 100 echo "database is ready for tests"
+
+# Tests need to be run sequentially for database access and fixture integrity
+testDirs=`find -name '*_test.go' -not -path "*vendor*" -printf '%h\n' | sort -u`
+i=0
+for testDir in $testDirs; do
+    go test $testDir
+done

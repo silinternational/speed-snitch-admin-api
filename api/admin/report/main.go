@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -15,16 +14,19 @@ import (
 const PeriodTimeFormat = "2006-01-02"
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	macAddr := req.PathParameters["macAddr"]
-	if macAddr != "" {
+	id := req.PathParameters["id"]
+	if id != "" {
 		return viewNodeReport(req)
 	}
 
-	return domain.ClientError(http.StatusBadRequest, "macAddr is required in url")
+	return domain.ClientError(http.StatusBadRequest, "id is required in url")
 }
 
 func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	macAddr := req.PathParameters["macAddr"]
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+	}
 
 	// Validate Inputs
 	interval := req.QueryStringParameters["interval"]
@@ -43,13 +45,10 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	}
 
 	// Fetch node to ensure exists and get tags for authorization
-	node, err := db.GetNode(macAddr)
+	var node domain.Node
+	err = db.GetItem(&node, id)
 	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	if node.ID == "" {
-		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+		return domain.ReturnJsonOrError(domain.Node{}, err)
 	}
 
 	// Ensure user is authorized ...
@@ -59,25 +58,13 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	}
 
 	// Fetch snapshots
-	snapshots, err := db.GetSnapshotsForRange(interval, macAddr, periodStartTimestamp, periodEndTimestamp)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	js, err := json.Marshal(snapshots)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	snapshots, err := db.GetSnapshotsForRange(interval, id, periodStartTimestamp, periodEndTimestamp)
+	return domain.ReturnJsonOrError(snapshots, err)
 }
 
 func getTimestampFromString(date string) (int64, error) {
 	if date == "" {
-		return 0, fmt.Errorf("Parameters start and end are required and should be format YYYY-MM-DD")
+		return 0, fmt.Errorf("parameters start and end are required and should be format YYYY-MM-DD")
 	}
 	dateTime, err := time.Parse(PeriodTimeFormat, date)
 	if err != nil {
@@ -92,5 +79,6 @@ func getTimestampFromString(date string) (int64, error) {
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

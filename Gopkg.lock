@@ -13,71 +13,42 @@
   version = "v1.2.0"
 
 [[projects]]
-  name = "github.com/aws/aws-sdk-go"
-  packages = [
-    "aws",
-    "aws/awserr",
-    "aws/awsutil",
-    "aws/client",
-    "aws/client/metadata",
-    "aws/corehandlers",
-    "aws/credentials",
-    "aws/credentials/ec2rolecreds",
-    "aws/credentials/endpointcreds",
-    "aws/credentials/stscreds",
-    "aws/defaults",
-    "aws/ec2metadata",
-    "aws/endpoints",
-    "aws/request",
-    "aws/session",
-    "aws/signer/v4",
-    "internal/sdkio",
-    "internal/sdkrand",
-    "internal/shareddefaults",
-    "private/protocol",
-    "private/protocol/json/jsonutil",
-    "private/protocol/jsonrpc",
-    "private/protocol/query",
-    "private/protocol/query/queryutil",
-    "private/protocol/rest",
-    "private/protocol/xml/xmlutil",
-    "service/dynamodb",
-    "service/dynamodb/dynamodbattribute",
-    "service/sts"
-  ]
-  revision = "9b0098a71f6d4d473a26ec8ad3c2feaac6eb1da6"
-  version = "v1.13.32"
-
-[[projects]]
   name = "github.com/fillup/semver"
   packages = ["."]
   revision = "08201dc719617e5457b54d07b66988c422da44e6"
   version = "0.1.0"
 
 [[projects]]
-  name = "github.com/go-ini/ini"
+  name = "github.com/go-sql-driver/mysql"
   packages = ["."]
-  revision = "ace140f73450505f33e8b8418216792275ae82a7"
-  version = "v1.35.0"
+  revision = "d523deb1b23d913de5bdada721a6071e71283618"
+  version = "v1.4.0"
 
 [[projects]]
-  name = "github.com/jmespath/go-jmespath"
-  packages = ["."]
-  revision = "0b12d6b5"
-
-[[projects]]
-  branch = "develop"
-  name = "github.com/silinternational/speed-snitch-agent"
+  branch = "master"
+  name = "github.com/jinzhu/gorm"
   packages = [
     ".",
-    "lib/httputils",
-    "lib/speedtestnet"
+    "dialects/mysql"
   ]
-  revision = "333470d211f0fedebd9dcad8e7209a8a248c5924"
+  revision = "77a1fc6994c4a9e5a3b5a3fa067829bbabf789e5"
+  source = "github.com/silinternational/gorm"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/jinzhu/inflection"
+  packages = ["."]
+  revision = "04140366298a54a039076d798123ffa108fff46c"
+
+[[projects]]
+  name = "google.golang.org/appengine"
+  packages = ["cloudsql"]
+  revision = "b1f26356af11148e710935ed1ac8a7f5702c7612"
+  version = "v1.1.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8453761856afd7c68ebdd29d8ee642e4bb87164d9db9a1a5000af6135be58eef"
+  inputs-digest = "4be7cbad6e986edc23df96f438cf0b5e26afc22d5d99c360b32c38a3ac9aa659"
   solver-name = "gps-cdcl"
   solver-version = 1

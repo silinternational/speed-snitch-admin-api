@@ -11,6 +11,14 @@ $DIR/build.sh
 export CUSTOM_DOMAIN_NAME="${PROD_DOMAIN_NAME}"
 export CERT_NAME="${PROD_CERT_NAME}"
 export DOWNLOAD_BASE_URL="${PROD_DOWNLOAD_BASE_URL}"
+export MYSQL_HOST="${PROD_MYSQL_HOST}"
+export MYSQL_USER="${PROD_MYSQL_USER}"
+export MYSQL_PASS="${PROD_MYSQL_PASS}"
+export MYSQL_DB="${PROD_MYSQL_DB}"
+export VPC_SG_ID="${PROD_VPC_SG_ID}"
+export VPC_SUBNET1="${PROD_VPC_SUBNET1}"
+export VPC_SUBNET2="${PROD_VPC_SUBNET2}"
+export VPC_SUBNET3="${PROD_VPC_SUBNET3}"
 
 cd api/admin
 serverless deploy -v --stage prod

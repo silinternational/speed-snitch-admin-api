@@ -2,9 +2,9 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -12,12 +12,8 @@ import (
 
 const SelfType = domain.DataTypeTag
 
-func main() {
-	lambda.Start(router)
-}
-
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, tagSpecified := req.PathParameters["uid"]
+	_, tagSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "GET":
 		if tagSpecified {
@@ -41,27 +37,14 @@ func viewTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	tag, err := db.GetTag(req.PathParameters["uid"])
-	if err != nil {
-		return domain.ServerError(err)
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
-	if tag.Name == "" {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-		}, nil
-	}
-
-	js, err := json.Marshal(tag)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	var tag domain.Tag
+	err := db.GetItem(&tag, id)
+	return domain.ReturnJsonOrError(tag, err)
 }
 
 func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -70,20 +53,9 @@ func listTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	tags, err := db.ListTags()
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	jsBody, err := domain.GetJSONFromSlice(tags)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       jsBody,
-	}, nil
+	var tags []domain.Tag
+	err := db.ListItems(&tags, "name asc")
+	return domain.ReturnJsonOrError(tags, err)
 }
 
 func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -94,19 +66,23 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	var tag domain.Tag
 
-	// If {uid} was provided in request, get existing record to update
-	if req.PathParameters["uid"] != "" {
-		var err error
-		tag, err = db.GetTag(req.PathParameters["uid"])
+	// If ID is provided, load existing tag for updating, otherwise we'll create a new one
+	if req.PathParameters["id"] != "" {
+		id := domain.GetResourceIDFromRequest(req)
+		if id == 0 {
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+		}
+
+		err := db.GetItem(&tag, id)
 		if err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Body:       "",
+				}, nil
+			}
 			return domain.ServerError(err)
 		}
-	}
-
-	// If UID is not set generate a UID
-	if tag.UID == "" {
-		tag.UID = domain.GetRandString(4)
-		tag.ID = SelfType + "-" + tag.UID
 	}
 
 	// Parse request body for updated attributes
@@ -120,35 +96,12 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(http.StatusUnprocessableEntity, "Name and Description are required")
 	}
 
-	// Make sure tag does not already exist with different UID
-	exists, err := tagAlreadyExists(tag.UID, updatedTag.Name)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-	if exists {
-		return domain.ClientError(http.StatusConflict, "A tag with this name already exists")
-	}
-
 	// Update tag record attributes for persistence
 	tag.Name = updatedTag.Name
 	tag.Description = updatedTag.Description
 
-	err = db.PutItem(domain.DataTable, tag)
-	if err != nil {
-		tagJson, _ := json.Marshal(tag)
-		return domain.ServerError(fmt.Errorf("%s", tagJson))
-		return domain.ServerError(err)
-	}
-
-	js, err := json.Marshal(tag)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	err = db.PutItem(&tag)
+	return domain.ReturnJsonOrError(tag, err)
 }
 
 func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -157,54 +110,17 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	UID := req.PathParameters["uid"]
-	tag, err := db.GetTag(UID)
-	if err != nil {
-		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
-	deleted, err := db.DeleteItem(domain.DataTable, SelfType, UID)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	if !deleted && err == nil {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       http.StatusText(http.StatusNotFound),
-		}, nil
-	}
-
-	// remove tag from users
-	err = db.RemoveTagFromUsers(tag)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	// remove tag from nodes
-	err = db.RemoveTagFromNodes(tag)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       "",
-	}, nil
+	var tag domain.Tag
+	err := db.DeleteItem(&tag, id)
+	return domain.ReturnJsonOrError(tag, err)
 }
 
-// tagAlreadyExist returns true if a tag with the same name but different UID already exists
-func tagAlreadyExists(uid, name string) (bool, error) {
-	allTags, err := db.ListTags()
-	if err != nil {
-		return false, err
-	}
-
-	for _, tag := range allTags {
-		if tag.Name == name && tag.UID != uid {
-			return true, nil
-		}
-	}
-
-	return false, nil
+func main() {
+	defer db.Db.Close()
+	lambda.Start(router)
 }
