@@ -11,6 +11,7 @@ provider:
   name: aws
   runtime: go1.x
   timeout: 30
+  versionFunctions: false
   apiKeys:
     - ${self:custom.namespace}-agent
   vpc:
