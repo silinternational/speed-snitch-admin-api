@@ -10,6 +10,7 @@ service: speedsnitch-agent
 provider:
   name: aws
   runtime: go1.x
+  timeout: 30
   apiKeys:
     - ${self:custom.namespace}-agent
   vpc:

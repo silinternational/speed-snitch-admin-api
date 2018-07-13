@@ -29,4 +29,6 @@
 
 [[constraint]]
   name = "github.com/jinzhu/gorm"
-  version = "^1.9.1"
+#  version = "^1.9.1"
+  branch = "master"
+  source = "github.com/silinternational/gorm"

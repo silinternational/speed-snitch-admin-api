@@ -12,7 +12,7 @@ import (
 const SelfType = domain.DataTypeSTNetServerList
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, serverSpecified := req.PathParameters["ID"]
+	_, serverSpecified := req.PathParameters["id"]
 	_, countrySpecified := req.PathParameters["countryCode"]
 
 	switch req.HTTPMethod {
