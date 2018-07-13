@@ -34,7 +34,7 @@ func GetDefaultSpeedTestUploadSizes() []int {
 }
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, nodeSpecified := req.PathParameters["macAddr"]
+	_, nodeSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteNode(req)
