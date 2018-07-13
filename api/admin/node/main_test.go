@@ -321,25 +321,55 @@ func TestListNodeTags(t *testing.T) {
 	version := domain.Version{
 		Number: "1.0.0",
 	}
-	db.PutItem(&version)
+	err := db.PutItem(&version)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag1 := domain.Tag{
+		Name:        "test1",
+		Description: "test1",
+	}
+	err = db.PutItem(&tag1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag2 := domain.Tag{
+		Name:        "test2",
+		Description: "test2",
+	}
+	err = db.PutItem(&tag2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag3 := domain.Tag{
+		Name:        "test3",
+		Description: "test3",
+	}
+	err = db.PutItem(&tag3)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag4 := domain.Tag{
+		Name:        "test4",
+		Description: "test4",
+	}
+	err = db.PutItem(&tag4)
+	if err != nil {
+		t.Error(err)
+	}
 
 	node1 := domain.Node{
 		RunningVersionID:    version.ID,
 		ConfiguredVersionID: version.ID,
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
 		Tags: []domain.Tag{
-			{
-				Name:        "test1",
-				Description: "test1",
-			},
-			{
-				Name:        "test2",
-				Description: "test2",
-			},
-			{
-				Name:        "test3",
-				Description: "test3",
-			},
+			tag1,
+			tag2,
+			tag3,
 		},
 	}
 
@@ -348,25 +378,20 @@ func TestListNodeTags(t *testing.T) {
 		RunningVersionID:    version.ID,
 		ConfiguredVersionID: version.ID,
 		Tags: []domain.Tag{
-			{
-				Name:        "test1",
-				Description: "test1",
-			},
-			{
-				Name:        "test4",
-				Description: "test4",
-			},
+			tag1,
+			tag4,
 		},
 	}
 
 	db.PutItem(&node1)
 	db.PutItem(&node2)
 
+	node1Id := fmt.Sprintf("%v", node1.ID)
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/node/1/tag",
+		Path:       "/node/" + node1Id + "/tag",
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": node1Id,
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
@@ -390,11 +415,12 @@ func TestListNodeTags(t *testing.T) {
 		t.Error("Did not get back right numer of tags for node 1")
 	}
 
+	node2Id := fmt.Sprintf("%v", node2.ID)
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/node/2/tag",
+		Path:       "/node/" + node2Id + "/tag",
 		PathParameters: map[string]string{
-			"id": "2",
+			"id": node2Id,
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
@@ -425,28 +451,52 @@ func TestUpdateNode(t *testing.T) {
 	version := domain.Version{
 		Number: "1.0.0",
 	}
-	db.PutItem(&version)
+	err := db.PutItem(&version)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag1 := domain.Tag{
+		Name:        "test1",
+		Description: "test1",
+	}
+	err = db.PutItem(&tag1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag2 := domain.Tag{
+		Name:        "test2",
+		Description: "test2",
+	}
+	err = db.PutItem(&tag2)
+	if err != nil {
+		t.Error(err)
+	}
+
+	tag3 := domain.Tag{
+		Name:        "test3",
+		Description: "test3",
+	}
+	err = db.PutItem(&tag3)
+	if err != nil {
+		t.Error(err)
+	}
 
 	node1 := domain.Node{
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
 		RunningVersionID:    version.ID,
 		ConfiguredVersionID: version.ID,
 		Tags: []domain.Tag{
-			{
-				Name:        "test1",
-				Description: "test1",
-			},
-			{
-				Name:        "test2",
-				Description: "test2",
-			},
-			{
-				Name:        "test3",
-				Description: "test3",
-			},
+			tag1,
+			tag2,
+			tag3,
 		},
 	}
-	db.PutItem(&node1)
+	err = db.PutItem(&node1)
+	if err != nil {
+		t.Error(err)
+	}
 
 	speedTestNetServer := domain.SpeedTestNetServer{
 		Name:        "test stn server",
@@ -455,14 +505,20 @@ func TestUpdateNode(t *testing.T) {
 		CountryCode: "US",
 		Host:        "example.com:8080",
 	}
-	db.PutItem(&speedTestNetServer)
+	err = db.PutItem(&speedTestNetServer)
+	if err != nil {
+		t.Error(err)
+	}
 
 	namedServer := domain.NamedServer{
 		Name:                 "example",
 		Description:          "test example",
 		SpeedTestNetServerID: speedTestNetServer.ID,
 	}
-	db.PutItem(&namedServer)
+	err = db.PutItem(&namedServer)
+	if err != nil {
+		t.Error(err)
+	}
 
 	// remove one tag, add tasks, nickname, and notes
 	update1 := domain.Node{
@@ -470,14 +526,8 @@ func TestUpdateNode(t *testing.T) {
 		RunningVersionID:    version.ID,
 		ConfiguredVersionID: version.ID,
 		Tags: []domain.Tag{
-			{
-				Name:        "test1",
-				Description: "test1",
-			},
-			{
-				Name:        "test2",
-				Description: "test2",
-			},
+			tag1,
+			tag2,
 		},
 		Nickname: "updated-test",
 		Notes:    "created this node via testing",
@@ -496,11 +546,12 @@ func TestUpdateNode(t *testing.T) {
 		t.Error("Unable to marshal update into json for api call, err: ", err.Error())
 	}
 
+	node1Id := fmt.Sprintf("%v", node1.ID)
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "PUT",
-		Path:       "/node/1",
+		Path:       "/node/" + node1Id,
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": node1Id,
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 		Body:    string(js),
