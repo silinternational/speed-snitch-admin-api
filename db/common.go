@@ -11,13 +11,18 @@ import (
 	"os"
 )
 
+const CASCADE = "CASCADE"
+const NOACTION = "NO ACTION"
+const SETNULL = "SET NULL"
+const RESTRICT = "RESTRICT"
+
 var db *gorm.DB
 
 var DatabaseTables = []interface{}{
-	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Node{}, &domain.Task{}, &domain.NamedServer{},
-	&domain.User{}, &domain.Version{}, &domain.SpeedTestNetServer{}, &domain.TaskLogSpeedTest{},
+	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Task{}, &domain.SpeedTestNetServer{},
+	&domain.User{}, &domain.Version{}, &domain.TaskLogSpeedTest{},
 	&domain.TaskLogPingTest{}, &domain.TaskLogError{}, &domain.TaskLogRestart{}, &domain.TaskLogNetworkDowntime{},
-	&domain.ReportingSnapshot{}}
+	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.Node{}}
 
 func GetDb() (*gorm.DB, error) {
 	if db == nil {
@@ -32,7 +37,7 @@ func GetDb() (*gorm.DB, error) {
 		}
 		db = gdb
 		db.SingularTable(true)
-		db.LogMode(false)
+		db.LogMode(true)
 		db.SetLogger(log.New(os.Stdout, "\r\n", 0))
 
 	}
@@ -40,17 +45,159 @@ func GetDb() (*gorm.DB, error) {
 }
 
 func AutoMigrateTables() error {
-	db, err := GetDb()
+	gdb, err := GetDb()
 	if err != nil {
 		return err
 	}
 
-	db.SingularTable(true)
+	gdb.SingularTable(true)
 
 	for _, table := range DatabaseTables {
-		db.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8").AutoMigrate(table)
-		if db.Error != nil {
-			return db.Error
+		gdb.Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8").AutoMigrate(table)
+		if gdb.Error != nil {
+			return gdb.Error
+		}
+	}
+
+	return CreateForeignKeys()
+}
+
+func CreateForeignKeys() error {
+	gdb, err := GetDb()
+	if err != nil {
+		return err
+	}
+
+	gdb.SingularTable(true)
+
+	keys := []domain.ForeignKey{
+		{
+			ChildModel:  &domain.Contact{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.Node{},
+			ChildField:  "running_version_id",
+			ParentTable: "version",
+			ParentField: "id",
+			OnDelete:    SETNULL,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.Node{},
+			ChildField:  "configured_version_id",
+			ParentTable: "version",
+			ParentField: "id",
+			OnDelete:    SETNULL,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.Task{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.Task{},
+			ChildField:  "named_server_id",
+			ParentTable: "named_server",
+			ParentField: "id",
+			OnDelete:    RESTRICT,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.NamedServer{},
+			ChildField:  "speed_test_net_server_id",
+			ParentTable: "speed_test_net_server",
+			ParentField: "id",
+			OnDelete:    SETNULL,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogSpeedTest{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogSpeedTest{},
+			ChildField:  "node_running_version_id",
+			ParentTable: "version",
+			ParentField: "id",
+			OnDelete:    SETNULL,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogPingTest{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogPingTest{},
+			ChildField:  "node_running_version_id",
+			ParentTable: "version",
+			ParentField: "id",
+			OnDelete:    SETNULL,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogError{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogError{},
+			ChildField:  "node_running_version_id",
+			ParentTable: "version",
+			ParentField: "id",
+			OnDelete:    SETNULL,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogRestart{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.TaskLogNetworkDowntime{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.ReportingSnapshot{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+	}
+
+	for _, key := range keys {
+		parentRef := fmt.Sprintf("%s(%s)", key.ParentTable, key.ParentField)
+		gdb.Model(key.ChildModel).AddForeignKey(key.ChildField, parentRef, key.OnDelete, key.OnUpdate)
+		if gdb.Error != nil {
+			return gdb.Error
 		}
 	}
 
@@ -64,6 +211,7 @@ func DropTables() error {
 	}
 
 	db.SingularTable(true)
+	db.Exec("SET FOREIGN_KEY_CHECKS=0")
 
 	for _, table := range DatabaseTables {
 		db.DropTable(table)
@@ -75,7 +223,7 @@ func DropTables() error {
 	// Need to manually drop many2many tables since they don't have their own models
 	db.DropTable("node_tags")
 	db.DropTable("user_tags")
-
+	db.Exec("SET FOREIGN_KEY_CHECKS=1")
 	return nil
 }
 
@@ -149,11 +297,57 @@ func PutItem(itemObj interface{}) error {
 		return err
 	}
 
-	notFound := gdb.Save(itemObj).RecordNotFound()
-	if notFound {
+	newGdb := gdb.Save(itemObj)
+	if newGdb.RecordNotFound() {
 		return gorm.ErrRecordNotFound
 	}
 
+	errs := newGdb.GetErrors()
+	if len(errs) > 0 {
+		fmt.Fprintf(os.Stdout, "errors: %+v", errs)
+		return errs[0]
+	}
+
+	return nil
+}
+
+func PutItemWithAssociations(itemObj interface{}, replacements []domain.AssociationReplacement) error {
+	gdb, err := GetDb()
+	if err != nil {
+		return err
+	}
+
+	tx := gdb.Begin()
+
+	notFound := tx.Save(itemObj).RecordNotFound()
+	if notFound {
+		tx.Rollback()
+		return gorm.ErrRecordNotFound
+	}
+
+	for _, replace := range replacements {
+		tx.Model(itemObj).Association(replace.AssociationName).Replace(replace.Replacement)
+		if tx.Error != nil {
+			tx.Rollback()
+			return tx.Error
+		}
+	}
+
+	if tx.Error != nil {
+		tx.Rollback()
+		return tx.Error
+	}
+
+	return tx.Commit().Error
+}
+
+func ReplaceAssociations(itemObj, replaceObj interface{}, assocName string) error {
+	gdb, err := GetDb()
+	if err != nil {
+		return err
+	}
+
+	gdb.Model(itemObj).Association(assocName).Replace(replaceObj)
 	return gdb.Error
 }
 
@@ -168,7 +362,7 @@ func DeleteItem(itemObj interface{}, id uint) error {
 		return err
 	}
 
-	notFound := gdb.Delete(itemObj).RecordNotFound()
+	notFound := gdb.Unscoped().Delete(itemObj).RecordNotFound()
 	if notFound {
 		return gorm.ErrRecordNotFound
 	}

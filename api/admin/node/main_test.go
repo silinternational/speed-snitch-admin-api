@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -15,19 +16,23 @@ func TestDeleteNode(t *testing.T) {
 	testutils.ResetDb(t)
 
 	create := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		MacAddr: "aa:aa:aa:aa:aa:aa",
+		Contacts: []domain.Contact{
+			{
+				Name:  "test",
+				Email: "test@test.com",
+			},
+		},
 	}
-
 	db.PutItem(&create)
+
+	idStr := fmt.Sprintf("%v", create.ID)
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
-		Path:       "/node/1",
+		Path:       "/node/" + idStr,
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": idStr,
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
@@ -54,6 +59,13 @@ func TestDeleteNode(t *testing.T) {
 		t.Error("node still exists after deletion")
 	}
 
+	// Check if contact was removed too
+	var contact domain.Contact
+	err = db.GetItem(&contact, create.Contacts[0].ID)
+	if !gorm.IsRecordNotFoundError(err) {
+		t.Errorf("contact still exists after node deletion: %+v", contact)
+	}
+
 	// try to delete node that doesnt exist
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
@@ -74,15 +86,9 @@ func TestViewNode(t *testing.T) {
 	testutils.ResetDb(t)
 
 	create := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		MacAddr: "aa:aa:aa:aa:aa:aa",
 		Tags: []domain.Tag{
 			{
-				Model: gorm.Model{
-					ID: 1,
-				},
 				Name:        "test",
 				Description: "test",
 			},
@@ -140,14 +146,8 @@ func TestViewNode(t *testing.T) {
 		Name:  "not super admin",
 		Email: "admin@test.com",
 		UUID:  "014BF02D-75E6-444B-9231-7BF9C17D42A1",
-		Model: gorm.Model{
-			ID: 2,
-		},
 		Tags: []domain.Tag{
 			{
-				Model: gorm.Model{
-					ID: 2,
-				},
 				Name:        "doesnt-match",
 				Description: "tag doesn't match",
 			},
@@ -180,93 +180,87 @@ func TestViewNode(t *testing.T) {
 func TestListNodes(t *testing.T) {
 	testutils.ResetDb(t)
 
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	db.PutItem(&version)
+
+	tag := domain.Tag{
+		Name:        "test",
+		Description: "test",
+	}
+	err := db.PutItem(&tag)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
 	visibleNodes := []domain.Node{
 		{
-			Model: gorm.Model{
-				ID: 1,
-			},
-			MacAddr: "aa:aa:aa:aa:aa:aa",
+			MacAddr:             "aa:aa:aa:aa:aa:aa",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
 			Tags: []domain.Tag{
-				{
-					Model: gorm.Model{
-						ID: 1,
-					},
-					Name:        "test",
-					Description: "test",
-				},
+				tag,
 			},
 		},
 		{
-			Model: gorm.Model{
-				ID: 2,
-			},
-			MacAddr: "bb:bb:bb:bb:bb:bb",
+			MacAddr:             "bb:bb:bb:bb:bb:bb",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
 			Tags: []domain.Tag{
-				{
-					Model: gorm.Model{
-						ID: 1,
-					},
-					Name:        "test",
-					Description: "test",
-				},
+				tag,
 			},
 		},
 		{
-			Model: gorm.Model{
-				ID: 3,
-			},
-			MacAddr: "cc:cc:cc:cc:cc:cc",
+			MacAddr:             "cc:cc:cc:cc:cc:cc",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
 			Tags: []domain.Tag{
-				{
-					Model: gorm.Model{
-						ID: 1,
-					},
-					Name:        "test",
-					Description: "test",
-				},
+				tag,
 			},
 		},
 	}
 
 	invisibleNodes := []domain.Node{
 		{
-			Model: gorm.Model{
-				ID: 4,
-			},
-			MacAddr: "dd:dd:dd:dd:dd:dd",
+			MacAddr:             "dd:dd:dd:dd:dd:dd",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
 			Tags: []domain.Tag{
 				{
-					Model: gorm.Model{
-						ID: 2,
-					},
-					Name:        "hide",
-					Description: "hide",
+					Name:        "hide1",
+					Description: "hide1",
 				},
 			},
 		},
 		{
-			Model: gorm.Model{
-				ID: 5,
-			},
-			MacAddr: "ee:ee:ee:ee:ee:ee",
+			MacAddr:             "ee:ee:ee:ee:ee:ee",
+			RunningVersionID:    version.ID,
+			ConfiguredVersionID: version.ID,
 			Tags: []domain.Tag{
 				{
-					Model: gorm.Model{
-						ID: 2,
-					},
-					Name:        "hide",
-					Description: "hide",
+					Name:        "hide2",
+					Description: "hide2",
 				},
 			},
 		},
 	}
 
 	for _, i := range visibleNodes {
-		db.PutItem(&i)
+		err := db.PutItem(&i)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	for _, i := range invisibleNodes {
-		db.PutItem(&i)
+		err := db.PutItem(&i)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	adminUser := domain.User{
@@ -274,20 +268,15 @@ func TestListNodes(t *testing.T) {
 		Name:  "not super admin",
 		Email: "admin@test.com",
 		UUID:  "014BF02D-75E6-444B-9231-7BF9C17D42A1",
-		Model: gorm.Model{
-			ID: 2,
-		},
 		Tags: []domain.Tag{
-			{
-				Model: gorm.Model{
-					ID: 1,
-				},
-				Name:        "test",
-				Description: "test",
-			},
+			tag,
 		},
 	}
-	db.PutItem(&adminUser)
+	err = db.PutItem(&adminUser)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
@@ -303,7 +292,7 @@ func TestListNodes(t *testing.T) {
 		t.Error("Received error trying to view node: ", err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
-		t.Error("Did not get 200 trying tolist nodes, got: ", resp.StatusCode, " body: ", resp.Body)
+		t.Error("Did not get 200 trying to list nodes, got: ", resp.StatusCode, " body: ", resp.Body)
 	}
 
 	var found []domain.Node
@@ -329,30 +318,25 @@ func TestListNodes(t *testing.T) {
 func TestListNodeTags(t *testing.T) {
 	testutils.ResetDb(t)
 
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	db.PutItem(&version)
+
 	node1 := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
-		MacAddr: "aa:aa:aa:aa:aa:aa",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
 		Tags: []domain.Tag{
 			{
-				Model: gorm.Model{
-					ID: 1,
-				},
 				Name:        "test1",
 				Description: "test1",
 			},
 			{
-				Model: gorm.Model{
-					ID: 2,
-				},
 				Name:        "test2",
 				Description: "test2",
 			},
 			{
-				Model: gorm.Model{
-					ID: 3,
-				},
 				Name:        "test3",
 				Description: "test3",
 			},
@@ -360,22 +344,15 @@ func TestListNodeTags(t *testing.T) {
 	}
 
 	node2 := domain.Node{
-		Model: gorm.Model{
-			ID: 2,
-		},
-		MacAddr: "bb:bb:bb:bb:bb:bb",
+		MacAddr:             "bb:bb:bb:bb:bb:bb",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
 		Tags: []domain.Tag{
 			{
-				Model: gorm.Model{
-					ID: 1,
-				},
 				Name:        "test1",
 				Description: "test1",
 			},
 			{
-				Model: gorm.Model{
-					ID: 4,
-				},
 				Name:        "test4",
 				Description: "test4",
 			},
@@ -445,30 +422,25 @@ func TestListNodeTags(t *testing.T) {
 func TestUpdateNode(t *testing.T) {
 	testutils.ResetDb(t)
 
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	db.PutItem(&version)
+
 	node1 := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
-		MacAddr: "aa:aa:aa:aa:aa:aa",
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
 		Tags: []domain.Tag{
 			{
-				Model: gorm.Model{
-					ID: 1,
-				},
 				Name:        "test1",
 				Description: "test1",
 			},
 			{
-				Model: gorm.Model{
-					ID: 2,
-				},
 				Name:        "test2",
 				Description: "test2",
 			},
 			{
-				Model: gorm.Model{
-					ID: 3,
-				},
 				Name:        "test3",
 				Description: "test3",
 			},
@@ -477,9 +449,6 @@ func TestUpdateNode(t *testing.T) {
 	db.PutItem(&node1)
 
 	speedTestNetServer := domain.SpeedTestNetServer{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		Name:        "test stn server",
 		ServerID:    "1234",
 		Country:     "United States",
@@ -489,9 +458,6 @@ func TestUpdateNode(t *testing.T) {
 	db.PutItem(&speedTestNetServer)
 
 	namedServer := domain.NamedServer{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		Name:                 "example",
 		Description:          "test example",
 		SpeedTestNetServerID: speedTestNetServer.ID,
@@ -500,19 +466,15 @@ func TestUpdateNode(t *testing.T) {
 
 	// remove one tag, add tasks, nickname, and notes
 	update1 := domain.Node{
-		MacAddr: "aa:aa:aa:aa:aa:aa",
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
 		Tags: []domain.Tag{
 			{
-				Model: gorm.Model{
-					ID: 1,
-				},
 				Name:        "test1",
 				Description: "test1",
 			},
 			{
-				Model: gorm.Model{
-					ID: 2,
-				},
 				Name:        "test2",
 				Description: "test2",
 			},
@@ -562,5 +524,100 @@ func TestUpdateNode(t *testing.T) {
 
 	if node.Nickname != update1.Nickname {
 		t.Error("Nickname was not updated")
+	}
+
+	if len(node.Tags) != len(update1.Tags) {
+		t.Error("Tags not updated as expected")
+	}
+}
+
+func TestRemoveAssociations(t *testing.T) {
+	testutils.ResetDb(t)
+
+	version := domain.Version{
+		Number: "1.0.0",
+	}
+	db.PutItem(&version)
+
+	node1 := domain.Node{
+		MacAddr:             "aa:aa:aa:aa:aa:aa",
+		Nickname:            "before",
+		RunningVersionID:    version.ID,
+		ConfiguredVersionID: version.ID,
+		Tags: []domain.Tag{
+			{
+				Name:        "test1",
+				Description: "test1",
+			},
+			{
+				Name:        "test2",
+				Description: "test2",
+			},
+			{
+				Name:        "test3",
+				Description: "test3",
+			},
+		},
+		Contacts: []domain.Contact{
+			{
+				Name:  "contact 1",
+				Email: "contact1@domain.com",
+			},
+			{
+				Name:  "contact 2",
+				Email: "contact2@domain.com",
+			},
+		},
+		Tasks: []domain.Task{
+			{
+				Type: domain.TaskTypePing,
+			},
+		},
+	}
+	db.PutItem(&node1)
+	node1Id := fmt.Sprintf("%v", node1.ID)
+
+	js := `{"MacAddr": "aa:aa:aa:aa:aa:aa", "Nickname": "after", "Tags": [], "Contacts": [], "Tasks": []}`
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "PUT",
+		Path:       "/node/" + node1Id,
+		PathParameters: map[string]string{
+			"id": node1Id,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		Body:    string(js),
+	}
+
+	resp, err := updateNode(req)
+	if err != nil {
+		t.Error("Unable to update node, err: ", err.Error())
+	}
+
+	if resp.StatusCode != 200 {
+		t.Error("Did not get 200 response updating node, got: ", resp.StatusCode, " body: ", resp.Body)
+	}
+
+	// fetch node from db to check for updates
+	var node domain.Node
+	err = db.GetItem(&node, node1.ID)
+	if err != nil {
+		t.Error("Unable to get node, err: ", err.Error())
+	}
+
+	if node.Nickname != "after" {
+		t.Error("Nickname not changed after update")
+	}
+
+	if len(node.Tags) != 0 {
+		t.Error("Tags still present after update")
+	}
+
+	if len(node.Contacts) != 0 {
+		t.Error("Contacts still present after update")
+	}
+
+	if len(node.Tasks) != 0 {
+		t.Error("Tasks still present after update")
 	}
 }

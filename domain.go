@@ -66,10 +66,9 @@ const ReportingIntervalMonthly = "monthly"
 /* Define types that will be stored to database using GORM
 /*
 /**************************************************************/
-
 type Contact struct {
 	gorm.Model
-	NodeID uint   `gorm:"not null"`
+	NodeID uint
 	Name   string `gorm:"not null"`
 	Email  string `gorm:"not null"`
 	Phone  string
@@ -83,7 +82,7 @@ type Country struct {
 
 type Tag struct {
 	gorm.Model
-	Name        string `gorm:"not null"`
+	Name        string `gorm:"not null;unique_index"`
 	Description string `gorm:"not null"`
 	Nodes       []Node `gorm:"many2many:node_tags"`
 	Users       []User `gorm:"many2many:user_tags"`
@@ -95,12 +94,12 @@ type Node struct {
 	OS                  string  `gorm:"type:varchar(16); not null"`
 	Arch                string  `gorm:"type:varchar(8); not null"`
 	RunningVersion      Version `gorm:"foreignkey:RunningVersionID"`
-	RunningVersionID    uint
+	RunningVersionID    uint    `gorm:"default:null"`
 	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID"`
-	ConfiguredVersionID uint
-	Uptime              int64 `gorm:"default:0"`
-	LastSeen            int64 `gorm:"type:int(11)"`
-	FirstSeen           int64 `gorm:"type:int(11)"`
+	ConfiguredVersionID uint    `gorm:"default:null"`
+	Uptime              int64   `gorm:"default:0"`
+	LastSeen            int64   `gorm:"type:int(11)"`
+	FirstSeen           int64   `gorm:"type:int(11)"`
 	Location            string
 	Coordinates         string
 	Network             string
@@ -115,11 +114,11 @@ type Node struct {
 
 type Task struct {
 	gorm.Model
-	NodeID               uint   `gorm:"not null"`
+	NodeID               uint   `gorm:"default:null"`
 	Type                 string `gorm:"type:varchar(32);not null"`
 	Schedule             string `gorm:"not null"`
 	NamedServer          NamedServer
-	NamedServerID        uint
+	NamedServerID        uint `gorm:"default:null"`
 	SpeedTestNetServerID string
 	ServerHost           string
 	TaskData             TaskData `gorm:"type:text"`
@@ -144,7 +143,7 @@ func (td *TaskData) Scan(value interface{}) error {
 type NamedServer struct {
 	gorm.Model
 	ServerType           string `gorm:"not null"`
-	SpeedTestNetServerID uint   // Only needed if ServerType is SpeedTestNetServer
+	SpeedTestNetServerID uint   `gorm:"default:null"` // Only needed if ServerType is SpeedTestNetServer
 	SpeedTestNetServer   SpeedTestNetServer
 	ServerHost           string // Needed for non-SpeedTestNetServers
 	ServerCountry        string
@@ -182,11 +181,11 @@ type SpeedTestNetServer struct {
 type TaskLogSpeedTest struct {
 	gorm.Model
 	Node                 Node
-	NodeID               uint    `gorm:"not null"`
+	NodeID               uint    `gorm:"default:null"`
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Upload               float64 `gorm:"not null;default:0"`
 	Download             float64 `gorm:"not null;default:0"`
-	ServerID             string  `gorm:"not null"`
+	ServerID             string
 	ServerCountry        string
 	ServerCoordinates    string
 	ServerName           string
@@ -195,17 +194,17 @@ type TaskLogSpeedTest struct {
 	NodeNetwork          string
 	NodeIPAddress        string  `gorm:"not null"`
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID uint    `gorm:"not null"`
+	NodeRunningVersionID uint    `gorm:"default:null"`
 }
 
 type TaskLogPingTest struct {
 	gorm.Model
 	Node                 Node
-	NodeID               uint    `gorm:"not null"`
+	NodeID               uint    `gorm:"default:null"`
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Latency              float64 `gorm:"not null;default:0"`
 	PacketLossPercent    float64 `gorm:"not null;default:0"`
-	ServerID             string  `gorm:"not null"`
+	ServerID             string
 	ServerCountry        string
 	ServerCoordinates    string
 	ServerName           string
@@ -214,13 +213,13 @@ type TaskLogPingTest struct {
 	NodeNetwork          string
 	NodeIPAddress        string
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID uint    `gorm:"not null"`
+	NodeRunningVersionID uint    `gorm:"default:null"`
 }
 
 type TaskLogError struct {
 	gorm.Model
 	Node                 Node
-	NodeID               uint  `gorm:"not null"`
+	NodeID               uint  `gorm:"default:null"`
 	Timestamp            int64 `gorm:"type:int(11); not null"`
 	ErrorCode            string
 	ErrorMessage         string
@@ -233,20 +232,20 @@ type TaskLogError struct {
 	NodeNetwork          string
 	NodeIPAddress        string
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
-	NodeRunningVersionID uint
+	NodeRunningVersionID uint    `gorm:"default:null"`
 }
 
 type TaskLogRestart struct {
 	gorm.Model
 	Node      Node
-	NodeID    uint  `gorm:"not null"`
+	NodeID    uint  `gorm:"default:null"`
 	Timestamp int64 `gorm:"type:int(11); not null"`
 }
 
 type TaskLogNetworkDowntime struct {
 	gorm.Model
 	Node            Node
-	NodeID          uint   `gorm:"not null"`
+	NodeID          uint   `gorm:"default:null"`
 	Timestamp       int64  `gorm:"type:int(11); not null;default:0"`
 	DowntimeStart   string `gorm:"not null"`
 	DowntimeSeconds int64  `gorm:"not null;default:0"`
@@ -257,7 +256,7 @@ type TaskLogNetworkDowntime struct {
 type ReportingSnapshot struct {
 	gorm.Model
 	Node                   Node
-	NodeID                 uint    `gorm:"not null"`
+	NodeID                 uint    `gorm:"default:null"`
 	Timestamp              int64   `gorm:"type:int(11); not null"`
 	Interval               string  `gorm:"not null"`
 	UploadAvg              float64 `gorm:"not null;default:0"`
@@ -305,6 +304,11 @@ type NodeConfig struct {
 	Tasks []Task
 }
 
+type AssociationReplacement struct {
+	Replacement     interface{}
+	AssociationName string
+}
+
 type STNetServerList struct {
 	Country Country
 	Servers []SpeedTestNetServer `xml:"server"`
@@ -313,6 +317,15 @@ type STNetServerList struct {
 // This relates to the xml response from the external url where we get the list of speedtest.net servers
 type STNetServerSettings struct {
 	ServerLists []STNetServerList `xml:"servers"`
+}
+
+type ForeignKey struct {
+	ChildModel  interface{}
+	ChildField  string
+	ParentTable string
+	ParentField string
+	OnDelete    string
+	OnUpdate    string
 }
 
 // Add a helper for handling errors. This logs any error to os.Stderr
@@ -324,7 +337,7 @@ func ServerError(err error) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusInternalServerError,
 		Body:       string(js),
-	}, nil
+	}, err
 }
 
 // Similarly add a helper for send responses relating to client errors.
