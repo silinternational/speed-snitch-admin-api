@@ -37,7 +37,7 @@ func GetDb() (*gorm.DB, error) {
 		}
 		db = gdb
 		db.SingularTable(true)
-		db.LogMode(true)
+		db.LogMode(false)
 		db.SetLogger(log.New(os.Stdout, "\r\n", 0))
 
 	}
