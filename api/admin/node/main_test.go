@@ -330,36 +330,28 @@ func TestListNodeTags(t *testing.T) {
 		Name:        "test1",
 		Description: "test1",
 	}
-	err = db.PutItem(&tag1)
-	if err != nil {
-		t.Error(err)
-	}
 
 	tag2 := domain.Tag{
 		Name:        "test2",
 		Description: "test2",
-	}
-	err = db.PutItem(&tag2)
-	if err != nil {
-		t.Error(err)
 	}
 
 	tag3 := domain.Tag{
 		Name:        "test3",
 		Description: "test3",
 	}
-	err = db.PutItem(&tag3)
-	if err != nil {
-		t.Error(err)
-	}
 
 	tag4 := domain.Tag{
 		Name:        "test4",
 		Description: "test4",
 	}
-	err = db.PutItem(&tag4)
-	if err != nil {
-		t.Error(err)
+
+	for _, nextTag := range []*domain.Tag{&tag1, &tag2, &tag3, &tag4} {
+		err = db.PutItem(nextTag)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	node1 := domain.Node{
@@ -383,8 +375,13 @@ func TestListNodeTags(t *testing.T) {
 		},
 	}
 
-	db.PutItem(&node1)
-	db.PutItem(&node2)
+	for _, nextNode := range []*domain.Node{&node1, &node2} {
+		err = db.PutItem(&nextNode)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
 
 	node1Id := fmt.Sprintf("%v", node1.ID)
 	req := events.APIGatewayProxyRequest{
@@ -460,29 +457,24 @@ func TestUpdateNode(t *testing.T) {
 		Name:        "test1",
 		Description: "test1",
 	}
-	err = db.PutItem(&tag1)
-	if err != nil {
-		t.Error(err)
-	}
 
 	tag2 := domain.Tag{
 		Name:        "test2",
 		Description: "test2",
-	}
-	err = db.PutItem(&tag2)
-	if err != nil {
-		t.Error(err)
 	}
 
 	tag3 := domain.Tag{
 		Name:        "test3",
 		Description: "test3",
 	}
-	err = db.PutItem(&tag3)
-	if err != nil {
-		t.Error(err)
-	}
 
+	for _, nextTag := range []*domain.Tag{&tag1, &tag2, &tag3} {
+		err = db.PutItem(nextTag)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
 	node1 := domain.Node{
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
 		RunningVersionID:    version.ID,
