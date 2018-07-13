@@ -12,10 +12,6 @@ import (
 
 const SelfType = domain.DataTypeTag
 
-func main() {
-	lambda.Start(router)
-}
-
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, tagSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
@@ -122,4 +118,9 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	var tag domain.Tag
 	err := db.DeleteItem(&tag, id)
 	return domain.ReturnJsonOrError(tag, err)
+}
+
+func main() {
+	defer db.Db.Close()
+	lambda.Start(router)
 }

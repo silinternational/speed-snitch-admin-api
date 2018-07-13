@@ -118,5 +118,6 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

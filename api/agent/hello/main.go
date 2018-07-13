@@ -95,6 +95,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(Handler)
 }
 

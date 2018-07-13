@@ -16,7 +16,7 @@ const NOACTION = "NO ACTION"
 const SETNULL = "SET NULL"
 const RESTRICT = "RESTRICT"
 
-var db *gorm.DB
+var Db *gorm.DB
 
 var DatabaseTables = []interface{}{
 	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Task{}, &domain.SpeedTestNetServer{},
@@ -25,7 +25,7 @@ var DatabaseTables = []interface{}{
 	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.Node{}}
 
 func GetDb() (*gorm.DB, error) {
-	if db == nil {
+	if Db == nil {
 		host := domain.GetEnv("MYSQL_HOST", "localhost")
 		user := domain.GetEnv("MYSQL_USER", "user")
 		pass := domain.GetEnv("MYSQL_PASS", "pass")
@@ -35,13 +35,13 @@ func GetDb() (*gorm.DB, error) {
 		if err != nil {
 			return &gorm.DB{}, err
 		}
-		db = gdb
-		db.SingularTable(true)
-		db.LogMode(false)
-		db.SetLogger(log.New(os.Stdout, "\r\n", 0))
+		Db = gdb
+		Db.SingularTable(true)
+		Db.LogMode(false)
+		Db.SetLogger(log.New(os.Stdout, "\r\n", 0))
 
 	}
-	return db, nil
+	return Db, nil
 }
 
 func AutoMigrateTables() error {
@@ -348,16 +348,6 @@ func PutItemWithAssociations(itemObj interface{}, replacements []domain.Associat
 	return tx.Commit().Error
 }
 
-func ReplaceAssociations(itemObj, replaceObj interface{}, assocName string) error {
-	gdb, err := GetDb()
-	if err != nil {
-		return err
-	}
-
-	gdb.Model(itemObj).Association(assocName).Replace(replaceObj)
-	return gdb.Error
-}
-
 func DeleteItem(itemObj interface{}, id uint) error {
 	err := GetItem(itemObj, id)
 	if err != nil {
@@ -441,8 +431,8 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 // AreTagsValid returns a bool based on this ...
 //  - if the input is empty, then true
 //  - if there is an error getting the tags from the database, then false
-//  - if any of the tags do not have a UID that matches one that's in the db, then false
-//  - if all of the tags have a UID that matches one that's in the db, then true
+//  - if any of the tags do not have a UID that matches one that's in the Db, then false
+//  - if all of the tags have a UID that matches one that's in the Db, then true
 func AreTagsValid(tags []domain.Tag) bool {
 	if len(tags) == 0 {
 		return true
@@ -467,7 +457,7 @@ func AreTagsValid(tags []domain.Tag) bool {
 	return len(tags) == len(foundTags)
 }
 
-// GetLatestVersion iterates through version in db to return only the latest version
+// GetLatestVersion iterates through version in Db to return only the latest version
 func GetLatestVersion() (domain.Version, error) {
 	var versions []domain.Version
 	err := ListItems(&versions, "number asc")

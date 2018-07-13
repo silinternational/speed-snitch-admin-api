@@ -22,5 +22,6 @@ func handler(ctx context.Context, event events.CloudWatchEvent) error {
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(handler)
 }

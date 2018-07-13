@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/speedtestnet"
 	"os"
 )
@@ -22,5 +23,6 @@ func handler(ctx context.Context, event events.CloudWatchEvent) error {
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(handler)
 }

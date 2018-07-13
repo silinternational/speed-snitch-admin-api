@@ -399,5 +399,6 @@ func setStringValue(stringValues map[string]string, key string, value string) ma
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

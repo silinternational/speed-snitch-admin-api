@@ -96,5 +96,6 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

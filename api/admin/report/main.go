@@ -79,5 +79,6 @@ func getTimestampFromString(date string) (int64, error) {
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

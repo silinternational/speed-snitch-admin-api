@@ -61,5 +61,6 @@ func getConfig(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(getConfig)
 }
