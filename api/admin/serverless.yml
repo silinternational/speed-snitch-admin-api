@@ -200,14 +200,14 @@ functions:
                 paths:
                   countryCode: true
         - http:
-            path: speedtestnetserver/country/{countryCode}/{ID}
+            path: speedtestnetserver/country/{countryCode}/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
                   countryCode: true
-                  serverID: true
+                  id: true
 
   speedtestnetserverupdate:
       handler: bin/speedtestnetserverupdate
