@@ -179,7 +179,7 @@ func UpdateSTNetServers(serverURL string) ([]string, error) {
 
 	// Delete old SpeedTestNetServers that don't have a matching new one and get a list of the NamedServers that don't have a match anymore
 	staleServerIDs := deleteOutdatedSTNetServers(oldSTNetServers, newServers, namedServers)
-	fmt.Fprintf(os.Stdout, "\nFound %v outdated servers that still have a matching NamedServer", len(staleServerIDs))
+	fmt.Fprintf(os.Stdout, "\nFound %v outdated servers that still have a matching NamedServer\n", len(staleServerIDs))
 
 	updateCountries(newCountries)
 
