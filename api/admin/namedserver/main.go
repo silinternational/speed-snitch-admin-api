@@ -101,6 +101,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	server.ServerType = updatedServer.ServerType
 	server.SpeedTestNetServerID = updatedServer.SpeedTestNetServerID
 	server.ServerHost = updatedServer.ServerHost
+	server.ServerCountry = updatedServer.ServerCountry
 	server.Name = updatedServer.Name
 	server.Description = updatedServer.Description
 	server.Notes = updatedServer.Notes
