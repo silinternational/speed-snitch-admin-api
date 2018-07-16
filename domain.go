@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const DataTypeNamedServer = "namedserver"
@@ -98,8 +99,8 @@ type Node struct {
 	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID"`
 	ConfiguredVersionID uint    `gorm:"default:null"`
 	Uptime              int64   `gorm:"default:0"`
-	LastSeen            int64   `gorm:"type:int(11)"`
-	FirstSeen           int64   `gorm:"type:int(11)"`
+	LastSeen            string  `gorm:"type:varchar(64)"`
+	FirstSeen           string  `gorm:"type:varchar(64)"`
 	Location            string
 	Coordinates         string
 	Network             string
@@ -147,7 +148,7 @@ type NamedServer struct {
 	SpeedTestNetServer   SpeedTestNetServer
 	ServerHost           string // Needed for non-SpeedTestNetServers
 	ServerCountry        string
-	Name                 string `gorm:"not null"`
+	Name                 string `gorm:"not null;unique_index"`
 	Description          string
 	Notes                string `gorm:"type:varchar(2048)"`
 }
@@ -519,4 +520,10 @@ func GetResourceIDFromRequest(req events.APIGatewayProxyRequest) uint {
 
 	id := GetUintFromString(req.PathParameters["id"])
 	return id
+}
+
+// GetTimeNow returns the current UTC time in the RFC3339 format
+func GetTimeNow() string {
+	t := time.Now().UTC()
+	return t.Format(time.RFC3339)
 }

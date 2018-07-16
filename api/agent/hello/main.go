@@ -39,7 +39,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 	if err == gorm.ErrRecordNotFound {
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
-		node.FirstSeen = getTimeNow()
+		node.FirstSeen = domain.GetTimeNow()
 	} else if err != nil {
 		return domain.ServerError(err)
 	}
@@ -79,7 +79,7 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 
 	// Update transient fields
 	node.Uptime = helloReq.Uptime
-	node.LastSeen = getTimeNow()
+	node.LastSeen = domain.GetTimeNow()
 
 	// Write to DB
 	err = db.PutItem(&node)
