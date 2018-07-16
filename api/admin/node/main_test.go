@@ -479,6 +479,7 @@ func TestUpdateNode(t *testing.T) {
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
 		RunningVersionID:    version.ID,
 		ConfiguredVersionID: version.ID,
+		Contacts:            []domain.Contact{},
 		Tags: []domain.Tag{
 			tag1,
 			tag2,
@@ -517,6 +518,14 @@ func TestUpdateNode(t *testing.T) {
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
 		RunningVersionID:    version.ID,
 		ConfiguredVersionID: version.ID,
+		ConfiguredVersion:   version,
+		Contacts: []domain.Contact{
+			{
+				Name:  "New Contact",
+				Email: "new_contact@test.org",
+			},
+		},
+
 		Tags: []domain.Tag{
 			tag1,
 			tag2,
@@ -563,6 +572,7 @@ func TestUpdateNode(t *testing.T) {
 	err = db.GetItem(&node, node1.ID)
 	if err != nil {
 		t.Error("Unable to get node, err: ", err.Error())
+		return
 	}
 
 	if node.Nickname != update1.Nickname {
@@ -571,6 +581,18 @@ func TestUpdateNode(t *testing.T) {
 
 	if len(node.Tags) != len(update1.Tags) {
 		t.Error("Tags not updated as expected")
+	}
+
+	if len(node.Tasks) != len(update1.Tasks) {
+		t.Error("Tasks not updated as expected")
+	}
+
+	if len(node.Contacts) != len(update1.Contacts) {
+		t.Error("Contacts not updated as expected")
+	}
+
+	if node.ConfiguredVersion.Number != update1.ConfiguredVersion.Number {
+		t.Errorf("Configured Version not updated as expected.")
 	}
 }
 

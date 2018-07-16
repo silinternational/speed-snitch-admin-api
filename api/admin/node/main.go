@@ -185,7 +185,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	node.Nickname = updatedNode.Nickname
 	node.Notes = updatedNode.Notes
 
-	node, err = updateNodeTasks(node)
+	updatedNode, err = updateNodeTasks(updatedNode)
 	if err != nil {
 		return domain.ReturnJsonOrError(domain.Node{}, err)
 	}
