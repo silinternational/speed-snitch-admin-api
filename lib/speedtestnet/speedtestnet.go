@@ -36,6 +36,10 @@ func GetSTNetServers(serverURL string) (map[string]domain.SpeedTestNetServer, ma
 	for _, nextServerList := range outerXML.ServerLists {
 		for _, nextServer := range nextServerList.Servers {
 			servers[nextServer.ServerID] = nextServer
+			if nextServer.CountryCode == "" {
+				domain.ErrorLogger.Println("\nError: country has no code. Name: ", nextServer.Country)
+				continue
+			}
 			country := domain.Country{
 				Code: nextServer.CountryCode,
 				Name: nextServer.Country,
@@ -127,6 +131,7 @@ func updateCountries(newCountries map[string]domain.Country) {
 			continue
 		}
 
+		dbCountry.Code = country.Code
 		dbCountry.Name = country.Name
 
 		err = db.PutItem(&dbCountry)
@@ -179,7 +184,7 @@ func UpdateSTNetServers(serverURL string) ([]string, error) {
 
 	// Delete old SpeedTestNetServers that don't have a matching new one and get a list of the NamedServers that don't have a match anymore
 	staleServerIDs := deleteOutdatedSTNetServers(oldSTNetServers, newServers, namedServers)
-	fmt.Fprintf(os.Stdout, "\nFound %v outdated servers that still have a matching NamedServer", len(staleServerIDs))
+	fmt.Fprintf(os.Stdout, "\nFound %v outdated servers that still have a matching NamedServer\n", len(staleServerIDs))
 
 	updateCountries(newCountries)
 
