@@ -31,7 +31,7 @@
     ".",
     "dialects/mysql"
   ]
-  revision = "77a1fc6994c4a9e5a3b5a3fa067829bbabf789e5"
+  revision = "088b993df9a2bcab1b690deed4bfd4a41ebe6ab5"
   source = "github.com/silinternational/gorm"
 
 [[projects]]
