@@ -36,11 +36,15 @@ func GetSTNetServers(serverURL string) (map[string]domain.SpeedTestNetServer, ma
 	for _, nextServerList := range outerXML.ServerLists {
 		for _, nextServer := range nextServerList.Servers {
 			servers[nextServer.ServerID] = nextServer
-			country := domain.Country{
-				Code: nextServer.CountryCode,
-				Name: nextServer.Country,
+			if nextServer.CountryCode == "" {
+				country := domain.Country{
+					Code: nextServer.CountryCode,
+					Name: nextServer.Country,
+				}
+				countries[country.Code] = country
+			} else {
+				domain.ErrorLogger.Println("\nError: country has no code. Name: ", nextServer.Country)
 			}
-			countries[country.Code] = country
 		}
 	}
 
@@ -127,6 +131,7 @@ func updateCountries(newCountries map[string]domain.Country) {
 			continue
 		}
 
+		dbCountry.Code = country.Code
 		dbCountry.Name = country.Name
 
 		err = db.PutItem(&dbCountry)

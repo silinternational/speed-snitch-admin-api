@@ -349,9 +349,14 @@ func TestUpdateCountries(t *testing.T) {
 		return
 	}
 
+	nc1 := domain.Country{Code: "NC1", Name: "New Country1"}
+	nc2 := domain.Country{Code: "NC2", Name: "New Country2"}
+
 	newCountries := map[string]domain.Country{
-		"GC": domain.Country{Code: goodCountry.Code, Name: goodCountry.Name},
-		"OC": domain.Country{Code: outdatedCountry.Code, Name: "Updated Country"},
+		"GC":  domain.Country{Code: goodCountry.Code, Name: goodCountry.Name},
+		"OC":  domain.Country{Code: outdatedCountry.Code, Name: "Updated Country"},
+		"NC1": nc1,
+		"NC2": nc2,
 	}
 
 	updateCountries(newCountries)
@@ -363,7 +368,7 @@ func TestUpdateCountries(t *testing.T) {
 		return
 	}
 
-	if len(updatedCountries) != 2 {
+	if len(updatedCountries) != 4 {
 		t.Errorf("Wrong number of Country entries after update. Expected: 2. But Got: %d.\n%+v",
 			len(updatedCountries),
 			updatedCountries,
@@ -371,9 +376,9 @@ func TestUpdateCountries(t *testing.T) {
 		return
 	}
 
-	expectedCountries := []domain.Country{goodCountry, newCountries["OC"]}
+	expectedCountries := []domain.Country{goodCountry, nc1, nc2, newCountries["OC"]}
 
-	for index := range []int{0, 1} {
+	for _, index := range []int{0, 1, 2, 3} {
 		if expectedCountries[index].Code != updatedCountries[index].Code ||
 			expectedCountries[index].Name != updatedCountries[index].Name {
 			t.Errorf("Updated Country results not as expected at index %d. \nExpected: %+v.\n But Got: %+v.",
