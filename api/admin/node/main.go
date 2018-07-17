@@ -96,6 +96,10 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
+	if node.Tags == nil {
+		node.Tags = []domain.Tag{}
+	}
+
 	return domain.ReturnJsonOrError(node, err)
 }
 
@@ -107,6 +111,9 @@ func listNodeTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	var node domain.Node
 	err := db.GetItem(&node, id)
+	if node.Tags == nil {
+		node.Tags = []domain.Tag{}
+	}
 	return domain.ReturnJsonOrError(node.Tags, err)
 }
 
@@ -227,6 +234,9 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// Update the node in the database
 	err = db.PutItemWithAssociations(&node, replaceAssoc)
+	if node.Tags == nil {
+		node.Tags = []domain.Tag{}
+	}
 	return domain.ReturnJsonOrError(node, err)
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -175,6 +176,35 @@ func TestViewNode(t *testing.T) {
 		t.Error("Did not get 403 trying to view node that user shouldn't be able to view, got: ", resp.StatusCode, " body: ", resp.Body)
 	}
 
+}
+
+func TestViewNodeWithoutTags(t *testing.T) {
+	testutils.ResetDb(t)
+
+	create := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+
+	db.PutItem(&create)
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/node/1",
+		PathParameters: map[string]string{
+			"id": "1",
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+
+	resp, err := viewNode(req)
+	if err != nil {
+		t.Error("Received error trying to view node: ", err.Error())
+		return
+	}
+
+	if strings.Contains(resp.Body, `"Tags":null`) || !strings.Contains(resp.Body, `"Tags":[]`) {
+		t.Errorf("Tags was not shown as an empty object\n%+v", resp.Body)
+	}
 }
 
 func TestListNodes(t *testing.T) {
