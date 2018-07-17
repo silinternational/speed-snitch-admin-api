@@ -42,22 +42,20 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		taskLogEntry.NodeIPAddress = node.IPAddress
 		taskLogEntry.NodeRunningVersion = node.RunningVersion
 
-		if taskLogEntry.ServerID != "" {
-			id := domain.GetUintFromString(taskLogEntry.ServerID)
-			if id != 0 {
-				var namedServer domain.NamedServer
-				err = db.GetItem(&namedServer, id)
-				if err != nil {
-					// Just log it and not error out for now
-					fmt.Fprintf(
-						os.Stdout,
-						"\nUnable to enrich task log entry for node %s. Country: %s, ServerID: %s. Err: %s",
-						macAddr, taskLogEntry.ServerCountry, taskLogEntry.ServerID, err.Error())
-				} else {
-					taskLogEntry.ServerCountry = namedServer.SpeedTestNetServer.CountryCode
-					taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", namedServer.SpeedTestNetServer.Lat, namedServer.SpeedTestNetServer.Lon)
-					taskLogEntry.ServerName = namedServer.SpeedTestNetServer.Name
-				}
+		if taskLogEntry.NamedServerID != 0 {
+			var namedServer domain.NamedServer
+			err = db.GetItem(&namedServer, taskLogEntry.NamedServerID)
+			if err != nil {
+				// Just log it and not error out for now
+				fmt.Fprintf(
+					os.Stdout,
+					"\nUnable to enrich task log entry for node %s. Country: %s, NamedServerID: %v. Err: %s",
+					macAddr, taskLogEntry.ServerCountry, taskLogEntry.NamedServerID, err.Error())
+			} else {
+				taskLogEntry.ServerCountry = namedServer.ServerCountry
+				taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", namedServer.SpeedTestNetServer.Lat, namedServer.SpeedTestNetServer.Lon)
+				taskLogEntry.ServerName = namedServer.SpeedTestNetServer.Name
+				taskLogEntry.ServerHost = namedServer.ServerHost
 			}
 		}
 
@@ -78,6 +76,22 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		taskLogEntry.NodeNetwork = node.Network
 		taskLogEntry.NodeIPAddress = node.IPAddress
 		taskLogEntry.NodeRunningVersionID = node.RunningVersionID
+
+		if taskLogEntry.NamedServerID != 0 {
+			var namedServer domain.NamedServer
+			err = db.GetItem(&namedServer, taskLogEntry.NamedServerID)
+			if err != nil {
+				// Just log it and not error out for now
+				fmt.Fprintf(
+					os.Stdout,
+					"\nUnable to enrich task log entry for node %s. Country: %s, NamedServerID: %v. Err: %s",
+					macAddr, taskLogEntry.ServerCountry, taskLogEntry.NamedServerID, err.Error())
+			} else {
+				taskLogEntry.ServerCountry = namedServer.ServerCountry
+				taskLogEntry.ServerName = namedServer.Name
+				taskLogEntry.ServerHost = namedServer.ServerHost
+			}
+		}
 
 		err = db.PutItem(&taskLogEntry)
 		if err != nil {
@@ -125,22 +139,19 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		taskLogEntry.NodeIPAddress = node.IPAddress
 		taskLogEntry.NodeRunningVersionID = node.RunningVersionID
 
-		if taskLogEntry.ServerID != "" {
-			id := domain.GetUintFromString(taskLogEntry.ServerID)
-			if id != 0 {
-				var namedServer domain.NamedServer
-				err = db.GetItem(&namedServer, id)
-				if err != nil {
-					// Just log it and not error out for now
-					fmt.Fprintf(
-						os.Stdout,
-						"\nUnable to enrich task log entry for node %s. Country: %s, ServerID: %s. Err: %s",
-						macAddr, taskLogEntry.ServerCountry, taskLogEntry.ServerID, err.Error())
-				} else {
-					taskLogEntry.ServerCountry = namedServer.SpeedTestNetServer.CountryCode
-					taskLogEntry.ServerCoordinates = fmt.Sprintf("%s,%s", namedServer.SpeedTestNetServer.Lat, namedServer.SpeedTestNetServer.Lon)
-					taskLogEntry.ServerName = namedServer.SpeedTestNetServer.Name
-				}
+		if taskLogEntry.NamedServerID != 0 {
+			var namedServer domain.NamedServer
+			err = db.GetItem(&namedServer, taskLogEntry.NamedServerID)
+			if err != nil {
+				// Just log it and not error out for now
+				fmt.Fprintf(
+					os.Stdout,
+					"\nUnable to enrich task log entry for node %s. Country: %s, NamedServerID: %v. Err: %s",
+					macAddr, taskLogEntry.ServerCountry, taskLogEntry.NamedServerID, err.Error())
+			} else {
+				taskLogEntry.ServerCountry = namedServer.ServerCountry
+				taskLogEntry.ServerName = namedServer.Name
+				taskLogEntry.ServerHost = namedServer.ServerHost
 			}
 		}
 
