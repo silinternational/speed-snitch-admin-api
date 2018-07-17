@@ -445,10 +445,18 @@ func TestListNodeTags(t *testing.T) {
 func TestUpdateNode(t *testing.T) {
 	testutils.ResetDb(t)
 
-	version := domain.Version{
+	version1 := domain.Version{
 		Number: "1.0.0",
 	}
-	err := db.PutItem(&version)
+	err := db.PutItem(&version1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	version2 := domain.Version{
+		Number: "2.0.0",
+	}
+	err = db.PutItem(&version2)
 	if err != nil {
 		t.Error(err)
 	}
@@ -477,8 +485,8 @@ func TestUpdateNode(t *testing.T) {
 	}
 	node1 := domain.Node{
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
-		RunningVersionID:    version.ID,
-		ConfiguredVersionID: version.ID,
+		RunningVersionID:    version1.ID,
+		ConfiguredVersionID: version1.ID,
 		Contacts:            []domain.Contact{},
 		Tags: []domain.Tag{
 			tag1,
@@ -516,9 +524,9 @@ func TestUpdateNode(t *testing.T) {
 	// remove one tag, add tasks, nickname, and notes
 	update1 := domain.Node{
 		MacAddr:             "aa:aa:aa:aa:aa:aa",
-		RunningVersionID:    version.ID,
-		ConfiguredVersionID: version.ID,
-		ConfiguredVersion:   version,
+		RunningVersionID:    version1.ID,
+		ConfiguredVersionID: version2.ID, // This one should be used
+		ConfiguredVersion:   version1,    // This one should be ignored
 		Contacts: []domain.Contact{
 			{
 				Name:  "New Contact",
@@ -591,7 +599,7 @@ func TestUpdateNode(t *testing.T) {
 		t.Error("Contacts not updated as expected")
 	}
 
-	if node.ConfiguredVersion.Number != update1.ConfiguredVersion.Number {
+	if node.ConfiguredVersion.Number != version2.Number {
 		t.Errorf("Configured Version not updated as expected.")
 	}
 }
