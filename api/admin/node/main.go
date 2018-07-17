@@ -96,6 +96,10 @@ func viewNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
 	}
 
+	if node.Tags == nil {
+		node.Tags = []domain.Tag{}
+	}
+
 	return domain.ReturnJsonOrError(node, err)
 }
 
@@ -107,6 +111,9 @@ func listNodeTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	var node domain.Node
 	err := db.GetItem(&node, id)
+	if node.Tags == nil {
+		node.Tags = []domain.Tag{}
+	}
 	return domain.ReturnJsonOrError(node.Tags, err)
 }
 
@@ -190,6 +197,22 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ReturnJsonOrError(domain.Node{}, err)
 	}
 
+	// Get new node version
+	if updatedNode.ConfiguredVersionID != updatedNode.ConfiguredVersion.ID {
+		var newVersion domain.Version
+		err := db.GetItem(&newVersion, updatedNode.ConfiguredVersionID)
+		if err != nil {
+			err = fmt.Errorf(
+				"error getting updated configured version with ID: %d\n%s",
+				updatedNode.ConfiguredVersionID,
+				err.Error(),
+			)
+			return domain.ReturnJsonOrError(domain.Node{}, err)
+		}
+
+		updatedNode.ConfiguredVersion = newVersion
+	}
+
 	replaceAssoc := []domain.AssociationReplacement{
 		{
 			Replacement:     updatedNode.Tags,
@@ -211,6 +234,9 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// Update the node in the database
 	err = db.PutItemWithAssociations(&node, replaceAssoc)
+	if node.Tags == nil {
+		node.Tags = []domain.Tag{}
+	}
 	return domain.ReturnJsonOrError(node, err)
 }
 
