@@ -115,14 +115,13 @@ type Node struct {
 
 type Task struct {
 	gorm.Model
-	NodeID               uint
-	Type                 string `gorm:"type:varchar(32);not null"`
-	Schedule             string `gorm:"not null"`
-	NamedServer          NamedServer
-	NamedServerID        uint `gorm:"default:null"`
-	SpeedTestNetServerID string
-	ServerHost           string
-	TaskData             TaskData `gorm:"type:text"`
+	NodeID        uint
+	Type          string `gorm:"type:varchar(32);not null"`
+	Schedule      string `gorm:"not null"`
+	NamedServer   NamedServer
+	NamedServerID uint `gorm:"default:null"`
+	ServerHost    string
+	TaskData      TaskData `gorm:"type:text"`
 }
 
 type TaskData struct {
@@ -186,7 +185,9 @@ type TaskLogSpeedTest struct {
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Upload               float64 `gorm:"not null;default:0"`
 	Download             float64 `gorm:"not null;default:0"`
-	ServerID             string
+	NamedServer          NamedServer
+	NamedServerID        uint `gorm:"default:null"`
+	ServerHost           string
 	ServerCountry        string
 	ServerCoordinates    string
 	ServerName           string
@@ -205,9 +206,10 @@ type TaskLogPingTest struct {
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Latency              float64 `gorm:"not null;default:0"`
 	PacketLossPercent    float64 `gorm:"not null;default:0"`
-	ServerID             string
+	NamedServer          NamedServer
+	NamedServerID        uint `gorm:"default:null"`
+	ServerHost           string
 	ServerCountry        string
-	ServerCoordinates    string
 	ServerName           string
 	NodeLocation         string
 	NodeCoordinates      string
@@ -224,9 +226,10 @@ type TaskLogError struct {
 	Timestamp            int64 `gorm:"type:int(11); not null"`
 	ErrorCode            string
 	ErrorMessage         string
-	ServerID             string
+	NamedServer          NamedServer
+	NamedServerID        uint `gorm:"default:null"`
+	ServerHost           string
 	ServerCountry        string
-	ServerCoordinates    string
 	ServerName           string
 	NodeLocation         string
 	NodeCoordinates      string

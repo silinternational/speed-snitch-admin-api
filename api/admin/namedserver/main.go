@@ -99,16 +99,23 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	}
 
 	server.ServerType = updatedServer.ServerType
-	server.SpeedTestNetServerID = updatedServer.SpeedTestNetServerID
 	server.ServerHost = updatedServer.ServerHost
 	server.ServerCountry = updatedServer.ServerCountry
 	server.Name = updatedServer.Name
 	server.Description = updatedServer.Description
 	server.Notes = updatedServer.Notes
 
+	var stnServer domain.SpeedTestNetServer
+	if updatedServer.SpeedTestNetServerID != 0 {
+		err = db.GetItem(&stnServer, updatedServer.SpeedTestNetServerID)
+		if err != nil {
+			return domain.ServerError(err)
+		}
+	}
+
 	replacement := []domain.AssociationReplacement{
 		{
-			Replacement:     updatedServer.SpeedTestNetServer,
+			Replacement:     stnServer,
 			AssociationName: "SpeedTestNetServer",
 		},
 	}
