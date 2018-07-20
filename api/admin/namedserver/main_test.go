@@ -65,7 +65,7 @@ func TestDeleteServer(t *testing.T) {
 func TestListServers(t *testing.T) {
 	testutils.ResetDb(t)
 
-	// First test that with no servers the response json is an empty array
+	// First, test that with no servers the response json is an empty array
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
 		Path:       "/namedserver",
@@ -80,19 +80,24 @@ func TestListServers(t *testing.T) {
 		t.Error("Response body was not empty array, got: ", resp.Body)
 	}
 
-	// Create a couple servers
-	servers := []domain.NamedServer{
-		{
-			Name: "server1",
-		},
-		{
-			Name: "server2",
-		},
+	serverCustom := domain.NamedServer{
+		Name:       "server1",
+		ServerType: domain.ServerTypeCustom,
 	}
+
+	serverSTN := domain.NamedServer{
+		Name:       "server2",
+		ServerType: domain.ServerTypeSpeedTestNet,
+	}
+
+	// Create a couple servers
+	servers := []domain.NamedServer{serverCustom, serverSTN}
+
 	for _, srv := range servers {
 		err = db.PutItem(&srv)
 		if err != nil {
 			t.Error("Unable to create server for test, got error: ", err.Error())
+			return
 		}
 	}
 
@@ -100,6 +105,7 @@ func TestListServers(t *testing.T) {
 	resp, err = listServers(req)
 	if err != nil {
 		t.Error("Got error trying to list servers: ", err.Error())
+		return
 	}
 
 	var returnedServers []domain.NamedServer
@@ -107,6 +113,27 @@ func TestListServers(t *testing.T) {
 
 	if len(returnedServers) != len(servers) {
 		t.Error("Did not return same number of servers as expected. Got: ", len(returnedServers), " expected: ", len(servers))
+		return
+	}
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/namedserver",
+		QueryStringParameters: map[string]string{"type": domain.ServerTypeSpeedTestNet},
+		Headers:               testutils.GetSuperAdminReqHeader(),
+	}
+
+	// Call API to get filtered list of servers
+	resp, err = listServers(req)
+	if err != nil {
+		t.Error("Got error trying to get filtered list of servers: ", err.Error())
+		return
+	}
+
+	err = json.Unmarshal([]byte(resp.Body), &returnedServers)
+	if len(returnedServers) != 1 || returnedServers[0].Name != serverSTN.Name {
+		t.Errorf("Wrong named servers returned. \nExpected:\n[%+v]\nBut got:\n%+v", serverSTN, returnedServers)
+		return
 	}
 }
 

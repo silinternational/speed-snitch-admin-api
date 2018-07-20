@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/jinzhu/gorm"
@@ -60,7 +61,24 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var servers []domain.NamedServer
-	err := db.ListItems(&servers, "name asc")
+
+	namedServerType, exists := req.QueryStringParameters["type"]
+
+	if !exists {
+		err := db.ListItems(&servers, "name asc")
+		return domain.ReturnJsonOrError(servers, err)
+	}
+
+	if namedServerType != domain.ServerTypeSpeedTestNet && namedServerType != domain.ServerTypeCustom {
+		err := fmt.Errorf(
+			`Invalid "type" query param. Must be %s or %s`,
+			domain.ServerTypeSpeedTestNet,
+			domain.ServerTypeCustom,
+		)
+		return domain.ReturnJsonOrError(servers, err)
+	}
+
+	servers, err := db.ListNamedServersByType(namedServerType)
 	return domain.ReturnJsonOrError(servers, err)
 }
 
