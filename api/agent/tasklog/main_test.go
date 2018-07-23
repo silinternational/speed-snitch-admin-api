@@ -50,27 +50,29 @@ func TestHandlerSpeedTest(t *testing.T) {
 		ServerType:           domain.DataTypeSpeedTestNetServer,
 		SpeedTestNetServerID: speedTestNetServer.ID,
 		Name:                 "test example",
+		ServerCountry:        speedTestNetServer.CountryCode,
+		ServerHost:           speedTestNetServer.Host,
 	}
 	db.PutItem(&namedServer)
 
 	logsToSend := []domain.TaskLogSpeedTest{
 		{
-			Timestamp: 1531246102,
-			ServerID:  fmt.Sprintf("%v", namedServer.ID),
-			Upload:    10,
-			Download:  10,
+			Timestamp:     1531246102,
+			NamedServerID: namedServer.ID,
+			Upload:        10,
+			Download:      10,
 		},
 		{
-			Timestamp: 1531246103,
-			ServerID:  fmt.Sprintf("%v", namedServer.ID),
-			Upload:    20,
-			Download:  20,
+			Timestamp:     1531246103,
+			NamedServerID: namedServer.ID,
+			Upload:        20,
+			Download:      20,
 		},
 		{
-			Timestamp: 1531246104,
-			ServerID:  fmt.Sprintf("%v", namedServer.ID),
-			Upload:    30,
-			Download:  30,
+			Timestamp:     1531246104,
+			NamedServerID: namedServer.ID,
+			Upload:        30,
+			Download:      30,
 		},
 	}
 
@@ -145,19 +147,19 @@ func TestHandlerPing(t *testing.T) {
 	logsToSend := []domain.TaskLogPingTest{
 		{
 			Timestamp:         1531246102,
-			ServerID:          fmt.Sprintf("%v", namedServer.ID),
+			NamedServerID:     namedServer.ID,
 			Latency:           0.5,
 			PacketLossPercent: 1,
 		},
 		{
 			Timestamp:         1531246103,
-			ServerID:          fmt.Sprintf("%v", namedServer.ID),
+			NamedServerID:     namedServer.ID,
 			Latency:           1,
 			PacketLossPercent: 2,
 		},
 		{
 			Timestamp:         1531246104,
-			ServerID:          fmt.Sprintf("%v", namedServer.ID),
+			NamedServerID:     namedServer.ID,
 			Latency:           3,
 			PacketLossPercent: 0,
 		},
@@ -195,8 +197,8 @@ func TestHandlerPing(t *testing.T) {
 		t.Error("Unable to retrieve task log for first entry, err: ", err.Error())
 	}
 
-	if taskLogEntry.ServerCountry != logsToSend[0].ServerCountry {
-		t.Errorf("Task log entry was not created properly, wrong country code, expected %s, got %s", logsToSend[0].ServerCountry, taskLogEntry.ServerCountry)
+	if taskLogEntry.ServerCountry != namedServer.ServerCountry {
+		t.Errorf("Task log entry was not created properly, wrong country code, expected %s, got %s", namedServer.ServerCountry, taskLogEntry.ServerCountry)
 	}
 	if taskLogEntry.Latency != logsToSend[0].Latency {
 		t.Errorf("Task log entry does not have correct upload value, expected %v, got %v", logsToSend[0].Latency, taskLogEntry.Latency)
@@ -382,27 +384,29 @@ func TestHandlerError(t *testing.T) {
 		ServerType:           domain.DataTypeSpeedTestNetServer,
 		SpeedTestNetServerID: speedTestNetServer.ID,
 		Name:                 "test example",
+		ServerCountry:        speedTestNetServer.CountryCode,
+		ServerHost:           speedTestNetServer.Host,
 	}
 	db.PutItem(&namedServer)
 
 	logsToSend := []domain.TaskLogError{
 		{
-			Timestamp:    1531246102,
-			ServerID:     fmt.Sprintf("%v", namedServer.ID),
-			ErrorCode:    "abc123",
-			ErrorMessage: "error message",
+			Timestamp:     1531246102,
+			NamedServerID: namedServer.ID,
+			ErrorCode:     "abc123",
+			ErrorMessage:  "error message",
 		},
 		{
-			Timestamp:    1531246103,
-			ServerID:     fmt.Sprintf("%v", namedServer.ID),
-			ErrorCode:    "abc123",
-			ErrorMessage: "error message",
+			Timestamp:     1531246103,
+			NamedServerID: namedServer.ID,
+			ErrorCode:     "abc123",
+			ErrorMessage:  "error message",
 		},
 		{
-			Timestamp:    1531246104,
-			ServerID:     fmt.Sprintf("%v", namedServer.ID),
-			ErrorCode:    "abc123",
-			ErrorMessage: "error message",
+			Timestamp:     1531246104,
+			NamedServerID: namedServer.ID,
+			ErrorCode:     "abc123",
+			ErrorMessage:  "error message",
 		},
 	}
 

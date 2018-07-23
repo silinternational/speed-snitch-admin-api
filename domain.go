@@ -96,7 +96,7 @@ type Node struct {
 	Arch                string  `gorm:"type:varchar(8); not null"`
 	RunningVersion      Version `gorm:"foreignkey:RunningVersionID"`
 	RunningVersionID    uint    `gorm:"default:null"`
-	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID"`
+	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID" json:"-"`
 	ConfiguredVersionID uint    `gorm:"default:null"`
 	Uptime              int64   `gorm:"default:0"`
 	LastSeen            string  `gorm:"type:varchar(64)"`
@@ -115,14 +115,13 @@ type Node struct {
 
 type Task struct {
 	gorm.Model
-	NodeID               uint
-	Type                 string `gorm:"type:varchar(32);not null"`
-	Schedule             string `gorm:"not null"`
-	NamedServer          NamedServer
-	NamedServerID        uint `gorm:"default:null"`
-	SpeedTestNetServerID string
-	ServerHost           string
-	TaskData             TaskData `gorm:"type:text"`
+	NodeID        uint
+	Type          string `gorm:"type:varchar(32);not null"`
+	Schedule      string `gorm:"not null"`
+	NamedServer   NamedServer
+	NamedServerID uint `gorm:"default:null"`
+	ServerHost    string
+	TaskData      TaskData `gorm:"type:text"`
 }
 
 type TaskData struct {
@@ -162,6 +161,13 @@ type User struct {
 	Tags  []Tag  `gorm:"many2many:user_tags"`
 }
 
+type UserTags struct {
+	gorm.Model
+	TagID  uint
+	User   User `gorm:"foreignkey:UserID"`
+	UserID uint
+}
+
 type Version struct {
 	gorm.Model
 	Number      string `gorm:"not null;unique_index"`
@@ -186,7 +192,9 @@ type TaskLogSpeedTest struct {
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Upload               float64 `gorm:"not null;default:0"`
 	Download             float64 `gorm:"not null;default:0"`
-	ServerID             string
+	NamedServer          NamedServer
+	NamedServerID        uint `gorm:"default:null"`
+	ServerHost           string
 	ServerCountry        string
 	ServerCoordinates    string
 	ServerName           string
@@ -205,9 +213,10 @@ type TaskLogPingTest struct {
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Latency              float64 `gorm:"not null;default:0"`
 	PacketLossPercent    float64 `gorm:"not null;default:0"`
-	ServerID             string
+	NamedServer          NamedServer
+	NamedServerID        uint `gorm:"default:null"`
+	ServerHost           string
 	ServerCountry        string
-	ServerCoordinates    string
 	ServerName           string
 	NodeLocation         string
 	NodeCoordinates      string
@@ -224,9 +233,10 @@ type TaskLogError struct {
 	Timestamp            int64 `gorm:"type:int(11); not null"`
 	ErrorCode            string
 	ErrorMessage         string
-	ServerID             string
+	NamedServer          NamedServer
+	NamedServerID        uint `gorm:"default:null"`
+	ServerHost           string
 	ServerCountry        string
-	ServerCoordinates    string
 	ServerName           string
 	NodeLocation         string
 	NodeCoordinates      string

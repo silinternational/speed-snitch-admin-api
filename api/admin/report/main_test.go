@@ -13,45 +13,45 @@ import (
 func TestViewNodeReport(t *testing.T) {
 	testutils.ResetDb(t)
 
-	tagFixtures := []domain.Tag{
-		{
-			Model: gorm.Model{
-				ID: 1,
-			},
-			Name: "tag-pass",
+	tagPass := domain.Tag{
+		Model: gorm.Model{
+			ID: 1,
 		},
-		{
-			Model: gorm.Model{
-				ID: 2,
-			},
-			Name: "tag-fail",
-		},
+		Name: "tag-pass",
 	}
+	tagFail := domain.Tag{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Name: "tag-fail",
+	}
+
+	tagFixtures := []domain.Tag{tagPass, tagFail}
+
 	for _, i := range tagFixtures {
 		db.PutItem(&i)
 	}
 
-	nodeFixtures := []domain.Node{
-		{
-			Model: gorm.Model{
-				ID: 1,
-			},
-			MacAddr: "aa:aa:aa:aa:aa:aa",
-			Tags:    []domain.Tag{tagFixtures[0]},
+	passNode := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
 		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
 	}
-	for _, i := range nodeFixtures {
-		db.PutItem(&i)
-	}
+
+	// Create the node in the database
+	err := db.PutItemWithAssociations(
+		&passNode,
+		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
+	)
 
 	passUser := domain.User{
 		Model: gorm.Model{
 			ID: 2,
 		},
 		UUID:  "pass_test",
-		Email: "user2@test.com",
+		Email: "userPass@test.com",
 		Role:  domain.UserRoleAdmin,
-		Tags:  []domain.Tag{tagFixtures[0]},
 	}
 
 	failUser := domain.User{
@@ -59,17 +59,30 @@ func TestViewNodeReport(t *testing.T) {
 			ID: 3,
 		},
 		UUID:  "fail_test",
-		Email: "user3@test.com",
+		Email: "userFail@test.com",
 		Role:  domain.UserRoleAdmin,
-		Tags:  []domain.Tag{tagFixtures[1]},
 	}
 
-	userFixtures := []domain.User{
-		passUser,
-		failUser,
+	// Create the user in the database
+	err = db.PutItemWithAssociations(
+		&passUser,
+		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
+	)
+
+	if err != nil {
+		t.Error("Got Error loading user fixture.\n", err.Error())
+		return
 	}
-	for _, i := range userFixtures {
-		db.PutItem(&i)
+
+	// Create the user in the database
+	err = db.PutItemWithAssociations(
+		&failUser,
+		[]domain.AssociationReplacement{{Replacement: tagFail, AssociationName: "tags"}},
+	)
+
+	if err != nil {
+		t.Error("Got Error loading user fixture.\n", err.Error())
+		return
 	}
 
 	taskLogFixtures := []domain.ReportingSnapshot{
@@ -79,7 +92,7 @@ func TestViewNodeReport(t *testing.T) {
 			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527811200, // 2018-06-01 00:00:00
-			NodeID:      nodeFixtures[0].ID,
+			NodeID:      passNode.ID,
 			UploadAvg:   20,
 			UploadMax:   30,
 			UploadMin:   10,
@@ -96,7 +109,7 @@ func TestViewNodeReport(t *testing.T) {
 			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527897600, // 2018-06-02 00:00:00
-			NodeID:      nodeFixtures[0].ID,
+			NodeID:      passNode.ID,
 			UploadAvg:   20,
 			UploadMax:   30,
 			UploadMin:   10,
@@ -113,7 +126,7 @@ func TestViewNodeReport(t *testing.T) {
 			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527984000, // 2018-06-03 00:00:00
-			NodeID:      nodeFixtures[0].ID,
+			NodeID:      passNode.ID,
 			UploadAvg:   20,
 			UploadMax:   30,
 			UploadMin:   10,
@@ -153,6 +166,7 @@ func TestViewNodeReport(t *testing.T) {
 	}
 	if response.StatusCode != 200 {
 		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
 	}
 
 	var snapResults []domain.ReportingSnapshot

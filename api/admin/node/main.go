@@ -198,7 +198,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Get new node version
-	if updatedNode.ConfiguredVersionID != updatedNode.ConfiguredVersion.ID {
+	if updatedNode.ConfiguredVersionID > 0 && updatedNode.ConfiguredVersionID != node.ConfiguredVersion.ID {
 		var newVersion domain.Version
 		err := db.GetItem(&newVersion, updatedNode.ConfiguredVersionID)
 		if err != nil {
@@ -243,6 +243,15 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 func updateNodeTasks(node domain.Node) (domain.Node, error) {
 	newTasks := []domain.Task{}
 	for index, task := range node.Tasks {
+		if task.NamedServerID != 0 {
+			var namedServer domain.NamedServer
+			err := db.GetItem(&namedServer, task.NamedServerID)
+			if err != nil {
+				return domain.Node{}, err
+			}
+			task.NamedServer = namedServer
+			task.ServerHost = namedServer.ServerHost
+		}
 		if task.Type == domain.TaskTypeSpeedTest {
 			newTask, err := updateTaskSpeedTest(task)
 			if err != nil {
