@@ -198,7 +198,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	// Get new node version
-	if updatedNode.ConfiguredVersionID != updatedNode.ConfiguredVersion.ID {
+	if updatedNode.ConfiguredVersionID > 0 && updatedNode.ConfiguredVersionID != node.ConfiguredVersion.ID {
 		var newVersion domain.Version
 		err := db.GetItem(&newVersion, updatedNode.ConfiguredVersionID)
 		if err != nil {
