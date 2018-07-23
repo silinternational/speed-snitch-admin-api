@@ -148,4 +148,53 @@ func TestHandler(t *testing.T) {
 		t.Errorf("Node created with a 'RunningVersion', but expected it to be empty.\n\tNode: %+v", node)
 		return
 	}
+
+	// Test using a new  node
+
+	newMACAddr := "21:22:23:24:25:26"
+	helloReq = domain.HelloRequest{
+		ID:      newMACAddr,
+		Version: version1.Number, // new version (not version1)
+		Uptime:  111,
+		OS:      "linux",
+		Arch:    "arm",
+	}
+	js, err = json.Marshal(helloReq)
+	if err != nil {
+		t.Error("Unable to marshal hello request to JSON, err: ", err.Error())
+	}
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod:     method,
+		Path:           "/hello",
+		PathParameters: map[string]string{},
+		Body:           string(js),
+	}
+
+	response, err = Handler(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 204 {
+		t.Error("Wrong status code returned, expected 204, got", response.StatusCode, response.Body)
+		return
+	}
+
+	// fetch node from db to check for update
+	node, err = db.GetNodeByMacAddr(newMACAddr)
+	if err != nil {
+		t.Error("Unable to get node, err: ", err.Error())
+		return
+	}
+
+	if node.RunningVersion.ID != version1.ID {
+		t.Errorf("Wrong 'RunningVersion' on node. Expected ID: %d\n But got: %+v.", version1.ID, node.RunningVersion)
+		return
+	}
+
+	if node.ConfiguredVersion.ID != version1.ID {
+		t.Errorf("Wrong 'ConfiguredVersion' on node. Expected ID: %d\n But got: %+v.", version1.ID, node.ConfiguredVersion)
+		return
+	}
 }
