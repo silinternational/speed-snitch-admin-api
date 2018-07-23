@@ -96,7 +96,7 @@ type Node struct {
 	Arch                string  `gorm:"type:varchar(8); not null"`
 	RunningVersion      Version `gorm:"foreignkey:RunningVersionID"`
 	RunningVersionID    uint    `gorm:"default:null"`
-	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID"`
+	ConfiguredVersion   Version `gorm:"foreignkey:ConfiguredVersionID" json:"-"`
 	ConfiguredVersionID uint    `gorm:"default:null"`
 	Uptime              int64   `gorm:"default:0"`
 	LastSeen            string  `gorm:"type:varchar(64)"`
