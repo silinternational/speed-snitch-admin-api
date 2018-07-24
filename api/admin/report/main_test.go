@@ -427,7 +427,7 @@ func TestGetNodeRawData(t *testing.T) {
 		t.Errorf("Expected two logs with values of 111 and 222, but got\n%s", results)
 	}
 
-	// Test for passNode's downtime logs
+	// Test for passNode's Restart logs
 	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04"))
 	if err != nil {
 		t.Error(err)
