@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -213,12 +214,12 @@ func TestViewNodeReport(t *testing.T) {
 	}
 }
 
-func getRawDataRequest(logType string) events.APIGatewayProxyRequest {
+func getRawDataRequest(nodeID, logType, date string) events.APIGatewayProxyRequest {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/report/node/1/raw",
+		Path:       "/report/node/nodeID/raw",
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": nodeID,
 		},
 		Headers: map[string]string{
 			"x-user-uuid": testutils.SuperAdmin.UUID,
@@ -226,7 +227,7 @@ func getRawDataRequest(logType string) events.APIGatewayProxyRequest {
 		},
 		QueryStringParameters: map[string]string{
 			"type": logType,
-			"date": "2018-06-04",
+			"date": date,
 		},
 	}
 
@@ -261,6 +262,8 @@ func TestGetNodeRawData(t *testing.T) {
 		},
 		MacAddr: "aa:aa:aa:aa:aa:aa",
 	}
+
+	strPassNodeID := fmt.Sprintf("%v", passNode.ID)
 
 	// Create the node in the database
 	err := db.PutItemWithAssociations(
@@ -371,7 +374,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's speedTest logs
-	response, err := getNodeRawData(getRawDataRequest(domain.TaskTypeSpeedTest))
+	response, err := getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypeSpeedTest, "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -389,7 +392,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's ping logs
-	response, err = getNodeRawData(getRawDataRequest(domain.TaskTypePing))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypePing, "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -407,7 +410,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's downtime logs
-	response, err = getNodeRawData(getRawDataRequest(domain.LogTypeDowntime))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -423,8 +426,22 @@ func TestGetNodeRawData(t *testing.T) {
 		strings.Contains(results, `333`) {
 		t.Errorf("Expected two logs with values of 111 and 222, but got\n%s", results)
 	}
-}
 
-func TestReturnCSVOrError(t *testing.T) {
+	// Test for passNode's downtime logs
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04"))
+	if err != nil {
+		t.Error(err)
+	}
 
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results = response.Body
+	if !strings.Contains(results, `:30-`) ||
+		!strings.Contains(results, `:31-`) ||
+		strings.Contains(results, `2,2018`) {
+		t.Errorf("Expected two logs with values of 30 and 31, but got\n%s", results)
+	}
 }
