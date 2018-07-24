@@ -112,6 +112,14 @@ functions:
               parameters:
                 paths:
                   id: true
+        - http:
+            path: /report/node/{id}/raw
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  id: true
 
   tag:
       handler: bin/tag
