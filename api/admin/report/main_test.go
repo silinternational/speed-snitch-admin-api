@@ -439,8 +439,8 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	results = response.Body
-	if !strings.Contains(results, `:30-`) ||
-		!strings.Contains(results, `:31-`) ||
+	if !strings.Contains(results, `:30`) ||
+		!strings.Contains(results, `:31`) ||
 		strings.Contains(results, `2,2018`) {
 		t.Errorf("Expected two logs with values of 30 and 31, but got\n%s", results)
 	}
