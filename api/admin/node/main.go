@@ -11,9 +11,6 @@ import (
 	"strings"
 )
 
-const SelfType = domain.DataTypeNode
-
-const DefaultPingTimeoutInSeconds = 5
 const DefaultSpeedTestTimeoutInSeconds = 60 // 1 minute
 const DefaultSpeedTestMaxSeconds = 60.0     // 1 minute
 
