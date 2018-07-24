@@ -1,7 +1,9 @@
 package domain
 
 import (
+	"bytes"
 	"database/sql/driver"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
@@ -18,7 +20,6 @@ import (
 )
 
 const DataTypeNamedServer = "namedserver"
-const DataTypeNode = "node"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
 const DataTypeSTNetServerList = "stnetserverlist"
 
@@ -39,10 +40,8 @@ const TaskTypePing = "ping"
 const TaskTypeSpeedTest = "speedTest"
 
 const TestConfigSpeedTest = "speedTest"
-const TestConfigLatencyTest = "latencyTest"
 
-const DefaultPingServerID = "defaultPing"
-const DefaultPingServerHost = "paris1.speedtest.orange.fr:8080"
+const SecondsPerDay = 86400 // 60 * 60 * 24
 
 const DefaultSpeedTestNetServerID = "5559"
 const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
@@ -188,12 +187,12 @@ type SpeedTestNetServer struct {
 type TaskLogSpeedTest struct {
 	gorm.Model
 	Node                 Node
+	NamedServer          NamedServer
 	NodeID               uint    `gorm:"default:null"`
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Upload               float64 `gorm:"not null;default:0"`
 	Download             float64 `gorm:"not null;default:0"`
-	NamedServer          NamedServer
-	NamedServerID        uint `gorm:"default:null"`
+	NamedServerID        uint    `gorm:"default:null"`
 	ServerHost           string
 	ServerCountry        string
 	ServerCoordinates    string
@@ -206,15 +205,55 @@ type TaskLogSpeedTest struct {
 	NodeRunningVersionID uint    `gorm:"default:null"`
 }
 
+func (t TaskLogSpeedTest) GetTaskLogMap() map[string]string {
+	taskLogMap := map[string]string{
+		"NodeID":             fmt.Sprintf("%v", t.NodeID),
+		"Date and Time":      TimestampToHumanReadable(t.Timestamp),
+		"Upload":             fmt.Sprintf("%.3f", t.Upload),
+		"Download":           fmt.Sprintf("%.3f", t.Download),
+		"NamedServerID":      fmt.Sprintf("%v", t.NamedServerID),
+		"ServerHost":         t.ServerHost,
+		"ServerCountry":      t.ServerCountry,
+		"ServerName":         t.ServerName,
+		"NodeLocation":       t.NodeLocation,
+		"NodeCoordinates":    t.NodeCoordinates,
+		"NodeNetwork":        t.NodeNetwork,
+		"NodeIPAddress":      t.NodeIPAddress,
+		"NodeRunningVersion": t.NodeRunningVersion.Number,
+	}
+
+	return taskLogMap
+}
+
+func (t TaskLogSpeedTest) GetTaskLogKeys() []string {
+	taskLogKeys := []string{
+		"NodeID",
+		"Date and Time",
+		"Upload",
+		"Download",
+		"NamedServerID",
+		"ServerHost",
+		"ServerCountry",
+		"ServerName",
+		"NodeLocation",
+		"NodeCoordinates",
+		"NodeNetwork",
+		"NodeIPAddress",
+		"NodeRunningVersion",
+	}
+
+	return taskLogKeys
+}
+
 type TaskLogPingTest struct {
 	gorm.Model
 	Node                 Node
+	NamedServer          NamedServer
 	NodeID               uint    `gorm:"default:null"`
 	Timestamp            int64   `gorm:"type:int(11); not null"`
 	Latency              float64 `gorm:"not null;default:0"`
 	PacketLossPercent    float64 `gorm:"not null;default:0"`
-	NamedServer          NamedServer
-	NamedServerID        uint `gorm:"default:null"`
+	NamedServerID        uint    `gorm:"default:null"`
 	ServerHost           string
 	ServerCountry        string
 	ServerName           string
@@ -224,6 +263,46 @@ type TaskLogPingTest struct {
 	NodeIPAddress        string
 	NodeRunningVersion   Version `gorm:"foreignkey:NodeRunningVersionID"`
 	NodeRunningVersionID uint    `gorm:"default:null"`
+}
+
+func (t TaskLogPingTest) GetTaskLogMap() map[string]string {
+	taskLogMap := map[string]string{
+		"NodeID":             fmt.Sprintf("%v", t.NodeID),
+		"Date and Time":      TimestampToHumanReadable(t.Timestamp),
+		"Latency":            fmt.Sprintf("%.3f", t.Latency),
+		"PacketLossPercent":  fmt.Sprintf("%.3f", t.PacketLossPercent),
+		"NamedServerID":      fmt.Sprintf("%v", t.NamedServerID),
+		"ServerHost":         t.ServerHost,
+		"ServerCountry":      t.ServerCountry,
+		"ServerName":         t.ServerName,
+		"NodeLocation":       t.NodeLocation,
+		"NodeCoordinates":    t.NodeCoordinates,
+		"NodeNetwork":        t.NodeNetwork,
+		"NodeIPAddress":      t.NodeIPAddress,
+		"NodeRunningVersion": t.NodeRunningVersion.Number,
+	}
+
+	return taskLogMap
+}
+
+func (t TaskLogPingTest) GetTaskLogKeys() []string {
+	taskLogKeys := []string{
+		"NodeID",
+		"Date and Time",
+		"Latency",
+		"PacketLossPercent",
+		"NamedServerID",
+		"ServerHost",
+		"ServerCountry",
+		"ServerName",
+		"NodeLocation",
+		"NodeCoordinates",
+		"NodeNetwork",
+		"NodeIPAddress",
+		"NodeRunningVersion",
+	}
+
+	return taskLogKeys
 }
 
 type TaskLogError struct {
@@ -253,6 +332,23 @@ type TaskLogRestart struct {
 	Timestamp int64 `gorm:"type:int(11); not null"`
 }
 
+func (t TaskLogRestart) GetTaskLogMap() map[string]string {
+	taskLogMap := map[string]string{
+		"NodeID":        fmt.Sprintf("%v", t.NodeID),
+		"Date and Time": TimestampToHumanReadable(t.Timestamp),
+	}
+
+	return taskLogMap
+}
+
+func (t TaskLogRestart) GetTaskLogKeys() []string {
+	taskLogKeys := []string{
+		"NodeID",
+		"Date and Time",
+	}
+	return taskLogKeys
+}
+
 type TaskLogNetworkDowntime struct {
 	gorm.Model
 	Node            Node
@@ -262,6 +358,31 @@ type TaskLogNetworkDowntime struct {
 	DowntimeSeconds int64  `gorm:"not null;default:0"`
 	NodeNetwork     string
 	NodeIPAddress   string
+}
+
+func (t TaskLogNetworkDowntime) GetTaskLogMap() map[string]string {
+	taskLogMap := map[string]string{
+		"NodeID":          fmt.Sprintf("%v", t.NodeID),
+		"Date and Time":   TimestampToHumanReadable(t.Timestamp),
+		"DowntimeStart":   t.DowntimeStart,
+		"DowntimeSeconds": fmt.Sprintf("%v", t.DowntimeSeconds),
+		"NodeNetwork":     t.NodeNetwork,
+		"NodeIPAddress":   t.NodeIPAddress,
+	}
+
+	return taskLogMap
+}
+
+func (t TaskLogNetworkDowntime) GetTaskLogKeys() []string {
+	taskLogKeys := []string{
+		"NodeID",
+		"Date and Time",
+		"DowntimeStart",
+		"DowntimeSeconds",
+		"NodeNetwork",
+		"NodeIPAddress",
+	}
+	return taskLogKeys
 }
 
 type ReportingSnapshot struct {
@@ -513,6 +634,61 @@ func ReturnJsonOrError(response interface{}, err error) (events.APIGatewayProxyR
 	}, nil
 }
 
+type TaskLogMapper interface {
+	GetTaskLogMap() map[string]string
+	GetTaskLogKeys() []string
+}
+
+func ReturnCSVOrError(items []TaskLogMapper, csvFilename string, err error) (events.APIGatewayProxyResponse, error) {
+	if len(items) == 0 {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusOK,
+			Body:       "[]",
+		}, nil
+	}
+
+	//var w http.ResponseWriter
+	//w.Header().Set("Content-Type", "text/csv")
+	//w.Header().Set("Content-Disposition", "attachment;filename="+csvFilename)
+	var b bytes.Buffer
+	csvWriter := csv.NewWriter(&b)
+
+	defer csvWriter.Flush()
+
+	columnKeys := items[0].GetTaskLogKeys()
+
+	// Write the Column Headers
+	err = csvWriter.Write(columnKeys)
+	if err != nil {
+		return events.APIGatewayProxyResponse{
+			StatusCode: http.StatusInternalServerError,
+			Body:       "",
+		}, err
+	}
+
+	for _, item := range items {
+		itemMap := item.GetTaskLogMap()
+		nextRow := []string{}
+		for _, key := range columnKeys {
+			nextRow = append(nextRow, itemMap[key])
+		}
+
+		err := csvWriter.Write(nextRow)
+		if err != nil {
+			return events.APIGatewayProxyResponse{
+				StatusCode: http.StatusInternalServerError,
+				Body:       "",
+			}, err
+		}
+	}
+
+	csvWriter.Flush()
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       b.String(),
+	}, nil
+}
+
 func GetEnv(name, defaultValue string) string {
 	value := os.Getenv(name)
 	if value == "" {
@@ -536,4 +712,8 @@ func GetResourceIDFromRequest(req events.APIGatewayProxyRequest) uint {
 func GetTimeNow() string {
 	t := time.Now().UTC()
 	return t.Format(time.RFC3339)
+}
+
+func TimestampToHumanReadable(timestamp int64) string {
+	return time.Unix(timestamp, 0).Format(time.RFC3339)
 }
