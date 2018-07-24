@@ -7,6 +7,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
+	"strings"
 	"testing"
 )
 
@@ -44,6 +45,9 @@ func TestViewNodeReport(t *testing.T) {
 		&passNode,
 		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
 	)
+	if err != nil {
+		t.Errorf("Error creating Node fixture.\n%s", err.Error())
+	}
 
 	passUser := domain.User{
 		Model: gorm.Model{
@@ -207,4 +211,220 @@ func TestViewNodeReport(t *testing.T) {
 	if response.StatusCode != 403 {
 		t.Error("Wrong status code returned, expected 403, got", response.StatusCode, response.Body)
 	}
+}
+
+func getRawDataRequest(logType string) events.APIGatewayProxyRequest {
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/report/node/1/raw",
+		PathParameters: map[string]string{
+			"id": "1",
+		},
+		Headers: map[string]string{
+			"x-user-uuid": testutils.SuperAdmin.UUID,
+			"x-user-mail": testutils.SuperAdmin.Email,
+		},
+		QueryStringParameters: map[string]string{
+			"type": logType,
+			"date": "2018-06-04",
+		},
+	}
+
+	return req
+}
+
+func TestGetNodeRawData(t *testing.T) {
+	testutils.ResetDb(t)
+
+	tagPass := domain.Tag{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Name: "tag-pass",
+	}
+	tagFail := domain.Tag{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Name: "tag-fail",
+	}
+
+	tagFixtures := []domain.Tag{tagPass, tagFail}
+
+	for _, i := range tagFixtures {
+		db.PutItem(&i)
+	}
+
+	passNode := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+
+	// Create the node in the database
+	err := db.PutItemWithAssociations(
+		&passNode,
+		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
+	)
+	if err != nil {
+		t.Errorf("Error creating Node fixture.\n%s", err.Error())
+	}
+
+	failNode := domain.Node{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		MacAddr: "21:22:23:24:25:26",
+	}
+
+	db.PutItem(&failNode)
+
+	speedInRange := []domain.TaskLogSpeedTest{
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145185,
+			Upload:    10.0,
+			Download:  10.0,
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145285,
+			Upload:    20.0,
+			Download:  20.0,
+		},
+		{
+			NodeID:    failNode.ID,
+			Timestamp: 1528145385,
+			Upload:    30.0,
+			Download:  30.0,
+		},
+	}
+
+	for _, i := range speedInRange {
+		db.PutItem(&i)
+	}
+
+	pingInRange := []domain.TaskLogPingTest{
+		{
+			NodeID:            passNode.ID,
+			Timestamp:         1528145485,
+			Latency:           5,
+			PacketLossPercent: 5,
+		},
+		{
+			NodeID:            passNode.ID,
+			Timestamp:         1528145486,
+			Latency:           10,
+			PacketLossPercent: 10,
+		},
+		{
+			NodeID:            failNode.ID,
+			Timestamp:         1528145489,
+			Latency:           15,
+			PacketLossPercent: 15,
+		},
+	}
+
+	for _, i := range pingInRange {
+		db.PutItem(&i)
+	}
+
+	downtimeInRange := []domain.TaskLogNetworkDowntime{
+		{
+			NodeID:          passNode.ID,
+			Timestamp:       1528145000,
+			DowntimeSeconds: 111,
+		},
+		{
+			NodeID:          passNode.ID,
+			Timestamp:       1528146000,
+			DowntimeSeconds: 222,
+		},
+		{
+			NodeID:          failNode.ID,
+			Timestamp:       1528145489,
+			DowntimeSeconds: 333,
+		},
+	}
+
+	for _, i := range downtimeInRange {
+		db.PutItem(&i)
+	}
+
+	restartsInRange := []domain.TaskLogRestart{
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145490,
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145491,
+		},
+		{
+			NodeID:    failNode.ID,
+			Timestamp: 1528145491,
+		},
+	}
+	for _, i := range restartsInRange {
+		db.PutItem(&i)
+	}
+
+	// Test for passNode's speedTest logs
+	response, err := getNodeRawData(getRawDataRequest(domain.TaskTypeSpeedTest))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results := response.Body
+	if !strings.Contains(results, `,10.000,`) ||
+		!strings.Contains(results, `,20.000,`) ||
+		strings.Contains(results, `30.000`) {
+		t.Errorf("Expected two logs with values of 10.000 and 20.000, but got\n%s", results)
+	}
+
+	// Test for passNode's ping logs
+	response, err = getNodeRawData(getRawDataRequest(domain.TaskTypePing))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results = response.Body
+	if !strings.Contains(results, `,5.000,`) ||
+		!strings.Contains(results, `,10.000,`) ||
+		strings.Contains(results, `15`) {
+		t.Errorf("Expected two logs with values of 5 and 10, but got\n%s", results)
+	}
+
+	// Test for passNode's downtime logs
+	response, err = getNodeRawData(getRawDataRequest(domain.LogTypeDowntime))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results = response.Body
+	if !strings.Contains(results, `,111,`) ||
+		!strings.Contains(results, `,222,`) ||
+		strings.Contains(results, `333`) {
+		t.Errorf("Expected two logs with values of 111 and 222, but got\n%s", results)
+	}
+}
+
+func TestReturnCSVOrError(t *testing.T) {
+
 }
