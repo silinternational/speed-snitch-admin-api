@@ -639,7 +639,7 @@ type TaskLogMapper interface {
 	GetTaskLogKeys() []string
 }
 
-func ReturnCSVOrError(items []TaskLogMapper, csvFilename string, err error) (events.APIGatewayProxyResponse, error) {
+func ReturnCSVOrError(items []TaskLogMapper, err error) (events.APIGatewayProxyResponse, error) {
 	if len(items) == 0 {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
