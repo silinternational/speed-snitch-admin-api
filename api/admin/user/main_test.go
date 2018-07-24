@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
@@ -14,33 +15,73 @@ import (
 func TestDeleteUser(t *testing.T) {
 	testutils.ResetDb(t)
 
-	createUser := domain.User{
+	targetUserTag1 := domain.Tag{
+		Name:        "TargetUserTag1",
+		Description: "First tag for the target user",
+	}
+
+	otherTag := domain.Tag{
+		Name:        "otherTag",
+		Description: "This tag is not for the target user",
+	}
+
+	targetUserTag2 := domain.Tag{
+		Name:        "TargetUserTag2",
+		Description: "Second tag for the target user",
+	}
+
+	err := db.PutItem(&otherTag)
+	if err != nil {
+		t.Error(err)
+	}
+
+	testUser := domain.User{
 		Name:  "test",
 		Email: "test@test.com",
 		UUID:  "abc123",
+		Tags:  []domain.Tag{targetUserTag1, targetUserTag2},
 	}
 
-	err := db.PutItem(&createUser)
+	// Save the user in the database
+	err = db.PutItem(&testUser)
 	if err != nil {
 		t.Error("Error creating test user: ", err.Error())
+		return
 	}
 
+	// Check that the users got loaded
 	users := []domain.User{}
 	err = db.ListItems(&users, "id asc")
 	if err != nil {
 		t.Errorf("Error calling list users: %s", err.Error())
 		return
 	}
+
 	// Including the SuperAdmin
 	if len(users) != 2 {
 		t.Errorf("Wrong number of user fixtures loaded. Expected: 2. But got: %d", len(users))
+		return
 	}
+
+	var userTags []domain.UserTags
+	err = db.ListItems(&userTags, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries in user_tags table before the test.\n%s", err.Error())
+		return
+	}
+
+	if len(userTags) != 2 {
+		t.Errorf("Wrong number of user_tags saved. Expected: 2. But got: %d", len(userTags))
+		return
+	}
+
+	userID := fmt.Sprintf("%d", testUser.ID)
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
-		Path:       "/user/1",
+		Path:       "/user/" + userID,
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": userID,
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
@@ -49,18 +90,33 @@ func TestDeleteUser(t *testing.T) {
 
 	if err != nil {
 		t.Error("Error deleting user: ", err.Error())
+		return
 	}
 
 	if resp.StatusCode != 200 {
-		t.Error("Did not get expected 200 response for deleting uesr, got: ", resp.StatusCode, " body: ", string(resp.Body))
+		t.Error("Did not get expected 200 response for deleting user, got: ", resp.StatusCode, " body: ", string(resp.Body))
+		//return
 	}
 
 	// query db directly to make sure user no longer exists
 	var findUser domain.User
-	err = db.GetItem(&findUser, 1)
+	err = db.GetItem(&findUser, testUser.ID)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Error("Did not get a not found error as expected")
 	}
+
+	userTags = []domain.UserTags{}
+	err = db.ListItems(&userTags, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries in user_tags table following the test.\n%s", err.Error())
+		return
+	}
+
+	if len(userTags) != 0 {
+		t.Errorf("Wrong number of user_tags remaining. Expected: 0. But got: %d", len(userTags))
+		return
+	}
+
 }
 
 func TestViewMe(t *testing.T) {

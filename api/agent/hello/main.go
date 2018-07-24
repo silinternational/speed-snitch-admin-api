@@ -75,6 +75,9 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		return domain.ServerError(err)
 	} else {
 		node.RunningVersion = version
+		if node.ConfiguredVersionID == 0 {
+			node.ConfiguredVersion = version
+		}
 	}
 
 	// Update transient fields

@@ -98,11 +98,13 @@ func TestViewNode(t *testing.T) {
 
 	db.PutItem(&create)
 
+	strNodeID := fmt.Sprintf("%v", create.ID)
+
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/node/1",
+		Path:       "/node/" + strNodeID,
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": strNodeID,
 		},
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}

@@ -28,6 +28,14 @@ func TestDeleteTag(t *testing.T) {
 		Description: "This tag is not to be deleted",
 	}
 
+	tagFixtures := []domain.Tag{deleteMeTag, keepMeTag}
+	for _, fix := range tagFixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
 	changedNode := domain.Node{
 		Model: gorm.Model{
 			ID: 1,
@@ -39,11 +47,14 @@ func TestDeleteTag(t *testing.T) {
 		},
 	}
 
-	nodeFixtures := []domain.Node{
-		changedNode,
-	}
-
-	superAdmin := testutils.SuperAdmin
+	// Create the node in the database
+	err := db.PutItemWithAssociations(
+		&changedNode,
+		[]domain.AssociationReplacement{
+			{Replacement: deleteMeTag, AssociationName: "nodes"},
+			{Replacement: keepMeTag, AssociationName: "nodes"},
+		},
+	)
 
 	changedUser := domain.User{
 		Model: gorm.Model{
@@ -52,10 +63,6 @@ func TestDeleteTag(t *testing.T) {
 		UUID:  "2",
 		Email: "changed_test@mail.com",
 		Role:  domain.UserRoleAdmin,
-		Tags: []domain.Tag{
-			deleteMeTag,
-			keepMeTag,
-		},
 	}
 
 	notChangedUser := domain.User{
@@ -65,41 +72,30 @@ func TestDeleteTag(t *testing.T) {
 		UUID:  "3",
 		Email: "notchanged_test@mail.com",
 		Role:  domain.UserRoleAdmin,
-		Tags: []domain.Tag{
-			keepMeTag,
+	}
+
+	// Create the user in the database
+	err = db.PutItemWithAssociations(
+		&changedUser,
+		[]domain.AssociationReplacement{
+			{Replacement: deleteMeTag, AssociationName: "tags"},
+			{Replacement: keepMeTag, AssociationName: "tags"},
 		},
+	)
+
+	if err != nil {
+		t.Error("Got Error loading user fixture.\n", err.Error())
+		return
 	}
 
-	userFixtures := []domain.User{
-		superAdmin,
-		changedUser,
-		notChangedUser,
-	}
+	err = db.PutItemWithAssociations(
+		&notChangedUser,
+		[]domain.AssociationReplacement{{Replacement: keepMeTag, AssociationName: "tags"}},
+	)
 
-	tagFixtures := []domain.Tag{
-		deleteMeTag,
-		keepMeTag,
-	}
-
-	for _, fix := range nodeFixtures {
-		err := db.PutItem(&fix)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-
-	for _, fix := range userFixtures {
-		err := db.PutItem(&fix)
-		if err != nil {
-			t.Error(err)
-		}
-	}
-
-	for _, fix := range tagFixtures {
-		err := db.PutItem(&fix)
-		if err != nil {
-			t.Error(err)
-		}
+	if err != nil {
+		t.Error("Got Error loading user fixture.\n", err.Error())
+		return
 	}
 
 	// Test that using an invalid tag id results in 404 error

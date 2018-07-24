@@ -20,7 +20,7 @@ var Db *gorm.DB
 
 var DatabaseTables = []interface{}{
 	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Task{}, &domain.SpeedTestNetServer{},
-	&domain.User{}, &domain.Version{}, &domain.TaskLogSpeedTest{},
+	&domain.UserTags{}, &domain.User{}, &domain.Version{}, &domain.TaskLogSpeedTest{},
 	&domain.TaskLogPingTest{}, &domain.TaskLogError{}, &domain.TaskLogRestart{}, &domain.TaskLogNetworkDowntime{},
 	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.Node{}}
 
@@ -191,6 +191,14 @@ func CreateForeignKeys() error {
 			OnDelete:    CASCADE,
 			OnUpdate:    NOACTION,
 		},
+		{
+			ChildModel:  &domain.UserTags{},
+			ChildField:  "user_id",
+			ParentTable: "user",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
 	}
 
 	for _, key := range keys {
@@ -233,7 +241,7 @@ func GetItem(itemObj interface{}, id uint) error {
 		return err
 	}
 
-	notFound := gdb.Set("gorm:auto_preload", true).First(itemObj, id).RecordNotFound()
+	notFound := gdb.Set("gorm:auto_preload", true).Unscoped().First(itemObj, id).RecordNotFound()
 	if notFound {
 		return gorm.ErrRecordNotFound
 	}
@@ -286,7 +294,7 @@ func ListItems(itemObj interface{}, order string) error {
 		return err
 	}
 
-	gdb.Set("gorm:auto_preload", true).Order(order).Find(itemObj)
+	gdb.Set("gorm:auto_preload", true).Unscoped().Order(order).Find(itemObj)
 
 	return gdb.Error
 }
@@ -426,6 +434,20 @@ func GetUserFromRequest(req events.APIGatewayProxyRequest) (domain.User, error) 
 	}
 
 	return user, nil
+}
+
+func ListNamedServersByType(serverType string) ([]domain.NamedServer, error) {
+
+	gdb, err := GetDb()
+	if err != nil {
+		return []domain.NamedServer{}, err
+	}
+
+	order := fmt.Sprintf("name asc")
+	serverList := []domain.NamedServer{}
+	where := fmt.Sprintf("server_type = ?")
+	gdb.Set("gorm:auto_preload", true).Unscoped().Order(order).Where(where, serverType).Find(&serverList)
+	return serverList, gdb.Error
 }
 
 // AreTagsValid returns a bool based on this ...

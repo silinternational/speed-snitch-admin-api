@@ -161,6 +161,13 @@ type User struct {
 	Tags  []Tag  `gorm:"many2many:user_tags"`
 }
 
+type UserTags struct {
+	gorm.Model
+	TagID  uint
+	User   User `gorm:"foreignkey:UserID"`
+	UserID uint
+}
+
 type Version struct {
 	gorm.Model
 	Number      string `gorm:"not null;unique_index"`
