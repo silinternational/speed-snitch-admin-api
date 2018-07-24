@@ -231,16 +231,8 @@ func (t TaskLogSpeedTest) GetTaskLogKeys() []string {
 		"Date and Time",
 		"Upload",
 		"Download",
-		"NamedServerID",
-		"ServerHost",
-		"ServerCountry",
-		"ServerName",
-		"NodeLocation",
-		"NodeCoordinates",
-		"NodeNetwork",
-		"NodeIPAddress",
-		"NodeRunningVersion",
 	}
+	taskLogKeys = append(taskLogKeys, getSharedTaskLogKeys()...)
 
 	return taskLogKeys
 }
@@ -291,17 +283,8 @@ func (t TaskLogPingTest) GetTaskLogKeys() []string {
 		"Date and Time",
 		"Latency",
 		"PacketLossPercent",
-		"NamedServerID",
-		"ServerHost",
-		"ServerCountry",
-		"ServerName",
-		"NodeLocation",
-		"NodeCoordinates",
-		"NodeNetwork",
-		"NodeIPAddress",
-		"NodeRunningVersion",
 	}
-
+	taskLogKeys = append(taskLogKeys, getSharedTaskLogKeys()...)
 	return taskLogKeys
 }
 
@@ -647,9 +630,6 @@ func ReturnCSVOrError(items []TaskLogMapper, err error) (events.APIGatewayProxyR
 		}, nil
 	}
 
-	//var w http.ResponseWriter
-	//w.Header().Set("Content-Type", "text/csv")
-	//w.Header().Set("Content-Disposition", "attachment;filename="+csvFilename)
 	var b bytes.Buffer
 	csvWriter := csv.NewWriter(&b)
 
@@ -683,9 +663,11 @@ func ReturnCSVOrError(items []TaskLogMapper, err error) (events.APIGatewayProxyR
 	}
 
 	csvWriter.Flush()
+	csvOutput := b.String()
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       b.String(),
+		Body:       csvOutput,
 	}, nil
 }
 
@@ -716,4 +698,19 @@ func GetTimeNow() string {
 
 func TimestampToHumanReadable(timestamp int64) string {
 	return time.Unix(timestamp, 0).Format(time.RFC3339)
+}
+
+func getSharedTaskLogKeys() []string {
+	keys := []string{
+		"NamedServerID",
+		"ServerHost",
+		"ServerCountry",
+		"ServerName",
+		"NodeLocation",
+		"NodeCoordinates",
+		"NodeNetwork",
+		"NodeIPAddress",
+		"NodeRunningVersion",
+	}
+	return keys
 }
