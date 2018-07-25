@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
@@ -16,53 +15,38 @@ func TestViewNodeReport(t *testing.T) {
 	testutils.ResetDb(t)
 
 	tagPass := domain.Tag{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		Name: "tag-pass",
 	}
 	tagFail := domain.Tag{
-		Model: gorm.Model{
-			ID: 2,
-		},
 		Name: "tag-fail",
 	}
 
-	tagFixtures := []domain.Tag{tagPass, tagFail}
+	tagFixtures := []*domain.Tag{&tagPass, &tagFail}
 
 	for _, i := range tagFixtures {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
 
 	passNode := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		MacAddr: "aa:aa:aa:aa:aa:aa",
 	}
 
 	// Create the node in the database
 	err := db.PutItemWithAssociations(
 		&passNode,
-		[]domain.AssociationReplacements{{Replacements: tagPass, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagPass}, AssociationName: "tags"}},
 	)
 	if err != nil {
 		t.Errorf("Error creating Node fixture.\n%s", err.Error())
 	}
 
 	passUser := domain.User{
-		Model: gorm.Model{
-			ID: 2,
-		},
 		UUID:  "pass_test",
 		Email: "userPass@test.com",
 		Role:  domain.UserRoleAdmin,
 	}
 
 	failUser := domain.User{
-		Model: gorm.Model{
-			ID: 3,
-		},
 		UUID:  "fail_test",
 		Email: "userFail@test.com",
 		Role:  domain.UserRoleAdmin,
@@ -71,7 +55,7 @@ func TestViewNodeReport(t *testing.T) {
 	// Create the user in the database
 	err = db.PutItemWithAssociations(
 		&passUser,
-		[]domain.AssociationReplacements{{Replacements: tagPass, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagPass}, AssociationName: "tags"}},
 	)
 
 	if err != nil {
@@ -82,7 +66,7 @@ func TestViewNodeReport(t *testing.T) {
 	// Create the user in the database
 	err = db.PutItemWithAssociations(
 		&failUser,
-		[]domain.AssociationReplacements{{Replacements: tagFail, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagFail}, AssociationName: "tags"}},
 	)
 
 	if err != nil {
@@ -90,11 +74,8 @@ func TestViewNodeReport(t *testing.T) {
 		return
 	}
 
-	taskLogFixtures := []domain.ReportingSnapshot{
+	taskLogFixtures := []*domain.ReportingSnapshot{
 		{
-			Model: gorm.Model{
-				ID: 1,
-			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527811200, // 2018-06-01 00:00:00
 			NodeID:      passNode.ID,
@@ -109,9 +90,6 @@ func TestViewNodeReport(t *testing.T) {
 			LatencyMin:  2,
 		},
 		{
-			Model: gorm.Model{
-				ID: 2,
-			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527897600, // 2018-06-02 00:00:00
 			NodeID:      passNode.ID,
@@ -126,9 +104,6 @@ func TestViewNodeReport(t *testing.T) {
 			LatencyMin:  2,
 		},
 		{
-			Model: gorm.Model{
-				ID: 3,
-			},
 			Interval:    domain.ReportingIntervalDaily,
 			Timestamp:   1527984000, // 2018-06-03 00:00:00
 			NodeID:      passNode.ID,
@@ -144,14 +119,16 @@ func TestViewNodeReport(t *testing.T) {
 		},
 	}
 	for _, i := range taskLogFixtures {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
+
+	strNodeID := fmt.Sprintf("%d", passNode.ID)
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/report/node/1",
+		Path:       "/report/node/" + strNodeID,
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": strNodeID,
 		},
 		Headers: map[string]string{
 			"x-user-uuid": passUser.UUID,
@@ -189,9 +166,9 @@ func TestViewNodeReport(t *testing.T) {
 	// try again with user who is not allowed to view this node to ensure error message
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/report/node/1",
+		Path:       "/report/node/" + strNodeID,
 		PathParameters: map[string]string{
-			"id": "1",
+			"id": strNodeID,
 		},
 		Headers: map[string]string{
 			"x-user-uuid": failUser.UUID,
@@ -238,52 +215,40 @@ func TestGetNodeRawData(t *testing.T) {
 	testutils.ResetDb(t)
 
 	tagPass := domain.Tag{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		Name: "tag-pass",
 	}
 	tagFail := domain.Tag{
-		Model: gorm.Model{
-			ID: 2,
-		},
 		Name: "tag-fail",
 	}
 
-	tagFixtures := []domain.Tag{tagPass, tagFail}
+	tagFixtures := []*domain.Tag{&tagPass, &tagFail}
 
 	for _, i := range tagFixtures {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
 
 	passNode := domain.Node{
-		Model: gorm.Model{
-			ID: 1,
-		},
 		MacAddr: "aa:aa:aa:aa:aa:aa",
 	}
-
-	strPassNodeID := fmt.Sprintf("%v", passNode.ID)
 
 	// Create the node in the database
 	err := db.PutItemWithAssociations(
 		&passNode,
-		[]domain.AssociationReplacements{{Replacements: tagPass, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagPass}, AssociationName: "tags"}},
 	)
 	if err != nil {
 		t.Errorf("Error creating Node fixture.\n%s", err.Error())
 	}
 
+	strPassNodeID := fmt.Sprintf("%d", passNode.ID)
+
 	failNode := domain.Node{
-		Model: gorm.Model{
-			ID: 2,
-		},
 		MacAddr: "21:22:23:24:25:26",
 	}
 
 	db.PutItem(&failNode)
 
-	speedInRange := []domain.TaskLogSpeedTest{
+	speedInRange := []*domain.TaskLogSpeedTest{
 		{
 			NodeID:    passNode.ID,
 			Timestamp: 1528145185,
@@ -305,10 +270,10 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	for _, i := range speedInRange {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
 
-	pingInRange := []domain.TaskLogPingTest{
+	pingInRange := []*domain.TaskLogPingTest{
 		{
 			NodeID:            passNode.ID,
 			Timestamp:         1528145485,
@@ -330,10 +295,10 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	for _, i := range pingInRange {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
 
-	downtimeInRange := []domain.TaskLogNetworkDowntime{
+	downtimeInRange := []*domain.TaskLogNetworkDowntime{
 		{
 			NodeID:          passNode.ID,
 			Timestamp:       1528145000,
@@ -352,10 +317,10 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	for _, i := range downtimeInRange {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
 
-	restartsInRange := []domain.TaskLogRestart{
+	restartsInRange := []*domain.TaskLogRestart{
 		{
 			NodeID:    passNode.ID,
 			Timestamp: 1528145490,
@@ -370,7 +335,7 @@ func TestGetNodeRawData(t *testing.T) {
 		},
 	}
 	for _, i := range restartsInRange {
-		db.PutItem(&i)
+		db.PutItem(i)
 	}
 
 	// Test for passNode's speedTest logs
