@@ -106,10 +106,17 @@ type Node struct {
 	IPAddress           string
 	Tasks               []Task
 	Contacts            []Contact
-	Tags                []Tag `gorm:"many2many:node_tags;"`
+	Tags                []Tag `gorm:"many2many:node_tags"`
 	ConfiguredBy        string
 	Nickname            string
 	Notes               string
+}
+
+type NodeTags struct {
+	gorm.Model
+	TagID  uint
+	Node   Node `gorm:"foreignkey:NodeID"`
+	NodeID uint
 }
 
 type Task struct {
@@ -419,8 +426,8 @@ type NodeConfig struct {
 	Tasks []Task
 }
 
-type AssociationReplacement struct {
-	Replacement     interface{}
+type AssociationReplacements struct {
+	Replacements    interface{}
 	AssociationName string
 }
 
