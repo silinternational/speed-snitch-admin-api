@@ -210,21 +210,21 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		updatedNode.ConfiguredVersion = newVersion
 	}
 
-	replaceAssoc := []domain.AssociationReplacement{
+	replaceAssoc := []domain.AssociationReplacements{
 		{
-			Replacement:     updatedNode.Tags,
+			Replacements:    updatedNode.Tags,
 			AssociationName: "Tags",
 		},
 		{
-			Replacement:     updatedNode.Contacts,
+			Replacements:    updatedNode.Contacts,
 			AssociationName: "Contacts",
 		},
 		{
-			Replacement:     updatedNode.Tasks,
+			Replacements:    updatedNode.Tasks,
 			AssociationName: "Tasks",
 		},
 		{
-			Replacement:     updatedNode.ConfiguredVersion,
+			Replacements:    updatedNode.ConfiguredVersion,
 			AssociationName: "ConfiguredVersion",
 		},
 	}
