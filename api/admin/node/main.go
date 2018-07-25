@@ -224,7 +224,7 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 			AssociationName: "Tasks",
 		},
 		{
-			Replacements:    updatedNode.ConfiguredVersion,
+			Replacements:    []domain.Version{updatedNode.ConfiguredVersion},
 			AssociationName: "ConfiguredVersion",
 		},
 	}
