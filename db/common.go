@@ -22,7 +22,7 @@ var DatabaseTables = []interface{}{
 	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Task{}, &domain.SpeedTestNetServer{},
 	&domain.UserTags{}, &domain.User{}, &domain.Version{}, &domain.TaskLogSpeedTest{},
 	&domain.TaskLogPingTest{}, &domain.TaskLogError{}, &domain.TaskLogRestart{}, &domain.TaskLogNetworkDowntime{},
-	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.Node{}}
+	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.NodeTags{}, &domain.Node{}}
 
 func GetDb() (*gorm.DB, error) {
 	if Db == nil {
@@ -199,6 +199,14 @@ func CreateForeignKeys() error {
 			OnDelete:    CASCADE,
 			OnUpdate:    NOACTION,
 		},
+		{
+			ChildModel:  &domain.NodeTags{},
+			ChildField:  "node_id",
+			ParentTable: "node",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
 	}
 
 	for _, key := range keys {
@@ -319,7 +327,7 @@ func PutItem(itemObj interface{}) error {
 	return nil
 }
 
-func PutItemWithAssociations(itemObj interface{}, replacements []domain.AssociationReplacement) error {
+func PutItemWithAssociations(itemObj interface{}, replacements []domain.AssociationReplacements) error {
 	gdb, err := GetDb()
 	if err != nil {
 		return err
@@ -336,12 +344,12 @@ func PutItemWithAssociations(itemObj interface{}, replacements []domain.Associat
 	errs := newGdb.GetErrors()
 	if len(errs) > 0 {
 		tx.Rollback()
-		fmt.Fprintf(os.Stdout, "errors: %+v\n", errs)
+		fmt.Fprintf(os.Stdout, "errors with associations on item:\n%+v\n%+v\n", itemObj, errs)
 		return errs[0]
 	}
 
 	for _, replace := range replacements {
-		tx.Model(itemObj).Association(replace.AssociationName).Replace(replace.Replacement)
+		tx.Model(itemObj).Association(replace.AssociationName).Replace(replace.Replacements)
 		if tx.Error != nil {
 			tx.Rollback()
 			return tx.Error
