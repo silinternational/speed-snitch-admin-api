@@ -133,7 +133,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	replacement := []domain.AssociationReplacements{
 		{
-			Replacements:    stnServer,
+			Replacements:    []domain.SpeedTestNetServer{stnServer},
 			AssociationName: "SpeedTestNetServer",
 		},
 	}
