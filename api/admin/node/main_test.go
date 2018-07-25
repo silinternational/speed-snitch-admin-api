@@ -126,7 +126,7 @@ func TestDeleteNode(t *testing.T) {
 	nodeTags = []domain.NodeTags{}
 	err = db.ListItems(&nodeTags, "")
 	if err != nil {
-		t.Errorf("Error trying to get entries in node_tags table following the test.\n%s", err.Error())
+		t.Errorf("Error trying to get entries from node_tags table following the test.\n%s", err.Error())
 		return
 	}
 
