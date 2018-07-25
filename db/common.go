@@ -207,6 +207,22 @@ func CreateForeignKeys() error {
 			OnDelete:    CASCADE,
 			OnUpdate:    NOACTION,
 		},
+		{
+			ChildModel:  &domain.UserTags{},
+			ChildField:  "tag_id",
+			ParentTable: "tag",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.NodeTags{},
+			ChildField:  "tag_id",
+			ParentTable: "tag",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
 	}
 
 	for _, key := range keys {

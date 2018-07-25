@@ -114,6 +114,7 @@ type Node struct {
 
 type NodeTags struct {
 	gorm.Model
+	Tag    Node `gorm:"foreignkey:TagID"`
 	TagID  uint
 	Node   Node `gorm:"foreignkey:NodeID"`
 	NodeID uint
@@ -169,6 +170,7 @@ type User struct {
 
 type UserTags struct {
 	gorm.Model
+	Tag    Node `gorm:"foreignkey:TagID"`
 	TagID  uint
 	User   User `gorm:"foreignkey:UserID"`
 	UserID uint
