@@ -44,7 +44,7 @@ func TestViewNodeReport(t *testing.T) {
 	// Create the node in the database
 	err := db.PutItemWithAssociations(
 		&passNode,
-		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: tagPass, AssociationName: "tags"}},
 	)
 	if err != nil {
 		t.Errorf("Error creating Node fixture.\n%s", err.Error())
@@ -71,7 +71,7 @@ func TestViewNodeReport(t *testing.T) {
 	// Create the user in the database
 	err = db.PutItemWithAssociations(
 		&passUser,
-		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: tagPass, AssociationName: "tags"}},
 	)
 
 	if err != nil {
@@ -82,7 +82,7 @@ func TestViewNodeReport(t *testing.T) {
 	// Create the user in the database
 	err = db.PutItemWithAssociations(
 		&failUser,
-		[]domain.AssociationReplacement{{Replacement: tagFail, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: tagFail, AssociationName: "tags"}},
 	)
 
 	if err != nil {
@@ -268,7 +268,7 @@ func TestGetNodeRawData(t *testing.T) {
 	// Create the node in the database
 	err := db.PutItemWithAssociations(
 		&passNode,
-		[]domain.AssociationReplacement{{Replacement: tagPass, AssociationName: "tags"}},
+		[]domain.AssociationReplacements{{Replacements: tagPass, AssociationName: "tags"}},
 	)
 	if err != nil {
 		t.Errorf("Error creating Node fixture.\n%s", err.Error())
