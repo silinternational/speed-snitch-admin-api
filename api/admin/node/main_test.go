@@ -750,6 +750,18 @@ func TestRemoveAssociations(t *testing.T) {
 	db.PutItem(&node1)
 	node1Id := fmt.Sprintf("%v", node1.ID)
 
+	var tasks []domain.Task
+	err := db.ListItems(&tasks, "")
+	if err != nil {
+		t.Errorf("Error trying to get Tasks from db before test.\n%s", err.Error())
+		return
+	}
+
+	if len(tasks) != 1 {
+		t.Errorf("Error checking Task fixturess before test. Expected 1, but got %d\n%+v", len(tasks), tasks)
+		return
+	}
+
 	js := `{"MacAddr": "aa:aa:aa:aa:aa:aa", "Nickname": "after", "Tags": [], "Contacts": [], "Tasks": []}`
 
 	req := events.APIGatewayProxyRequest{
@@ -793,4 +805,29 @@ func TestRemoveAssociations(t *testing.T) {
 	if len(node.Tasks) != 0 {
 		t.Error("Tasks still present after update")
 	}
+
+	tasks = []domain.Task{}
+	err = db.ListItems(&tasks, "")
+	if err != nil {
+		t.Errorf("Error trying to get Tasks from db after test.\n%s", err.Error())
+		return
+	}
+
+	if len(tasks) != 0 {
+		t.Errorf("Wrong number of Tasks remaining in the db after test. Expected 0, but got %d", len(tasks))
+		return
+	}
+
+	contacts := []domain.Contact{}
+	err = db.ListItems(&contacts, "")
+	if err != nil {
+		t.Errorf("Error trying to get Contacts from db after test.\n%s", err.Error())
+		return
+	}
+
+	if len(contacts) != 0 {
+		t.Errorf("Wrong number of Contacts remaining in the db after test. Expected 0, but got %d", len(contacts))
+		return
+	}
+
 }

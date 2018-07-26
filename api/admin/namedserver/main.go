@@ -56,7 +56,23 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	var server domain.NamedServer
 	err := db.GetItem(&server, id)
-	return domain.ReturnJsonOrError(server, err)
+	if err != nil {
+		domain.ReturnJsonOrError(server, err)
+	}
+
+	if server.ServerType != domain.ServerTypeSpeedTestNet {
+		return domain.ReturnJsonOrError(server, err)
+	}
+
+	var stnServer domain.SpeedTestNetServer
+	err = db.GetItem(&stnServer, server.SpeedTestNetServerID)
+	if err != nil {
+		return domain.ReturnJsonOrError(server, err)
+	}
+
+	server.ServerHost = stnServer.Host
+	server.ServerCountry = stnServer.Country
+	return domain.ReturnJsonOrError(server, nil)
 }
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -124,11 +140,23 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	server.Notes = updatedServer.Notes
 
 	var stnServer domain.SpeedTestNetServer
-	if updatedServer.SpeedTestNetServerID != 0 {
-		err = db.GetItem(&stnServer, updatedServer.SpeedTestNetServerID)
-		if err != nil {
+	if updatedServer.ServerType == domain.ServerTypeSpeedTestNet {
+		if updatedServer.SpeedTestNetServerID == 0 {
+			err := fmt.Errorf("For server of type %s, the SpeedTestNetServerID cannot be 0.", domain.ServerTypeSpeedTestNet)
 			return domain.ServerError(err)
 		}
+
+		err = db.GetItem(&stnServer, updatedServer.SpeedTestNetServerID)
+		if err != nil {
+			err := fmt.Errorf(
+				"Error retrieving SpeedTestNet Server with ID %d.\n%s",
+				updatedServer.SpeedTestNetServerID,
+				err.Error(),
+			)
+			return domain.ServerError(err)
+		}
+		server.ServerHost = stnServer.Host
+		server.ServerCountry = stnServer.Country
 	}
 
 	replacement := []domain.AssociationReplacements{

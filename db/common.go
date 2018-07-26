@@ -16,6 +16,8 @@ const NOACTION = "NO ACTION"
 const SETNULL = "SET NULL"
 const RESTRICT = "RESTRICT"
 
+const MYSQL_NULL = "null"
+
 var Db *gorm.DB
 
 var DatabaseTables = []interface{}{
@@ -397,6 +399,24 @@ func DeleteItem(itemObj interface{}, id uint) error {
 	}
 
 	return gdb.Error
+}
+
+// itemObj needs to be a pointer
+// relationID should be something like "node_id"
+func DeleteOrphanedItems(itemObj interface{}, relationID string) {
+	gdb, err := GetDb()
+	if err != nil {
+		fmt.Fprintf(os.Stdout, "\nError connecting to database to delete orphaned items.\n%+v", err.Error())
+		return
+	}
+
+	where := fmt.Sprintf("%s is %s", relationID, MYSQL_NULL)
+	gdb.Unscoped().Where(where).Delete(itemObj)
+
+	if gdb.Error != nil {
+		fmt.Fprintf(os.Stdout, "\nError deleting orphaned items from the database based on %s.\n%s", relationID, gdb.Error.Error())
+		return
+	}
 }
 
 func FindOne(itemObj interface{}) error {
