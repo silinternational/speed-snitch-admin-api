@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
@@ -211,6 +212,15 @@ func getRawDataRequest(nodeID, logType, date string) events.APIGatewayProxyReque
 	return req
 }
 
+func isCSVValid(csvString string) error {
+	// Check the csv is OK
+	ioResults := strings.NewReader(csvString)
+	reader := csv.NewReader(ioResults)
+
+	_, err := reader.ReadAll()
+	return err
+}
+
 func TestGetNodeRawData(t *testing.T) {
 	testutils.ResetDb(t)
 
@@ -374,6 +384,13 @@ func TestGetNodeRawData(t *testing.T) {
 		t.Errorf("Expected two logs with values of 5 and 10, but got\n%s", results)
 	}
 
+	// Check the csv is OK
+	err = isCSVValid(results)
+	if err != nil {
+		t.Errorf("Error reading results as csv.\n %s", err.Error())
+		return
+	}
+
 	// Test for passNode's downtime logs
 	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04"))
 	if err != nil {
@@ -392,6 +409,13 @@ func TestGetNodeRawData(t *testing.T) {
 		t.Errorf("Expected two logs with values of 111 and 222, but got\n%s", results)
 	}
 
+	// Check the csv is OK
+	err = isCSVValid(results)
+	if err != nil {
+		t.Errorf("Error reading results as csv.\n %s", err.Error())
+		return
+	}
+
 	// Test for passNode's Restart logs
 	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04"))
 	if err != nil {
@@ -408,5 +432,13 @@ func TestGetNodeRawData(t *testing.T) {
 		!strings.Contains(results, `:31`) ||
 		strings.Contains(results, `2,2018`) {
 		t.Errorf("Expected two logs with values of 30 and 31, but got\n%s", results)
+		return
 	}
+
+	err = isCSVValid(results)
+	if err != nil {
+		t.Errorf("Error reading results as csv.\n %s", err.Error())
+		return
+	}
+
 }
