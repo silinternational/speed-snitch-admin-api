@@ -234,6 +234,13 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	if node.Tags == nil {
 		node.Tags = []domain.Tag{}
 	}
+
+	task := domain.Task{}
+	db.DeleteOrphanedItems(&task, "node_id")
+
+	contact := domain.Contact{}
+	db.DeleteOrphanedItems(&contact, "node_id")
+
 	return domain.ReturnJsonOrError(node, err)
 }
 
