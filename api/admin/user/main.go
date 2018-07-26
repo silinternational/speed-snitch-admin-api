@@ -149,9 +149,9 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	user.Name = updatedUser.Name
 	user.Role = updatedUser.Role
 
-	replacements := []domain.AssociationReplacement{
+	replacements := []domain.AssociationReplacements{
 		{
-			Replacement:     updatedUser.Tags,
+			Replacements:    updatedUser.Tags,
 			AssociationName: "Tags",
 		},
 	}

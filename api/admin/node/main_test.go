@@ -16,7 +16,43 @@ import (
 func TestDeleteNode(t *testing.T) {
 	testutils.ResetDb(t)
 
-	create := domain.Node{
+	targetNodeTag1 := domain.Tag{
+		Name:        "TargetNodeTag1",
+		Description: "First tag for the target node",
+	}
+
+	otherTag := domain.Tag{
+		Name:        "otherTag",
+		Description: "This tag is not for the target node",
+	}
+
+	targetNodeTag2 := domain.Tag{
+		Name:        "TargetNodeTag2",
+		Description: "Second tag for the target node",
+	}
+
+	tagFixtures := []*domain.Tag{&targetNodeTag1, &otherTag, &targetNodeTag2}
+	for _, fix := range tagFixtures {
+		err := db.PutItem(fix)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	var testTags []domain.Tag
+	err := db.ListItems(&testTags, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries in tags table before the test.\n%s", err.Error())
+		return
+	}
+
+	if len(testTags) != 3 {
+		t.Errorf("Wrong number of tag fixtures saved. Expected: 3. But got: %d", len(testTags))
+		return
+	}
+
+	createNode := domain.Node{
 		MacAddr: "aa:aa:aa:aa:aa:aa",
 		Contacts: []domain.Contact{
 			{
@@ -25,9 +61,28 @@ func TestDeleteNode(t *testing.T) {
 			},
 		},
 	}
-	db.PutItem(&create)
 
-	idStr := fmt.Sprintf("%v", create.ID)
+	// Create the node in the database
+	err = db.PutItemWithAssociations(
+		&createNode,
+		[]domain.AssociationReplacements{
+			{AssociationName: "Tags", Replacements: []domain.Tag{targetNodeTag1, targetNodeTag2}},
+		},
+	)
+
+	var nodeTags []domain.NodeTags
+	err = db.ListItems(&nodeTags, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries in node_tags table before the test.\n%s", err.Error())
+		return
+	}
+
+	if len(nodeTags) != 2 {
+		t.Errorf("Wrong number of node_tags saved. Expected: 2. But got: %d", len(nodeTags))
+		return
+	}
+
+	idStr := fmt.Sprintf("%v", createNode.ID)
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
@@ -55,16 +110,29 @@ func TestDeleteNode(t *testing.T) {
 
 	// try to find node via db to ensure doesn't exist
 	var find domain.Node
-	err = db.GetItem(&find, create.ID)
+	err = db.GetItem(&find, createNode.ID)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Error("node still exists after deletion")
 	}
 
 	// Check if contact was removed too
 	var contact domain.Contact
-	err = db.GetItem(&contact, create.Contacts[0].ID)
+	err = db.GetItem(&contact, createNode.Contacts[0].ID)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Errorf("contact still exists after node deletion: %+v", contact)
+	}
+
+	// Check that the node_tags were deleted
+	nodeTags = []domain.NodeTags{}
+	err = db.ListItems(&nodeTags, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries from node_tags table following the test.\n%s", err.Error())
+		return
+	}
+
+	if len(nodeTags) != 0 {
+		t.Errorf("Wrong number of node_tags remaining. Expected: 0. But got: %d", len(nodeTags))
+		return
 	}
 
 	// try to delete node that doesnt exist

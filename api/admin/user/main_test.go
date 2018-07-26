@@ -30,20 +30,28 @@ func TestDeleteUser(t *testing.T) {
 		Description: "Second tag for the target user",
 	}
 
-	err := db.PutItem(&otherTag)
-	if err != nil {
-		t.Error(err)
+	tagFixtures := []*domain.Tag{&targetUserTag1, &otherTag, &targetUserTag2}
+	for _, fix := range tagFixtures {
+		err := db.PutItem(fix)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 	}
 
 	testUser := domain.User{
 		Name:  "test",
 		Email: "test@test.com",
 		UUID:  "abc123",
-		Tags:  []domain.Tag{targetUserTag1, targetUserTag2},
 	}
 
 	// Save the user in the database
-	err = db.PutItem(&testUser)
+	err := db.PutItemWithAssociations(
+		&testUser,
+		[]domain.AssociationReplacements{
+			{AssociationName: "Tags", Replacements: []domain.Tag{targetUserTag1, targetUserTag2}},
+		},
+	)
 	if err != nil {
 		t.Error("Error creating test user: ", err.Error())
 		return
@@ -71,7 +79,7 @@ func TestDeleteUser(t *testing.T) {
 	}
 
 	if len(userTags) != 2 {
-		t.Errorf("Wrong number of user_tags saved. Expected: 2. But got: %d", len(userTags))
+		t.Errorf("Wrong number of user_tags saved with fixtures. Expected: 2. But got: %d", len(userTags))
 		return
 	}
 
