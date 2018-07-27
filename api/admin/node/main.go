@@ -247,7 +247,11 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 func updateNodeTasks(node domain.Node) (domain.Node, error) {
 	newTasks := []domain.Task{}
 	for index, task := range node.Tasks {
-		if task.NamedServerID != 0 {
+		if task.Type == domain.TaskTypeSpeedTest || task.Type == domain.TaskTypePing {
+			if task.NamedServerID == 0 {
+				err := fmt.Errorf("task of type %s must have a NamedServerID.", task.Type)
+				return node, err
+			}
 			var namedServer domain.NamedServer
 			err := db.GetItem(&namedServer, task.NamedServerID)
 			if err != nil {
