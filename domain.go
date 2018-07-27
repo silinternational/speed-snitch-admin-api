@@ -149,12 +149,12 @@ func (td *TaskData) Scan(value interface{}) error {
 
 type NamedServer struct {
 	gorm.Model
-	ServerType           string             `gorm:"not null"`
+	ServerType           string             `gorm:"not null" json:"Type"`
 	SpeedTestNetServerID uint               `gorm:"default:null"` // Only needed if ServerType is SpeedTestNetServer
 	SpeedTestNetServer   SpeedTestNetServer `json:"-"`
-	ServerHost           string             // Needed for non-SpeedTestNetServers
-	ServerCountry        string
-	Name                 string `gorm:"not null;unique_index"`
+	ServerHost           string             `json:"Host"` // Needed for non-SpeedTestNetServers
+	ServerCountry        string             `json:"Country"`
+	Name                 string             `gorm:"not null;unique_index"`
 	Description          string
 	Notes                string `gorm:"type:varchar(2048)"`
 }
