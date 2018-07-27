@@ -154,6 +154,7 @@ type NamedServer struct {
 	SpeedTestNetServer   SpeedTestNetServer `json:"-"`
 	ServerHost           string             `json:"Host"` // Needed for non-SpeedTestNetServers
 	ServerCountry        string             `json:"Country"`
+	ServerCountryCode    string             `gorm:"-" json:"CountryCode"` // Only needed if ServerType is SpeedTestNetServer
 	Name                 string             `gorm:"not null;unique_index"`
 	Description          string
 	Notes                string `gorm:"type:varchar(2048)"`

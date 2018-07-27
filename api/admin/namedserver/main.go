@@ -72,6 +72,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	server.ServerHost = stnServer.Host
 	server.ServerCountry = stnServer.Country
+	server.ServerCountryCode = stnServer.CountryCode
 	return domain.ReturnJsonOrError(server, nil)
 }
 
@@ -135,6 +136,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	server.ServerType = updatedServer.ServerType
 	server.ServerHost = updatedServer.ServerHost
 	server.ServerCountry = updatedServer.ServerCountry
+	server.ServerCountryCode = updatedServer.ServerCountryCode
 	server.Name = updatedServer.Name
 	server.Description = updatedServer.Description
 	server.Notes = updatedServer.Notes
@@ -157,6 +159,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		}
 		server.ServerHost = stnServer.Host
 		server.ServerCountry = stnServer.Country
+		server.ServerCountryCode = stnServer.CountryCode
 	}
 
 	replacement := []domain.AssociationReplacements{
