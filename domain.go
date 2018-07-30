@@ -467,7 +467,13 @@ func ServerError(err error) (events.APIGatewayProxyResponse, error) {
 
 // Similarly add a helper for send responses relating to client errors.
 func ClientError(status int, body string) (events.APIGatewayProxyResponse, error) {
-	js, _ := json.Marshal(body)
+
+	type cError struct {
+		Error string
+	}
+
+	js, _ := json.Marshal(cError{Error: body})
+
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,
 		Body:       string(js),
