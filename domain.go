@@ -472,8 +472,7 @@ func ClientError(status int, body string) (events.APIGatewayProxyResponse, error
 		Error string
 	}
 
-	cErr := cError{Error: body}
-	js, _ := json.Marshal(cErr)
+	js, _ := json.Marshal(cError{Error: body})
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: status,

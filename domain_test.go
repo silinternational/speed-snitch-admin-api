@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"encoding/json"
 	"github.com/jinzhu/gorm"
 	"testing"
 )
@@ -227,7 +228,6 @@ func TestGetJSONFromSliceGood(t *testing.T) {
 
 func TestClientError(t *testing.T) {
 	body := `abcd`
-
 	results, err := ClientError(1, body)
 	if err != nil {
 		t.Errorf("Got unexpected error:\n %s", err.Error())
@@ -237,6 +237,14 @@ func TestClientError(t *testing.T) {
 	expected := `{"Error":"abcd"}`
 	if results.Body != expected {
 		t.Errorf("Bad results. \nExpected: %s. \n But got: %s", expected, results.Body)
+		return
+	}
+
+	var js map[string]interface{}
+	err = json.Unmarshal([]byte(results.Body), &js)
+
+	if err != nil {
+		t.Errorf("Results were not valid json. Got error: \n%s", err.Error())
 		return
 	}
 }
