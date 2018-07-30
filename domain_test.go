@@ -224,3 +224,19 @@ func TestGetJSONFromSliceGood(t *testing.T) {
 		t.Errorf("Bad results. Expected: %s. But got: %s", expected, results)
 	}
 }
+
+func TestClientError(t *testing.T) {
+	body := `abcd`
+
+	results, err := ClientError(1, body)
+	if err != nil {
+		t.Errorf("Got unexpected error:\n %s", err.Error())
+		return
+	}
+
+	expected := `{"Error":"abcd"}`
+	if results.Body != expected {
+		t.Errorf("Bad results. \nExpected: %s. \n But got: %s", expected, results.Body)
+		return
+	}
+}
