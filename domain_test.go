@@ -326,37 +326,3 @@ func TestCleanBusinessTimes(t *testing.T) {
 	}
 
 }
-
-func TestGetBusinessTimestamp(t *testing.T) {
-	// test one minute past midnight
-	timestamp := int64(1532736001) // July 28, 2018 00:00:01
-	businessTime := "0:01"
-
-	results, err := GetBusinessTimestamp(timestamp, businessTime)
-	if err != nil {
-		t.Errorf("Got unexpected error.\n%s", err.Error())
-		return
-	}
-
-	expected := int64(1532736060) // July 28, 2018 00:00:01
-	if results != expected {
-		t.Errorf("Bad results. Expected: %d, but got: %d.", expected, results)
-		return
-	}
-
-	// test a normal situation
-	timestamp = int64(1532790027) // July 28, 2018 15:00:27
-	businessTime = "8:30"
-
-	results, err = GetBusinessTimestamp(timestamp, businessTime)
-	if err != nil {
-		t.Errorf("Got unexpected error.\n%s", err.Error())
-		return
-	}
-
-	expected = int64(1532766600) // July 28, 2018 08:30:00
-	if results != expected {
-		t.Errorf("Bad results. Expected: %d, but got: %d.", expected, results)
-	}
-
-}

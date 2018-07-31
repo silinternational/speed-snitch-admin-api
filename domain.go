@@ -766,37 +766,6 @@ func GetTimeNow() string {
 	return t.Format(time.RFC3339)
 }
 
-// GetBusinessTimestamp takes a timestamp and a string for a time-of-day (in UTC timezone).
-// It returns a (UTC) timestamp that matches the input time-of-day on the date
-// represented by the input timestamp.
-func GetBusinessTimestamp(timestamp int64, businessTime string) (int64, error) {
-
-	newTime, err := time.Parse(BusinessTimeFormat, businessTime)
-	if err != nil {
-		return 0, fmt.Errorf("Error parsing time: %s.\n%s", businessTime, err.Error())
-	}
-
-	// Get the number of seconds between the time-of-day and preceding midnight
-	minuteSeconds := newTime.Minute() * SecondsPerMinute
-	hourSeconds := newTime.Hour() * SecondsPerHour
-	totalBusinessSeconds := int64(minuteSeconds + hourSeconds)
-
-	// Get the number of seconds between the timestamp and the preceding midnight
-	timestampTime := time.Unix(timestamp, 0).UTC()
-	timestampSeconds := timestampTime.Second()
-	timestampMinuteSeconds := timestampTime.Minute() * SecondsPerHour
-	timestampHourSeconds := timestampTime.Hour() * SecondsPerHour
-	timestampTotalSeconds := int64(timestampSeconds + timestampMinuteSeconds + timestampHourSeconds)
-
-	// Timestamp for midnight on that day
-	startofDay := timestamp - timestampTotalSeconds
-
-	// Add the time-of-day seconds to the midnight timestamp
-	businessTimestamp := startofDay + totalBusinessSeconds
-
-	return businessTimestamp, nil
-}
-
 func TimestampToHumanReadable(timestamp int64) string {
 	return time.Unix(timestamp, 0).Format(time.RFC3339)
 }
