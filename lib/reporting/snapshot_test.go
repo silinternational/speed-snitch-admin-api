@@ -140,7 +140,7 @@ func TestGenerateDailySnapshotsForDateNoBusinessHours(t *testing.T) {
 	}
 
 	// Get snapshot for MacAddr aa:aa:aa:aa:aa:aa and make sure averages are right
-	startTime, endTime, err := GetStartEndTimestampsForDate(date)
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
 	results, err := db.GetSnapshotsForRange(domain.ReportingIntervalDaily, node1.ID, startTime, endTime)
 	if err != nil {
 		t.Error(err)
@@ -351,7 +351,7 @@ func TestGenerateDailySnapshotsForDateWithBusinessHours(t *testing.T) {
 	}
 
 	// Get snapshot for MacAddr aa:aa:aa:aa:aa:aa and make sure averages are right
-	startTime, endTime, err := GetStartEndTimestampsForDate(date)
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
 	results, err := db.GetSnapshotsForRange(domain.ReportingIntervalDaily, node1.ID, startTime, endTime)
 	if err != nil {
 		t.Error(err)
