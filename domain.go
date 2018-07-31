@@ -42,6 +42,9 @@ const TaskTypeSpeedTest = "speedTest"
 const TestConfigSpeedTest = "speedTest"
 
 const SecondsPerDay = 86400 // 60 * 60 * 24
+const SecondsPerHour = 3600 // 60 * 60
+const SecondsPerMinute = 60
+const BusinessTimeFormat = "15:04"
 
 const DefaultSpeedTestNetServerID = "5559"
 const DefaultSpeedTestNetServerHost = "paris1.speedtest.orange.fr:8080"
@@ -110,6 +113,8 @@ type Node struct {
 	ConfiguredBy        string
 	Nickname            string
 	Notes               string
+	BusinessStartTime   string `gorm:"type:varchar(5)"`
+	BusinessCloseTime   string `gorm:"type:varchar(5)"`
 }
 
 type NodeTags struct {
@@ -380,31 +385,52 @@ func (t TaskLogNetworkDowntime) GetTaskLogKeys() []string {
 
 type ReportingSnapshot struct {
 	gorm.Model
-	Node                   Node
-	NodeID                 uint    `gorm:"default:null"`
-	Timestamp              int64   `gorm:"type:int(11); not null"`
-	Interval               string  `gorm:"not null"`
-	UploadAvg              float64 `gorm:"not null;default:0"`
-	UploadMax              float64 `gorm:"not null;default:0"`
-	UploadMin              float64 `gorm:"not null;default:0"`
-	UploadTotal            float64 `gorm:"not null;default:0"`
-	DownloadAvg            float64 `gorm:"not null;default:0"`
-	DownloadMax            float64 `gorm:"not null;default:0"`
-	DownloadMin            float64 `gorm:"not null;default:0"`
-	DownloadTotal          float64 `gorm:"not null;default:0"`
-	LatencyAvg             float64 `gorm:"not null;default:0"`
-	LatencyMax             float64 `gorm:"not null;default:0"`
-	LatencyMin             float64 `gorm:"not null;default:0"`
-	LatencyTotal           float64 `gorm:"not null;default:0"`
-	PacketLossAvg          float64 `gorm:"not null;default:0"`
-	PacketLossMax          float64 `gorm:"not null;default:0"`
-	PacketLossMin          float64 `gorm:"not null;default:0"`
-	PacketLossTotal        float64 `gorm:"not null;default:0"`
-	SpeedTestDataPoints    int64   `gorm:"not null;default:0"`
-	LatencyDataPoints      int64   `gorm:"not null;default:0"`
-	NetworkDowntimeSeconds int64   `gorm:"not null;default:0"`
-	NetworkOutagesCount    int64   `gorm:"not null;default:0"`
-	RestartsCount          int64   `gorm:"not null;default:0"`
+	Node                      Node
+	NodeID                    uint    `gorm:"default:null"`
+	Timestamp                 int64   `gorm:"type:int(11); not null"`
+	Interval                  string  `gorm:"not null"`
+	UploadAvg                 float64 `gorm:"not null;default:0"`
+	UploadMax                 float64 `gorm:"not null;default:0"`
+	UploadMin                 float64 `gorm:"not null;default:0"`
+	UploadTotal               float64 `gorm:"not null;default:0"`
+	DownloadAvg               float64 `gorm:"not null;default:0"`
+	DownloadMax               float64 `gorm:"not null;default:0"`
+	DownloadMin               float64 `gorm:"not null;default:0"`
+	DownloadTotal             float64 `gorm:"not null;default:0"`
+	LatencyAvg                float64 `gorm:"not null;default:0"`
+	LatencyMax                float64 `gorm:"not null;default:0"`
+	LatencyMin                float64 `gorm:"not null;default:0"`
+	LatencyTotal              float64 `gorm:"not null;default:0"`
+	PacketLossAvg             float64 `gorm:"not null;default:0"`
+	PacketLossMax             float64 `gorm:"not null;default:0"`
+	PacketLossMin             float64 `gorm:"not null;default:0"`
+	PacketLossTotal           float64 `gorm:"not null;default:0"`
+	SpeedTestDataPoints       int64   `gorm:"not null;default:0"`
+	LatencyDataPoints         int64   `gorm:"not null;default:0"`
+	NetworkDowntimeSeconds    int64   `gorm:"not null;default:0"`
+	NetworkOutagesCount       int64   `gorm:"not null;default:0"`
+	RestartsCount             int64   `gorm:"not null;default:0"`
+	BizUploadAvg              float64 `gorm:"not null;default:0"`
+	BizUploadMax              float64 `gorm:"not null;default:0"`
+	BizUploadMin              float64 `gorm:"not null;default:0"`
+	BizUploadTotal            float64 `gorm:"not null;default:0"`
+	BizDownloadAvg            float64 `gorm:"not null;default:0"`
+	BizDownloadMax            float64 `gorm:"not null;default:0"`
+	BizDownloadMin            float64 `gorm:"not null;default:0"`
+	BizDownloadTotal          float64 `gorm:"not null;default:0"`
+	BizLatencyAvg             float64 `gorm:"not null;default:0"`
+	BizLatencyMax             float64 `gorm:"not null;default:0"`
+	BizLatencyMin             float64 `gorm:"not null;default:0"`
+	BizLatencyTotal           float64 `gorm:"not null;default:0"`
+	BizPacketLossAvg          float64 `gorm:"not null;default:0"`
+	BizPacketLossMax          float64 `gorm:"not null;default:0"`
+	BizPacketLossMin          float64 `gorm:"not null;default:0"`
+	BizPacketLossTotal        float64 `gorm:"not null;default:0"`
+	BizSpeedTestDataPoints    int64   `gorm:"not null;default:0"`
+	BizLatencyDataPoints      int64   `gorm:"not null;default:0"`
+	BizNetworkDowntimeSeconds int64   `gorm:"not null;default:0"`
+	BizNetworkOutagesCount    int64   `gorm:"not null;default:0"`
+	BizRestartsCount          int64   `gorm:"not null;default:0"`
 }
 
 /***************************************************************
@@ -501,6 +527,34 @@ func CleanMACAddress(mAddr string) (string, error) {
 	}
 
 	return strings.ToLower(mAddr), nil
+}
+
+// CleanBusinessTimes takes to strings for 24-hour times (HH:MM).
+// If they are both empty strings, it returns empty strings.
+// Otherwise makes sure there is no error parsing them into time.Time values,
+// in which case it returns the original values
+func CleanBusinessTimes(start, close string) (string, string, error) {
+	if start == "" && close == "" {
+		return start, close, nil
+	}
+
+	startTime, err := time.Parse(BusinessTimeFormat, start)
+	if err != nil {
+		return start, close, fmt.Errorf("Error parsing business start time.\n %s", err.Error())
+	}
+
+	closeTime, err := time.Parse(BusinessTimeFormat, close)
+	if err != nil {
+		return start, close, fmt.Errorf("Error parsing business close time.\n %s", err.Error())
+	}
+
+	if !closeTime.After(startTime) {
+		return start, close, fmt.Errorf(
+			"Error parsing business times. A 24-hour format must be used and close time must come after start time.",
+		)
+	}
+
+	return start, close, nil
 }
 
 // GetUrlForAgentVersion creates url to agent binary for given version, os, and arch
@@ -710,6 +764,37 @@ func GetResourceIDFromRequest(req events.APIGatewayProxyRequest) uint {
 func GetTimeNow() string {
 	t := time.Now().UTC()
 	return t.Format(time.RFC3339)
+}
+
+// GetBusinessTimestamp takes a timestamp and a string for a time-of-day (in UTC timezone).
+// It returns a (UTC) timestamp that matches the input time-of-day on the date
+// represented by the input timestamp.
+func GetBusinessTimestamp(timestamp int64, businessTime string) (int64, error) {
+
+	newTime, err := time.Parse(BusinessTimeFormat, businessTime)
+	if err != nil {
+		return 0, fmt.Errorf("Error parsing time: %s.\n%s", businessTime, err.Error())
+	}
+
+	// Get the number of seconds between the time-of-day and preceding midnight
+	minuteSeconds := newTime.Minute() * SecondsPerMinute
+	hourSeconds := newTime.Hour() * SecondsPerHour
+	totalBusinessSeconds := int64(minuteSeconds + hourSeconds)
+
+	// Get the number of seconds between the timestamp and the preceding midnight
+	timestampTime := time.Unix(timestamp, 0).UTC()
+	timestampSeconds := timestampTime.Second()
+	timestampMinuteSeconds := timestampTime.Minute() * SecondsPerHour
+	timestampHourSeconds := timestampTime.Hour() * SecondsPerHour
+	timestampTotalSeconds := int64(timestampSeconds + timestampMinuteSeconds + timestampHourSeconds)
+
+	// Timestamp for midnight on that day
+	startofDay := timestamp - timestampTotalSeconds
+
+	// Add the time-of-day seconds to the midnight timestamp
+	businessTimestamp := startofDay + totalBusinessSeconds
+
+	return businessTimestamp, nil
 }
 
 func TimestampToHumanReadable(timestamp int64) string {
