@@ -248,3 +248,81 @@ func TestClientError(t *testing.T) {
 		return
 	}
 }
+
+func TestCleanBusinessTimes(t *testing.T) {
+	// Good - early
+	start := "00:00"
+	close := "11:59"
+
+	resultStart, resultClose, err := CleanBusinessTimes(start, close)
+	if err != nil {
+		t.Errorf("Unexpected error.\n%s", err.Error())
+		return
+	}
+
+	if resultStart != start || resultClose != close {
+		t.Errorf("Bad results. Expected: %s and %s, but got %s and %s", start, close, resultStart, resultClose)
+		return
+	}
+
+	// Good - middle
+	start = "08:00"
+	close = "14:00"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err != nil {
+		t.Errorf("Unexpected error.\n%s", err.Error())
+		return
+	}
+
+	if resultStart != start || resultClose != close {
+		t.Errorf("Bad results. Expected: %s and %s, but got %s and %s", start, close, resultStart, resultClose)
+		return
+	}
+
+	// Good - late
+	start = "12:00"
+	close = "23:59"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err != nil {
+		t.Errorf("Unexpected error.\n%s", err.Error())
+		return
+	}
+
+	if resultStart != start || resultClose != close {
+		t.Errorf("Bad results. Expected: %s and %s, but got %s and %s", start, close, resultStart, resultClose)
+		return
+	}
+
+	// Bad Formatting
+	start = "08-00"
+	close = "14-00"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err == nil {
+		t.Errorf("Expected an error, but didn't get one.")
+		return
+	}
+
+	// Bad Number
+	start = "08:00"
+	close = "25:00"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err == nil {
+		t.Errorf("Expected an error, but didn't get one.")
+		return
+	}
+
+	// Close time too early
+	start = "08:00"
+	close = "04:00"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err == nil {
+		t.Errorf("Expected an error, but didn't get one.\n%s", err)
+		return
+	}
+
+}

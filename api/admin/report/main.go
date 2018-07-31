@@ -226,7 +226,7 @@ func getTimestampFromString(date, paramName string) (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("%s.\nGot error: %s", errMsg, err.Error())
 	}
-	timestamp, _, err := reporting.GetStartEndTimestampsForDate(dateTime)
+	timestamp, _, err := reporting.GetStartEndTimestampsForDate(dateTime, "", "")
 	if err != nil {
 		return 0, fmt.Errorf("%s.\nGot error: %s", errMsg, err.Error())
 	}

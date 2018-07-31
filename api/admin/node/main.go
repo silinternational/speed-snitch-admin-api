@@ -185,7 +185,18 @@ func updateNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ReturnJsonOrError(domain.Node{}, err)
 	}
 
+	businessStartTime, businessCloseTime, err := domain.CleanBusinessTimes(
+		updatedNode.BusinessStartTime,
+		updatedNode.BusinessCloseTime,
+	)
+
+	if err != nil {
+		return domain.ReturnJsonOrError(domain.Node{}, err)
+	}
+
 	// Apply updates to node
+	node.BusinessStartTime = businessStartTime
+	node.BusinessCloseTime = businessCloseTime
 	node.Nickname = updatedNode.Nickname
 	node.Notes = updatedNode.Notes
 

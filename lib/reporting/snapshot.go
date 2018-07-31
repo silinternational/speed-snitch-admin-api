@@ -17,7 +17,7 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 	}
 
 	for _, n := range nodes {
-		err = GenerateDailySnapshotsForNode(n.ID, date)
+		err = GenerateDailySnapshotsForNode(n, date)
 		if err != nil {
 			fmt.Fprintf(os.Stdout, "%v - error generating snapshot for node %v - %s. err: %s", date, n.ID, n.Nickname, err.Error())
 		}
@@ -26,65 +26,122 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 	return int64(len(nodes)), nil
 }
 
-func GenerateDailySnapshotsForNode(nodeId uint, date time.Time) error {
-	startTime, endTime, err := GetStartEndTimestampsForDate(date)
+func hydrateSnapshotWithPingLogs(
+	snapshot *domain.ReportingSnapshot,
+	node domain.Node,
+	startTime, endTime int64,
+) error {
+
+	var pingLogs []domain.TaskLogPingTest
+	err := db.GetTaskLogForRange(&pingLogs, node.ID, startTime, endTime)
 	if err != nil {
 		return err
 	}
 
-	// check for existing snapshot to update, or create new one
-	snapshot := domain.ReportingSnapshot{
-		Timestamp: startTime,
-		NodeID:    nodeId,
-		Interval:  domain.ReportingIntervalDaily,
-	}
-	err = db.FindOne(&snapshot)
-	if !gorm.IsRecordNotFoundError(err) && err != nil {
-		return err
+	if len(pingLogs) == 0 {
+		return nil
 	}
 
-	// Process ping/latency tests
-	var pingLog []domain.TaskLogPingTest
-	err = db.GetTaskLogForRange(&pingLog, nodeId, startTime, endTime)
-	if err != nil {
-		return err
-	}
+	snapshot.LatencyTotal = pingLogs[0].Latency
+	snapshot.LatencyMax = pingLogs[0].Latency
+	snapshot.LatencyMin = pingLogs[0].Latency
 
-	// Set high minimum packet loss to be sure we really get the lowest value from results since 0 is valid
-	if len(pingLog) > 0 {
-		snapshot.LatencyMax = pingLog[0].Latency
-		snapshot.LatencyMin = pingLog[0].Latency
-		snapshot.PacketLossMax = pingLog[0].PacketLossPercent
-		snapshot.PacketLossMin = pingLog[0].PacketLossPercent
+	snapshot.PacketLossTotal = pingLogs[0].PacketLossPercent
+	snapshot.PacketLossMax = pingLogs[0].PacketLossPercent
+	snapshot.PacketLossMin = pingLogs[0].PacketLossPercent
 
-		for _, i := range pingLog {
-			snapshot.LatencyTotal += i.Latency
-			snapshot.LatencyMax = GetHigherFloat(i.Latency, snapshot.LatencyMax)
-			snapshot.LatencyMin = GetLowerLatency(i.Latency, snapshot.LatencyMin)
+	floatLogCount := float64(len(pingLogs))
 
-			snapshot.PacketLossTotal += i.PacketLossPercent
-			snapshot.PacketLossMax = GetHigherFloat(i.PacketLossPercent, snapshot.PacketLossMax)
-			snapshot.PacketLossMin = GetLowerFloat(i.PacketLossPercent, snapshot.PacketLossMin)
+	if floatLogCount > 1 {
+		for _, pL := range pingLogs[1:] {
+			snapshot.LatencyTotal += pL.Latency
+			snapshot.LatencyMax = GetHigherFloat(pL.Latency, snapshot.LatencyMax)
+			snapshot.LatencyMin = GetLowerLatency(pL.Latency, snapshot.LatencyMin)
+
+			snapshot.PacketLossTotal += pL.PacketLossPercent
+			snapshot.PacketLossMax = GetHigherFloat(pL.PacketLossPercent, snapshot.PacketLossMax)
+			snapshot.PacketLossMin = GetLowerFloat(pL.PacketLossPercent, snapshot.PacketLossMin)
 		}
-
-		snapshot.LatencyAvg = snapshot.LatencyTotal / float64(len(pingLog))
-		snapshot.PacketLossAvg = snapshot.PacketLossTotal / float64(len(pingLog))
 	}
 
-	// Process speed test results
-	var speedLog []domain.TaskLogSpeedTest
-	err = db.GetTaskLogForRange(&speedLog, nodeId, startTime, endTime)
+	snapshot.LatencyAvg = snapshot.LatencyTotal / floatLogCount
+	snapshot.PacketLossAvg = snapshot.PacketLossTotal / floatLogCount
+	snapshot.LatencyDataPoints = int64(len(pingLogs))
+
+	return nil
+}
+
+func hydrateSnapshotWithBusinessHourPingLogs(
+	snapshot *domain.ReportingSnapshot,
+	node domain.Node,
+	businessStartTimestamp, businessCloseTimestamp int64,
+) error {
+	var pingLogs []domain.TaskLogPingTest
+	err := db.GetTaskLogForRange(&pingLogs, node.ID, businessStartTimestamp, businessCloseTimestamp)
 	if err != nil {
 		return err
 	}
 
-	if len(speedLog) > 0 {
-		snapshot.DownloadMax = speedLog[0].Download
-		snapshot.DownloadMin = speedLog[0].Download
-		snapshot.UploadMax = speedLog[0].Upload
-		snapshot.UploadMin = speedLog[0].Upload
+	if len(pingLogs) == 0 {
+		return nil
+	}
 
-		for _, i := range speedLog {
+	snapshot.BizLatencyTotal = pingLogs[0].Latency
+	snapshot.BizLatencyMax = pingLogs[0].Latency
+	snapshot.BizLatencyMin = pingLogs[0].Latency
+
+	snapshot.BizPacketLossTotal = pingLogs[0].PacketLossPercent
+	snapshot.BizPacketLossMax = pingLogs[0].PacketLossPercent
+	snapshot.BizPacketLossMin = pingLogs[0].PacketLossPercent
+
+	floatLogCount := float64(len(pingLogs))
+
+	if floatLogCount > 1 {
+		for _, pL := range pingLogs[1:] {
+			snapshot.BizLatencyTotal += pL.Latency
+			snapshot.BizLatencyMax = GetHigherFloat(pL.Latency, snapshot.BizLatencyMax)
+			snapshot.BizLatencyMin = GetLowerLatency(pL.Latency, snapshot.BizLatencyMin)
+
+			snapshot.BizPacketLossTotal += pL.PacketLossPercent
+			snapshot.BizPacketLossMax = GetHigherFloat(pL.PacketLossPercent, snapshot.BizPacketLossMax)
+			snapshot.BizPacketLossMin = GetLowerLatency(pL.PacketLossPercent, snapshot.BizPacketLossMin)
+		}
+	}
+
+	snapshot.BizLatencyAvg = snapshot.BizLatencyTotal / floatLogCount
+	snapshot.BizPacketLossAvg = snapshot.BizPacketLossTotal / floatLogCount
+	snapshot.BizLatencyDataPoints = int64(len(pingLogs))
+
+	return nil
+}
+
+func hydrateSnapshotWithSpeedTestLogs(
+	snapshot *domain.ReportingSnapshot,
+	node domain.Node,
+	startTime, endTime int64,
+) error {
+	var speedLogs []domain.TaskLogSpeedTest
+	err := db.GetTaskLogForRange(&speedLogs, node.ID, startTime, endTime)
+	if err != nil {
+		return err
+	}
+
+	if len(speedLogs) == 0 {
+		return nil
+	}
+
+	snapshot.DownloadTotal = speedLogs[0].Download
+	snapshot.DownloadMax = speedLogs[0].Download
+	snapshot.DownloadMin = speedLogs[0].Download
+
+	snapshot.UploadTotal += speedLogs[0].Upload
+	snapshot.UploadMax = speedLogs[0].Upload
+	snapshot.UploadMin = speedLogs[0].Upload
+
+	floatLogCount := float64(len(speedLogs))
+
+	if floatLogCount > 1 {
+		for _, i := range speedLogs[1:] {
 			snapshot.DownloadTotal += i.Download
 			snapshot.DownloadMax = GetHigherFloat(i.Download, snapshot.DownloadMax)
 			snapshot.DownloadMin = GetLowerFloat(i.Download, snapshot.DownloadMin)
@@ -93,14 +150,147 @@ func GenerateDailySnapshotsForNode(nodeId uint, date time.Time) error {
 			snapshot.UploadMax = GetHigherFloat(i.Upload, snapshot.UploadMax)
 			snapshot.UploadMin = GetLowerFloat(i.Upload, snapshot.UploadMin)
 		}
+	}
 
-		snapshot.DownloadAvg = snapshot.DownloadTotal / float64(len(speedLog))
-		snapshot.UploadAvg = snapshot.UploadTotal / float64(len(speedLog))
+	snapshot.DownloadAvg = snapshot.DownloadTotal / floatLogCount
+	snapshot.UploadAvg = snapshot.UploadTotal / floatLogCount
+	snapshot.SpeedTestDataPoints = int64(len(speedLogs))
+	return nil
+}
+
+func hydrateSnapshotWithBusinessHourSpeedTestLogs(
+	snapshot *domain.ReportingSnapshot,
+	node domain.Node,
+	businessStartTimestamp, businessCloseTimestamp int64,
+) error {
+
+	var speedLogs []domain.TaskLogSpeedTest
+	err := db.GetTaskLogForRange(&speedLogs, node.ID, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
+	}
+
+	if len(speedLogs) == 0 {
+		return nil
+	}
+
+	snapshot.BizDownloadTotal = speedLogs[0].Download
+	snapshot.BizDownloadMax = speedLogs[0].Download
+	snapshot.BizDownloadMin = speedLogs[0].Download
+
+	snapshot.BizUploadTotal += speedLogs[0].Upload
+	snapshot.BizUploadMax = speedLogs[0].Upload
+	snapshot.BizUploadMin = speedLogs[0].Upload
+
+	floatLogCount := float64(len(speedLogs))
+
+	if floatLogCount > 1 {
+		for _, i := range speedLogs[1:] {
+			snapshot.BizDownloadTotal += i.Download
+			snapshot.BizDownloadMax = GetHigherFloat(i.Download, snapshot.BizDownloadMax)
+			snapshot.BizDownloadMin = GetLowerFloat(i.Download, snapshot.BizDownloadMin)
+
+			snapshot.BizUploadTotal += i.Upload
+			snapshot.BizUploadMax = GetHigherFloat(i.Upload, snapshot.BizUploadMax)
+			snapshot.BizUploadMin = GetLowerFloat(i.Upload, snapshot.BizUploadMin)
+		}
+	}
+
+	snapshot.BizDownloadAvg = snapshot.BizDownloadTotal / floatLogCount
+	snapshot.BizUploadAvg = snapshot.BizUploadTotal / floatLogCount
+	snapshot.BizSpeedTestDataPoints = int64(len(speedLogs))
+	return nil
+}
+
+func hydrateSnapshotWithBusinessHourLogs(
+	snapshot *domain.ReportingSnapshot,
+	node domain.Node,
+	date time.Time,
+) error {
+	if node.BusinessStartTime == "" && node.BusinessCloseTime == "" {
+		return nil
+	}
+
+	businessStartTimestamp, businessCloseTimestamp, err := GetStartEndTimestampsForDate(
+		date,
+		fmt.Sprintf("%s:00", node.BusinessStartTime),
+		fmt.Sprintf("%s:00", node.BusinessCloseTime),
+	)
+
+	if err != nil {
+		return err
+	}
+
+	err = hydrateSnapshotWithBusinessHourPingLogs(snapshot, node, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
+	}
+
+	err = hydrateSnapshotWithBusinessHourSpeedTestLogs(snapshot, node, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
 	}
 
 	// Track system restart
 	var restarts []domain.TaskLogRestart
-	err = db.GetTaskLogForRange(&restarts, nodeId, startTime, endTime)
+	err = db.GetTaskLogForRange(&restarts, node.ID, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
+	}
+
+	snapshot.BizRestartsCount = int64(len(restarts))
+
+	// Process network outages
+	var outages []domain.TaskLogNetworkDowntime
+	err = db.GetTaskLogForRange(&outages, node.ID, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range outages {
+		snapshot.BizNetworkDowntimeSeconds += i.DowntimeSeconds
+	}
+
+	snapshot.BizNetworkOutagesCount = int64(len(outages))
+	return nil
+}
+
+func GenerateDailySnapshotsForNode(node domain.Node, date time.Time) error {
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
+	if err != nil {
+		return err
+	}
+
+	// check for existing snapshot to update, or create new one
+	snapshot := domain.ReportingSnapshot{
+		Timestamp: startTime,
+		NodeID:    node.ID,
+		Interval:  domain.ReportingIntervalDaily,
+	}
+	err = db.FindOne(&snapshot)
+	if !gorm.IsRecordNotFoundError(err) && err != nil {
+		return err
+	}
+
+	err = hydrateSnapshotWithPingLogs(&snapshot, node, startTime, endTime)
+	if err != nil {
+		return err
+	}
+
+	// Process speed test results
+	err = hydrateSnapshotWithSpeedTestLogs(&snapshot, node, startTime, endTime)
+	if err != nil {
+		return err
+	}
+
+	err = hydrateSnapshotWithBusinessHourLogs(&snapshot, node, date)
+	if err != nil {
+		return err
+	}
+
+	// Track system restart
+	var restarts []domain.TaskLogRestart
+	err = db.GetTaskLogForRange(&restarts, node.ID, startTime, endTime)
 	if err != nil {
 		return err
 	}
@@ -109,7 +299,7 @@ func GenerateDailySnapshotsForNode(nodeId uint, date time.Time) error {
 
 	// Process network outages
 	var outages []domain.TaskLogNetworkDowntime
-	err = db.GetTaskLogForRange(&outages, nodeId, startTime, endTime)
+	err = db.GetTaskLogForRange(&outages, node.ID, startTime, endTime)
 	if err != nil {
 		return err
 	}
