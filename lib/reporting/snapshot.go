@@ -245,7 +245,32 @@ func hydrateSnapshotWithBusinessHourLogs(
 	}
 
 	err = hydrateSnapshotWithBusinessHourSpeedTestLogs(snapshot, node, businessStartTimestamp, businessCloseTimestamp)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// Track system restart
+	var restarts []domain.TaskLogRestart
+	err = db.GetTaskLogForRange(&restarts, node.ID, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
+	}
+
+	snapshot.BizRestartsCount = int64(len(restarts))
+
+	// Process network outages
+	var outages []domain.TaskLogNetworkDowntime
+	err = db.GetTaskLogForRange(&outages, node.ID, businessStartTimestamp, businessCloseTimestamp)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range outages {
+		snapshot.BizNetworkDowntimeSeconds += i.DowntimeSeconds
+	}
+
+	snapshot.BizNetworkOutagesCount = int64(len(outages))
+	return nil
 }
 
 func GenerateDailySnapshotsForNode(node domain.Node, date time.Time) error {

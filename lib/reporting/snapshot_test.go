@@ -300,12 +300,17 @@ func TestGenerateDailySnapshotsForDateWithBusinessHours(t *testing.T) {
 	}
 
 	downtimeInRange := []domain.TaskLogNetworkDowntime{
-		{
+		{ // In business hours
 			NodeID:          node1.ID,
-			Timestamp:       1528145490,
+			Timestamp:       1528112000,
 			DowntimeSeconds: 240,
 		},
-		{
+		{ // In business hours
+			NodeID:          node1.ID,
+			Timestamp:       1528113000,
+			DowntimeSeconds: 60,
+		},
+		{ // Too late
 			NodeID:          node1.ID,
 			Timestamp:       1528145491,
 			DowntimeSeconds: 60,
@@ -317,13 +322,17 @@ func TestGenerateDailySnapshotsForDateWithBusinessHours(t *testing.T) {
 	}
 
 	restartsInRange := []domain.TaskLogRestart{
-		{
+		{ // Too early
 			NodeID:    node1.ID,
-			Timestamp: 1528145490,
+			Timestamp: 1528000000,
 		},
-		{
+		{ // In business hours
 			NodeID:    node1.ID,
-			Timestamp: 1528145491,
+			Timestamp: 1528112000,
+		},
+		{ // In business hours
+			NodeID:    node1.ID,
+			Timestamp: 1528113000,
 		},
 	}
 	for _, i := range restartsInRange {
