@@ -26,29 +26,6 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 	return int64(len(nodes)), nil
 }
 
-func getBusinessTimestamps(timestamp int64, node domain.Node) (int64, int64, error) {
-	startTime := "00:00"
-	if node.BusinessStartTime != "" {
-		startTime = node.BusinessStartTime
-	}
-	businessStartTimestamp, err := domain.GetBusinessTimestamp(timestamp, startTime)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	closeTime := "23:59"
-	if node.BusinessCloseTime != "" {
-		closeTime = node.BusinessCloseTime
-	}
-
-	businessCloseTimestamp, err := domain.GetBusinessTimestamp(timestamp, closeTime)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return businessStartTimestamp, businessCloseTimestamp, nil
-}
-
 func hydrateSnapshotWithPingLogs(
 	snapshot *domain.ReportingSnapshot,
 	node domain.Node,
@@ -228,13 +205,18 @@ func hydrateSnapshotWithBusinessHourSpeedTestLogs(
 func hydrateSnapshotWithBusinessHourLogs(
 	snapshot *domain.ReportingSnapshot,
 	node domain.Node,
-	startTime int64,
+	date time.Time,
 ) error {
 	if node.BusinessStartTime == "" && node.BusinessCloseTime == "" {
 		return nil
 	}
 
-	businessStartTimestamp, businessCloseTimestamp, err := getBusinessTimestamps(startTime, node)
+	businessStartTimestamp, businessCloseTimestamp, err := GetStartEndTimestampsForDate(
+		date,
+		fmt.Sprintf("%s:00", node.BusinessStartTime),
+		fmt.Sprintf("%s:00", node.BusinessCloseTime),
+	)
+
 	if err != nil {
 		return err
 	}
@@ -274,7 +256,7 @@ func hydrateSnapshotWithBusinessHourLogs(
 }
 
 func GenerateDailySnapshotsForNode(node domain.Node, date time.Time) error {
-	startTime, endTime, err := GetStartEndTimestampsForDate(date)
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
 	if err != nil {
 		return err
 	}
@@ -301,7 +283,7 @@ func GenerateDailySnapshotsForNode(node domain.Node, date time.Time) error {
 		return err
 	}
 
-	err = hydrateSnapshotWithBusinessHourLogs(&snapshot, node, startTime)
+	err = hydrateSnapshotWithBusinessHourLogs(&snapshot, node, date)
 	if err != nil {
 		return err
 	}
