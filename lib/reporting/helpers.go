@@ -13,15 +13,21 @@ func GetYesterday() time.Time {
 	return today.AddDate(0, 0, -1)
 }
 
-func GetStartEndTimestampsForDate(date time.Time) (int64, int64, error) {
-	startTimeString := fmt.Sprintf("%v-%v-%v 00:00:00", date.Year(), date.Month(), date.Day())
+func GetStartEndTimestampsForDate(date time.Time, startTimeOfDay, endTimeOfDay string) (int64, int64, error) {
+	if startTimeOfDay == "" {
+		startTimeOfDay = "00:00:00"
+	}
+	startTimeString := fmt.Sprintf("%v-%v-%v %s", date.Year(), date.Month(), date.Day(), startTimeOfDay)
 	startTime, err := time.Parse(DateTimeLayout, startTimeString)
 	if err != nil {
 		return 0, 0, err
 	}
 	startTimestamp := startTime.Unix()
 
-	endTimeString := fmt.Sprintf("%v-%v-%v 23:59:59", date.Year(), date.Month(), date.Day())
+	if endTimeOfDay == "" {
+		endTimeOfDay = "23:59:59"
+	}
+	endTimeString := fmt.Sprintf("%v-%v-%v %s", date.Year(), date.Month(), date.Day(), endTimeOfDay)
 	endTime, err := time.Parse(DateTimeLayout, endTimeString)
 	if err != nil {
 		return 0, 0, err

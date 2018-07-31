@@ -13,7 +13,7 @@ func TestGetStartEndTimestampsForDate(t *testing.T) {
 		t.Errorf("Unable to parse date %s", dateString)
 		t.Fail()
 	}
-	startTime, endTime, err := GetStartEndTimestampsForDate(date)
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
 	if startTime != 1525564800 {
 		t.Errorf("Did not get expected startTime (%v), got: %v", 1525564800, startTime)
 		t.Fail()
