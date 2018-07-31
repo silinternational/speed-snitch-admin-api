@@ -42,8 +42,6 @@ const TaskTypeSpeedTest = "speedTest"
 const TestConfigSpeedTest = "speedTest"
 
 const SecondsPerDay = 86400 // 60 * 60 * 24
-const SecondsPerHour = 3600 // 60 * 60
-const SecondsPerMinute = 60
 const BusinessTimeFormat = "15:04"
 
 const DefaultSpeedTestNetServerID = "5559"
