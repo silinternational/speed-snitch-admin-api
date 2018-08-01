@@ -31,7 +31,7 @@ const LogTypeDowntime = "downtime"
 const LogTypeRestart = "restarted"
 const LogTypeError = "error"
 
-const ServerTypeSpeedTestNet = "speedTestNet"
+const ServerTypeSpeedTestNet = "speedTest"
 const ServerTypeCustom = "custom"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
