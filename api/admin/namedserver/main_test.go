@@ -80,9 +80,9 @@ func TestListServers(t *testing.T) {
 		t.Error("Response body was not empty array, got: ", resp.Body)
 	}
 
-	serverCustom := domain.NamedServer{
+	serverPing := domain.NamedServer{
 		Name:       "server1",
-		ServerType: domain.ServerTypeCustom,
+		ServerType: domain.ServerTypePing,
 	}
 
 	serverSTN := domain.NamedServer{
@@ -91,7 +91,7 @@ func TestListServers(t *testing.T) {
 	}
 
 	// Create a couple servers
-	servers := []domain.NamedServer{serverCustom, serverSTN}
+	servers := []domain.NamedServer{serverPing, serverSTN}
 
 	for _, srv := range servers {
 		err = db.PutItem(&srv)

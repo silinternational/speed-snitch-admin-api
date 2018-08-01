@@ -32,7 +32,7 @@ const LogTypeRestart = "restarted"
 const LogTypeError = "error"
 
 const ServerTypeSpeedTestNet = "speedTest"
-const ServerTypeCustom = "custom"
+const ServerTypePing = "ping"
 
 const SpeedTestNetServerList = "http://c.speedtest.net/speedtest-servers-static.php"
 

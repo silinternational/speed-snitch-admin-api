@@ -206,7 +206,7 @@ func TestDeleteOutdatedSTNetServers(t *testing.T) {
 			Model: gorm.Model{
 				ID: 9,
 			},
-			ServerType: domain.ServerTypeCustom,
+			ServerType: domain.ServerTypePing,
 			ServerHost: "custom.server.org:8080",
 		},
 		{
@@ -454,7 +454,7 @@ func TestUpdateSTNetServers(t *testing.T) {
 			Model: gorm.Model{
 				ID: 9,
 			},
-			ServerType: domain.ServerTypeCustom,
+			ServerType: domain.ServerTypePing,
 			ServerHost: "custom.server.org:8080",
 		},
 		{
