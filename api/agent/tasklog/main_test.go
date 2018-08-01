@@ -137,7 +137,7 @@ func TestHandlerPing(t *testing.T) {
 		Model: gorm.Model{
 			ID: 1,
 		},
-		ServerType:    domain.ServerTypeCustom,
+		ServerType:    domain.ServerTypePing,
 		ServerHost:    "google.com",
 		ServerCountry: "US",
 		Name:          "test example",

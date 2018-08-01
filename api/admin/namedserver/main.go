@@ -86,11 +86,11 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ReturnJsonOrError(servers, err)
 	}
 
-	if namedServerType != domain.ServerTypeSpeedTestNet && namedServerType != domain.ServerTypeCustom {
+	if namedServerType != domain.ServerTypeSpeedTestNet && namedServerType != domain.ServerTypePing {
 		err := fmt.Errorf(
 			`Invalid "type" query param. Must be %s or %s`,
 			domain.ServerTypeSpeedTestNet,
-			domain.ServerTypeCustom,
+			domain.ServerTypePing,
 		)
 		return domain.ReturnJsonOrError(servers, err)
 	}
