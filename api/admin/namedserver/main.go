@@ -133,6 +133,17 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ServerError(err)
 	}
 
+	if updatedServer.ServerType != domain.ServerTypeSpeedTestNet &&
+		updatedServer.ServerType != domain.ServerTypePing {
+		errMsg := fmt.Sprintf(
+			"Invalid Type: %s. Must be %s or %s.",
+			updatedServer.ServerType,
+			domain.ServerTypePing,
+			domain.ServerTypeSpeedTestNet,
+		)
+		return domain.ClientError(http.StatusBadRequest, errMsg)
+	}
+
 	server.ServerType = updatedServer.ServerType
 	server.ServerHost = updatedServer.ServerHost
 	server.ServerCountry = updatedServer.ServerCountry
