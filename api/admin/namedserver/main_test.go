@@ -142,7 +142,8 @@ func TestUpdateServer(t *testing.T) {
 
 	// Create server record to update
 	createServer := domain.NamedServer{
-		Name: "test server",
+		Name:       "test server",
+		ServerType: domain.ServerTypePing,
 	}
 
 	err := db.PutItem(&createServer)
