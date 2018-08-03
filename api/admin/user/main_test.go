@@ -363,18 +363,19 @@ func TestUpdateUser(t *testing.T) {
 
 	createUser := domain.User{
 		Model: gorm.Model{
-			ID: 2,
+			ID: 11,
 		},
-		UUID:  "2",
+		UUID:  "11",
 		Email: "user2@test.com",
 		Role:  domain.UserRoleAdmin,
 	}
+	db.PutItem(createUser)
 
 	updatedUser := domain.User{
 		Model: gorm.Model{
-			ID: 2,
+			ID: 22,
 		},
-		UUID:  "2",
+		UUID:  "22",
 		Email: "updated@test.com",
 		Role:  domain.UserRoleAdmin,
 	}
@@ -383,16 +384,12 @@ func TestUpdateUser(t *testing.T) {
 		t.Error("Unable to marshal update user to JSON, err: ", err.Error())
 	}
 
-	db.PutItem(createUser)
-
 	req := events.APIGatewayProxyRequest{
-		HTTPMethod: "PUT",
-		Path:       "/user/2",
-		Headers:    testutils.GetSuperAdminReqHeader(),
-		PathParameters: map[string]string{
-			"id": "2",
-		},
-		Body: string(js),
+		HTTPMethod:     "PUT",
+		Path:           "/user",
+		Headers:        testutils.GetSuperAdminReqHeader(),
+		PathParameters: map[string]string{},
+		Body:           string(js),
 	}
 
 	resp, err := updateUser(req)
@@ -401,7 +398,7 @@ func TestUpdateUser(t *testing.T) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		t.Error("Got back wrong status code updating user, got: ", resp.StatusCode)
+		t.Error("Got back wrong status code updating user, got: ", resp.StatusCode, resp.Body)
 	}
 
 	var respUser domain.User
@@ -411,9 +408,38 @@ func TestUpdateUser(t *testing.T) {
 	}
 
 	if respUser.Email != updatedUser.Email {
-		t.Errorf("Updated user's email does not match what is should. Got: %s, expected: %s", respUser.Email, updatedUser.Email)
+		t.Errorf("Updated user's email does not match what it should. Got: %s, expected: %s", respUser.Email, updatedUser.Email)
 	}
 
+	// Check for a 409 when creating a new user with an email that already has been used
+
+	newUser := domain.User{
+		UUID:  "333",
+		Email: createUser.Email,
+		Role:  domain.UserRoleAdmin,
+	}
+	js, err = json.Marshal(&newUser)
+	if err != nil {
+		t.Error("Unable to marshal new user to JSON, err: ", err.Error())
+	}
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod:     "PUT",
+		Path:           "/user",
+		Headers:        testutils.GetSuperAdminReqHeader(),
+		PathParameters: map[string]string{},
+		Body:           string(js),
+	}
+
+	resp, err = updateUser(req)
+	if err != nil {
+		t.Error("Got error trying to update user, err: ", err.Error())
+		return
+	}
+
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("Got back wrong status code updating user. Expected %v, but got: %v", http.StatusConflict, resp.StatusCode)
+	}
 }
 
 func TestIsRoleValid(t *testing.T) {

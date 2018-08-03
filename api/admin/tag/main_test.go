@@ -1,11 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
+	"net/http"
 	"testing"
 )
 
@@ -186,4 +188,91 @@ func TestDeleteTag(t *testing.T) {
 		t.Errorf("Wrong user_tags remaining. Expected 1 with ID %d. \nBut got %d:\n%+v", keepMeTag.ID, len(userTags), userTags)
 		return
 	}
+}
+
+func TestUpdateTag(t *testing.T) {
+	testutils.ResetDb(t)
+
+	tag1 := domain.Tag{
+		Name:        "Tag1",
+		Description: "This is tag 1",
+	}
+
+	tag2 := domain.Tag{
+		Name:        "Tag2",
+		Description: "This is tag 2",
+	}
+
+	tagFixtures := []*domain.Tag{&tag1, &tag2}
+	for _, fix := range tagFixtures {
+		err := db.PutItem(fix)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+
+	var tags []domain.Tag
+	err := db.ListItems(&tags, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries in tag table before the test.\n%s", err.Error())
+		return
+	}
+
+	if len(tags) != 2 {
+		t.Errorf("Wrong number of tag fixtures saved. Expected: 2. But got: %d", len(tags))
+		return
+	}
+
+	tag1.Name = "Tag1B"
+	strID1 := fmt.Sprintf("%d", tag1.ID)
+
+	js, err := json.Marshal(&tag1)
+	if err != nil {
+		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
+	}
+
+	// Check that updating a Name works
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "PUT",
+		Path:       "/tag/" + strID1,
+		PathParameters: map[string]string{
+			"id": strID1,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		Body:    string(js),
+	}
+	response, err := updateTag(req)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != http.StatusOK {
+		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusOK, response.StatusCode)
+	}
+
+	// Check that updating one tag with the Name of the other receives a 409
+	tag1.Name = tag2.Name
+
+	js, err = json.Marshal(&tag1)
+	if err != nil {
+		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
+	}
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: "PUT",
+		Path:       "/tag/" + strID1,
+		PathParameters: map[string]string{
+			"id": strID1,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		Body:    string(js),
+	}
+	response, err = updateTag(req)
+	if err != nil {
+		t.Error(err)
+	}
+	if response.StatusCode != http.StatusConflict {
+		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, response.StatusCode)
+	}
+
 }

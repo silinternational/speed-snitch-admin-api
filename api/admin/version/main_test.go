@@ -8,6 +8,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/testutils"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -355,6 +356,101 @@ func TestUpdateVersion(t *testing.T) {
 	if results.Number != updatedVersion.Number || results.Description != updatedVersion.Description {
 		t.Errorf("Did not update version. \nExpected:\n%+v\n But got:\n%+v", updatedVersion, results)
 	}
+}
+
+func TestUpdateVersionFailUniqueNumber(t *testing.T) {
+	testutils.ResetDb(t)
+
+	updateMeVersion := domain.Version{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		Number:      "6.6.6",
+		Description: "This version is to be updated",
+	}
+
+	keepMeVersion := domain.Version{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		Number:      "3.3.3",
+		Description: "This tag is NOT to be updated",
+	}
+
+	versionFixtures := []domain.Version{
+		updateMeVersion,
+		keepMeVersion,
+	}
+
+	for _, fix := range versionFixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	_, err := getVersionsCheckLength(2)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	method := "PUT"
+
+	updateMeVersion.Number = keepMeVersion.Number
+	js, err := json.Marshal(&updateMeVersion)
+	if err != nil {
+		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
+	}
+
+	// Try to update version with the same number
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: method,
+		Path:       fmt.Sprintf("/version/%v", updateMeVersion.ID),
+		PathParameters: map[string]string{
+			"id": fmt.Sprintf("%v", updateMeVersion.ID),
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		Body:    string(js),
+	}
+	response, err := updateVersion(req)
+	if err != nil {
+		t.Error("Got error updating Version. \n", err.Error())
+		return
+	}
+	if response.StatusCode != http.StatusConflict {
+		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, response.StatusCode)
+		return
+	}
+
+	// Try to create version with the same number
+	newVersion := domain.Version{
+		Number:      keepMeVersion.Number,
+		Description: "This repeats a Number and should get a 409",
+	}
+	js, err = json.Marshal(&newVersion)
+	if err != nil {
+		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
+	}
+
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod: method,
+		Path:       fmt.Sprintf("/version/"),
+		Headers:    testutils.GetSuperAdminReqHeader(),
+		Body:       string(js),
+	}
+
+	response, err = updateVersion(req)
+	if err != nil {
+		t.Error("Got error updating Version. \n", err.Error())
+		return
+	}
+	if response.StatusCode != http.StatusConflict {
+		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, response.StatusCode)
+		return
+	}
+
 }
 
 func TestViewVersion(t *testing.T) {
