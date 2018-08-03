@@ -13,6 +13,37 @@ import (
 	"testing"
 )
 
+func updateVersionWithSuperAdmin(version domain.Version, versionID uint) (events.APIGatewayProxyResponse, string) {
+	js, err := json.Marshal(version)
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, "Unable to marshal update Version to JSON, err: " + err.Error()
+	}
+
+	path := "/version"
+	pathParams := map[string]string{}
+
+	if versionID != 0 {
+		strVersionID := fmt.Sprintf("%v", versionID)
+		path = path + "/" + strVersionID
+		pathParams["id"] = strVersionID
+	}
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod:     "PUT",
+		Path:           path,
+		Headers:        testutils.GetSuperAdminReqHeader(),
+		PathParameters: pathParams,
+		Body:           string(js),
+	}
+
+	resp, err := updateVersion(req)
+	if err != nil {
+		return resp, "Got error trying to update version, err: " + err.Error()
+	}
+
+	return resp, ""
+}
+
 func getVersionsCheckLength(expectedLength int) ([]domain.Version, error) {
 	versions := []domain.Version{}
 	err := db.ListItems(&versions, "number asc")
@@ -273,75 +304,48 @@ func TestUpdateVersion(t *testing.T) {
 		return
 	}
 
-	method := "PUT"
-
-	// Test that using an invalid version id results in 404 error
-	req := events.APIGatewayProxyRequest{
-		HTTPMethod: method,
-		Path:       "/version/404",
-		PathParameters: map[string]string{
-			"id": "404",
-		},
-		Headers: testutils.GetSuperAdminReqHeader(),
-	}
-	response, err := deleteVersion(req)
-	if err != nil {
-		t.Error(err)
+	resp, errMsg := updateVersionWithSuperAdmin(domain.Version{}, 404)
+	if errMsg != "" {
+		t.Error(errMsg)
 		return
 	}
-	if response.StatusCode != 404 {
-		t.Error("Wrong status code returned updating version, expected 404, got", response.StatusCode, response.Body)
+
+	if resp.StatusCode != 404 {
+		t.Error("Wrong status code returned updating version, expected 404, got", resp.StatusCode, resp.Body)
 		return
 	}
 
 	// Test that a normal admin user cannot delete a version
-	req = events.APIGatewayProxyRequest{
-		HTTPMethod: method,
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "PUT",
 		Path:       "/version/1",
 		PathParameters: map[string]string{
 			"id": "1",
 		},
 		Headers: testutils.GetAdminUserReqHeader(),
 	}
-	response, err = updateVersion(req)
+	resp, err = updateVersion(req)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	if response.StatusCode != 403 {
-		t.Error("Wrong status code returned, expected 403, got", response.StatusCode, response.Body)
+	if resp.StatusCode != 403 {
+		t.Error("Wrong status code returned, expected 403, got", resp.StatusCode, resp.Body)
 		return
 	}
 
-	updatedVersion := domain.Version{
-		Model: gorm.Model{
-			ID: 1,
-		},
-		Number:      "7.7.7",
-		Description: "This version has been updated",
-	}
-	js, err := json.Marshal(updatedVersion)
-	if err != nil {
-		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
-	}
+	// Update an existing version
+	updateMeVersion.Number = "7.7.7"
+	updateMeVersion.Description = "This version has been updated"
 
-	// Update version
-	req = events.APIGatewayProxyRequest{
-		HTTPMethod: method,
-		Path:       "/version/1",
-		PathParameters: map[string]string{
-			"id": "1",
-		},
-		Headers: testutils.GetSuperAdminReqHeader(),
-		Body:    string(js),
-	}
-	response, err = updateVersion(req)
-	if err != nil {
-		t.Error(err)
+	resp, errMsg = updateVersionWithSuperAdmin(updateMeVersion, updateMeVersion.ID)
+	if errMsg != "" {
+		t.Error(errMsg)
 		return
 	}
-	if response.StatusCode != 200 {
-		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+
+	if resp.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", resp.StatusCode, resp.Body)
 		return
 	}
 
@@ -353,8 +357,8 @@ func TestUpdateVersion(t *testing.T) {
 
 	results := versions[1]
 
-	if results.Number != updatedVersion.Number || results.Description != updatedVersion.Description {
-		t.Errorf("Did not update version. \nExpected:\n%+v\n But got:\n%+v", updatedVersion, results)
+	if results.Number != updateMeVersion.Number || results.Description != updateMeVersion.Description {
+		t.Errorf("Did not update version. \nExpected:\n%+v\n But got:\n%+v", updateMeVersion, results)
 	}
 }
 
@@ -396,31 +400,15 @@ func TestUpdateVersionFailUniqueNumber(t *testing.T) {
 		return
 	}
 
-	method := "PUT"
-
+	// Try to update an existing version with a Number that is already in use
 	updateMeVersion.Number = keepMeVersion.Number
-	js, err := json.Marshal(&updateMeVersion)
-	if err != nil {
-		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
-	}
-
-	// Try to update version with the same number
-	req := events.APIGatewayProxyRequest{
-		HTTPMethod: method,
-		Path:       fmt.Sprintf("/version/%v", updateMeVersion.ID),
-		PathParameters: map[string]string{
-			"id": fmt.Sprintf("%v", updateMeVersion.ID),
-		},
-		Headers: testutils.GetSuperAdminReqHeader(),
-		Body:    string(js),
-	}
-	response, err := updateVersion(req)
-	if err != nil {
-		t.Error("Got error updating Version. \n", err.Error())
+	resp, errMsg := updateVersionWithSuperAdmin(updateMeVersion, updateMeVersion.ID)
+	if errMsg != "" {
+		t.Error(errMsg)
 		return
 	}
-	if response.StatusCode != http.StatusConflict {
-		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, response.StatusCode)
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, resp.StatusCode)
 		return
 	}
 
@@ -429,25 +417,13 @@ func TestUpdateVersionFailUniqueNumber(t *testing.T) {
 		Number:      keepMeVersion.Number,
 		Description: "This repeats a Number and should get a 409",
 	}
-	js, err = json.Marshal(&newVersion)
-	if err != nil {
-		t.Error("Unable to marshal update version to JSON, err: ", err.Error())
-	}
-
-	req = events.APIGatewayProxyRequest{
-		HTTPMethod: method,
-		Path:       fmt.Sprintf("/version/"),
-		Headers:    testutils.GetSuperAdminReqHeader(),
-		Body:       string(js),
-	}
-
-	response, err = updateVersion(req)
-	if err != nil {
-		t.Error("Got error updating Version. \n", err.Error())
+	resp, errMsg = updateVersionWithSuperAdmin(newVersion, 0)
+	if errMsg != "" {
+		t.Error(errMsg)
 		return
 	}
-	if response.StatusCode != http.StatusConflict {
-		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, response.StatusCode)
+	if resp.StatusCode != http.StatusConflict {
+		t.Errorf("Wrong status code returned, expected %v, got %v", http.StatusConflict, resp.StatusCode)
 		return
 	}
 

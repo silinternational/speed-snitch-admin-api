@@ -12,6 +12,37 @@ import (
 	"testing"
 )
 
+func updateUserWithSuperAdmin(testUser domain.User, userID uint) (events.APIGatewayProxyResponse, string) {
+	js, err := json.Marshal(testUser)
+	if err != nil {
+		return events.APIGatewayProxyResponse{}, "Unable to marshal update User to JSON, err: " + err.Error()
+	}
+
+	path := "/user"
+	pathParams := map[string]string{}
+
+	if userID != 0 {
+		strUserID := fmt.Sprintf("%v", userID)
+		path = path + "/" + strUserID
+		pathParams["id"] = strUserID
+	}
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod:     "PUT",
+		Path:           path,
+		Headers:        testutils.GetSuperAdminReqHeader(),
+		PathParameters: pathParams,
+		Body:           string(js),
+	}
+
+	resp, err := updateUser(req)
+	if err != nil {
+		return resp, "Got error trying to update user, err: " + err.Error()
+	}
+
+	return resp, ""
+}
+
 func TestDeleteUser(t *testing.T) {
 	testutils.ResetDb(t)
 
@@ -372,66 +403,55 @@ func TestUpdateUser(t *testing.T) {
 	db.PutItem(createUser)
 
 	updatedUser := domain.User{
-		Model: gorm.Model{
-			ID: 22,
-		},
 		UUID:  "22",
-		Email: "updated@test.com",
+		Email: "old22@test.com",
 		Role:  domain.UserRoleAdmin,
 	}
-	js, err := json.Marshal(updatedUser)
-	if err != nil {
-		t.Error("Unable to marshal update user to JSON, err: ", err.Error())
-	}
-
-	req := events.APIGatewayProxyRequest{
-		HTTPMethod:     "PUT",
-		Path:           "/user",
-		Headers:        testutils.GetSuperAdminReqHeader(),
-		PathParameters: map[string]string{},
-		Body:           string(js),
-	}
-
-	resp, err := updateUser(req)
-	if err != nil {
-		t.Error("Got error trying to update user, err: ", err.Error())
+	resp, errMsg := updateUserWithSuperAdmin(updatedUser, 0)
+	if errMsg != "" {
+		t.Error(errMsg)
+		return
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		t.Error("Got back wrong status code updating user, got: ", resp.StatusCode, resp.Body)
+		return
 	}
 
+	// Update existing User
+	updatedUser.Email = "new22@test.com"
+	resp, errMsg = updateUserWithSuperAdmin(updatedUser, updatedUser.ID)
+	if errMsg != "" {
+		t.Error(errMsg)
+		return
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		t.Error("Got back wrong status code updating user, got: ", resp.StatusCode, resp.Body)
+		return
+	}
+
+	// Check the new email for updated User
 	var respUser domain.User
-	err = json.Unmarshal([]byte(resp.Body), &respUser)
+	err := json.Unmarshal([]byte(resp.Body), &respUser)
 	if err != nil {
 		t.Error("Unable to unmarshal body into updated user. err: ", err.Error(), " body: ", resp.Body)
+		return
 	}
 
 	if respUser.Email != updatedUser.Email {
 		t.Errorf("Updated user's email does not match what it should. Got: %s, expected: %s", respUser.Email, updatedUser.Email)
+		return
 	}
 
-	// Check for a 409 when creating a new user with an email that already has been used
-
+	// Check for a 409 when creating a new User with an email that already has been used
 	newUser := domain.User{
 		UUID:  "333",
 		Email: createUser.Email,
 		Role:  domain.UserRoleAdmin,
 	}
-	js, err = json.Marshal(&newUser)
-	if err != nil {
-		t.Error("Unable to marshal new user to JSON, err: ", err.Error())
-	}
 
-	req = events.APIGatewayProxyRequest{
-		HTTPMethod:     "PUT",
-		Path:           "/user",
-		Headers:        testutils.GetSuperAdminReqHeader(),
-		PathParameters: map[string]string{},
-		Body:           string(js),
-	}
-
-	resp, err = updateUser(req)
+	resp, errMsg = updateUserWithSuperAdmin(newUser, 0)
 	if err != nil {
 		t.Error("Got error trying to update user, err: ", err.Error())
 		return
