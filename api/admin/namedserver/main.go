@@ -9,9 +9,11 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"strings"
 )
 
-const SelfType = domain.DataTypeNamedServer
+const RelatedTaskErrorMessage = "Cannot delete a NamedServer that has a related Task."
+const UniqueNameErrorMessage = "Cannot update a NamedServer with a Name that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["id"]
@@ -45,6 +47,11 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	var server domain.NamedServer
 	err := db.DeleteItem(&server, id)
+
+	if err != nil && strings.Contains(err.Error(), db.RelatedTaskErrorCode) {
+		return domain.ClientError(http.StatusConflict, RelatedTaskErrorMessage)
+	}
+
 	return domain.ReturnJsonOrError(server, err)
 }
 
@@ -87,12 +94,7 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	}
 
 	if namedServerType != domain.ServerTypeSpeedTestNet && namedServerType != domain.ServerTypePing {
-		err := fmt.Errorf(
-			`Invalid "type" query param. Must be %s or %s`,
-			domain.ServerTypeSpeedTestNet,
-			domain.ServerTypePing,
-		)
-		return domain.ReturnJsonOrError(servers, err)
+		return domain.ReturnJsonOrError(servers, nil)
 	}
 
 	servers, err := db.ListNamedServersByType(namedServerType)
@@ -182,6 +184,9 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	// Update the namedserver in the database
 	err = db.PutItemWithAssociations(&server, replacement)
+	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
+		return domain.ClientError(http.StatusConflict, UniqueNameErrorMessage)
+	}
 	return domain.ReturnJsonOrError(server, err)
 }
 

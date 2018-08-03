@@ -18,6 +18,9 @@ const RESTRICT = "RESTRICT"
 
 const MYSQL_NULL = "null"
 
+const RelatedTaskErrorCode = "Error 1451"
+const UniqueFieldErrorCode = "Error 1062"
+
 var Db *gorm.DB
 
 var DatabaseTables = []interface{}{
@@ -393,7 +396,8 @@ func DeleteItem(itemObj interface{}, id uint) error {
 		return err
 	}
 
-	notFound := gdb.Unscoped().Delete(itemObj).RecordNotFound()
+	gdb = gdb.Unscoped().Delete(itemObj)
+	notFound := gdb.RecordNotFound()
 	if notFound {
 		return gorm.ErrRecordNotFound
 	}
