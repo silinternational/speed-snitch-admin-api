@@ -8,9 +8,10 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"strings"
 )
 
-const SelfType = domain.DataTypeTag
+const UniqueNameErrorMessage = "Cannot update a Tag with a Name that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, tagSpecified := req.PathParameters["id"]
@@ -101,6 +102,9 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	tag.Description = updatedTag.Description
 
 	err = db.PutItem(&tag)
+	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
+		return domain.ClientError(http.StatusConflict, UniqueNameErrorMessage)
+	}
 	return domain.ReturnJsonOrError(tag, err)
 }
 
