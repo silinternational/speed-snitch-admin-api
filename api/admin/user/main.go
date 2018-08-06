@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const SelfType = domain.DataTypeUser
+const UniqueEmailErrorMessage = "Cannot update a User with an Email that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, userSpecified := req.PathParameters["id"]
@@ -73,17 +73,6 @@ func viewUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse
 	var user domain.User
 	err := db.GetItem(&user, id)
 	return domain.ReturnJsonOrError(user, err)
-}
-
-func listUserTags(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	id := domain.GetResourceIDFromRequest(req)
-	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
-	}
-
-	var user domain.User
-	err := db.GetItem(&user, id)
-	return domain.ReturnJsonOrError(user.Tags, err)
 }
 
 func listUsers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -158,6 +147,10 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 
 	// Update the user in the database
 	err = db.PutItemWithAssociations(&user, replacements)
+
+	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
+		return domain.ClientError(http.StatusConflict, UniqueEmailErrorMessage)
+	}
 	return domain.ReturnJsonOrError(user, err)
 }
 

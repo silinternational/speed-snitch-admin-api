@@ -8,9 +8,10 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"strings"
 )
 
-const SelfType = domain.DataTypeVersion
+const UniqueNumberErrorMessage = "Cannot update a Version with a Number that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, versionSpecified := req.PathParameters["id"]
@@ -108,6 +109,10 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 	version.Description = updatedVersion.Description
 
 	err = db.PutItem(&version)
+
+	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
+		return domain.ClientError(http.StatusConflict, UniqueNumberErrorMessage)
+	}
 	return domain.ReturnJsonOrError(version, err)
 }
 

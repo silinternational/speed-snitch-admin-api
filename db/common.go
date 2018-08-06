@@ -341,7 +341,7 @@ func PutItem(itemObj interface{}) error {
 
 	errs := newGdb.GetErrors()
 	if len(errs) > 0 {
-		fmt.Fprintf(os.Stdout, "errors: %+v", errs)
+		fmt.Fprintf(os.Stdout, "\nerrors: %+v", errs)
 		return errs[0]
 	}
 
@@ -365,7 +365,7 @@ func PutItemWithAssociations(itemObj interface{}, replacements []domain.Associat
 	errs := newGdb.GetErrors()
 	if len(errs) > 0 {
 		tx.Rollback()
-		fmt.Fprintf(os.Stdout, "errors with associations on item:\n%+v\n%+v\n", itemObj, errs)
+		fmt.Fprintf(os.Stdout, "\nerrors with associations on item:\n%+v\n%+v\n", itemObj, errs)
 		return errs[0]
 	}
 
