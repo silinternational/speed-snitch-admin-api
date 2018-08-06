@@ -1,5 +1,6 @@
-# speed-snitch-admin-api
-Admin API for Speed Snitch agent
+# Admin API for Speed Snitch agent
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/silinternational/speed-snitch-admin-api)](https://goreportcard.com/report/github.com/silinternational/speed-snitch-admin-api)
 
 ## Dev setup
 1. Run `make dep` to have `dep` install all Go dependencies

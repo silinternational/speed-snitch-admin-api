@@ -19,7 +19,6 @@ test:
 
 codeshipsetup: dep build
 
-dynamo:
-	docker-compose up -d dynamo
-	sleep 5
-	docker-compose run init-dynamo
+clean:
+	docker-compose kill
+	docker-compose rm -f

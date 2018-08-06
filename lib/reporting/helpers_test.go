@@ -13,7 +13,7 @@ func TestGetStartEndTimestampsForDate(t *testing.T) {
 		t.Errorf("Unable to parse date %s", dateString)
 		t.Fail()
 	}
-	startTime, endTime, err := GetStartEndTimestampsForDate(date)
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
 	if startTime != 1525564800 {
 		t.Errorf("Did not get expected startTime (%v), got: %v", 1525564800, startTime)
 		t.Fail()
@@ -83,6 +83,48 @@ func TestGetLowerFloat(t *testing.T) {
 		result := GetLowerFloat(fix.first, fix.second)
 		if result != fix.lower {
 			t.Error("GetLowerFloat did not return expected winner. Got", result, "expected", fix.lower)
+			t.Fail()
+		}
+	}
+}
+
+func TestGetLowerLatency(t *testing.T) {
+	fixtures := []struct {
+		first  float64
+		second float64
+		lower  float64
+	}{
+		{
+			first:  1.0,
+			second: 1.1,
+			lower:  1.0,
+		},
+		{
+			first:  0.0001,
+			second: 0.00001,
+			lower:  0.00001,
+		},
+		{
+			first:  123.456789,
+			second: 12.1212,
+			lower:  12.1212,
+		},
+		{
+			first:  0.0,
+			second: 0.00001,
+			lower:  0.00001,
+		},
+		{
+			first:  0.0001,
+			second: 0.0,
+			lower:  0.0001,
+		},
+	}
+
+	for _, fix := range fixtures {
+		result := GetLowerLatency(fix.first, fix.second)
+		if result != fix.lower {
+			t.Error("GetLowerLatency did not return expected winner. Got", result, "expected", fix.lower)
 			t.Fail()
 		}
 	}

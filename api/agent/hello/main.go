@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/ipinfo"
@@ -30,19 +31,17 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		return domain.ClientError(http.StatusUnprocessableEntity, err.Error())
 	}
 
-	// Fetch existing node if exists
-	node, err := db.GetNode(helloReq.ID)
-	if err != nil {
-		return domain.ServerError(err)
+	node := domain.Node{
+		MacAddr: helloReq.ID,
 	}
 
-	if node.MacAddr == "" {
-		// Initialize new node record
-		node.ID = "node-" + helloReq.ID
-		node.MacAddr = helloReq.ID
+	err = db.FindOne(&node)
+	if err == gorm.ErrRecordNotFound {
 		node.OS = helloReq.OS
 		node.Arch = helloReq.Arch
-		node.FirstSeen = getTimeNow()
+		node.FirstSeen = domain.GetTimeNow()
+	} else if err != nil {
+		return domain.ServerError(err)
 	}
 
 	// If node is new or IP address has changed, update ip address, location, and coordinates
@@ -64,19 +63,34 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 		node.Coordinates = ipDetails.Loc
 	}
 
+	version := domain.Version{
+		Number: helloReq.Version,
+	}
+
+	err = db.FindOne(&version)
+	if err == gorm.ErrRecordNotFound {
+		errMsg := fmt.Sprintf("\nRunning Version not found: %s\n\t(for node %s)\n", helloReq.Version, helloReq.ID)
+		domain.ErrorLogger.Println(errMsg)
+	} else if err != nil {
+		return domain.ServerError(err)
+	} else {
+		node.RunningVersion = version
+		if node.ConfiguredVersionID == 0 {
+			node.ConfiguredVersion = version
+		}
+	}
+
 	// Update transient fields
-	node.RunningVersion = helloReq.Version
 	node.Uptime = helloReq.Uptime
-	node.LastSeen = getTimeNow()
+	node.LastSeen = domain.GetTimeNow()
 
 	// Write to DB
-	err = db.PutItem(domain.DataTable, node)
+	err = db.PutItem(&node)
 	if err != nil {
 		return domain.ServerError(err)
 	}
 
-	// Return a response with a 200 OK status and the JSON book record
-	// as the body.
+	// Return a response with a 204 status
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusNoContent,
 		Body:       "",
@@ -84,10 +98,11 @@ func Handler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse,
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(Handler)
 }
 
-func getTimeNow() string {
-	t := time.Now().UTC()
-	return t.Format(time.RFC3339)
+func getTimeNow() int64 {
+	utcNow := time.Now().UTC()
+	return utcNow.Unix()
 }

@@ -5,19 +5,18 @@ import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
-	"github.com/silinternational/speed-snitch-admin-api/lib/speedtestnet"
 	"os"
 )
 
 func handler(ctx context.Context, event events.CloudWatchEvent) error {
-	fmt.Fprintf(os.Stdout, "Starting update speedtestnetservers")
-	results, err := speedtestnet.UpdateSTNetServers(domain.SpeedTestNetServerList)
+	fmt.Fprintf(os.Stdout, "Starting database auto migrations")
+
+	err := db.AutoMigrateTables()
 	if err != nil {
+		fmt.Fprintf(os.Stdout, "Error migrating database: %s", err.Error())
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "Update returned %v stale servers", len(results))
 
 	return nil
 }

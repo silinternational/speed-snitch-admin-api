@@ -2,17 +2,21 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
+	"strings"
 )
 
-const SelfType = domain.DataTypeNamedServer
+const RelatedTaskErrorMessage = "Cannot delete a NamedServer that has a related Task."
+const UniqueNameErrorMessage = "Cannot update a NamedServer with a Name that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, serverSpecified := req.PathParameters["uid"]
+	_, serverSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
 		return deleteServer(req)
@@ -36,65 +40,65 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	uid := req.PathParameters["uid"]
-
-	success, err := db.DeleteItem(domain.DataTable, SelfType, uid)
-
-	if err != nil {
-		return domain.ServerError(err)
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
 	}
 
-	if !success {
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusNotFound,
-			Body:       "",
-		}, nil
+	var server domain.NamedServer
+	err := db.DeleteItem(&server, id)
+
+	if err != nil && strings.Contains(err.Error(), db.RelatedTaskErrorCode) {
+		return domain.ClientError(http.StatusConflict, RelatedTaskErrorMessage)
 	}
 
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusNoContent,
-		Body:       "",
-	}, nil
+	return domain.ReturnJsonOrError(server, err)
 }
 
 func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	uid := req.PathParameters["uid"]
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+	}
 
-	server, err := db.GetNamedServer(uid)
+	var server domain.NamedServer
+	err := db.GetItem(&server, id)
 	if err != nil {
-		return domain.ServerError(err)
+		domain.ReturnJsonOrError(server, err)
 	}
 
-	if server.Name == "" {
-		return domain.ClientError(http.StatusNotFound, http.StatusText(http.StatusNotFound))
+	if server.ServerType != domain.ServerTypeSpeedTestNet {
+		return domain.ReturnJsonOrError(server, err)
 	}
 
-	js, err := json.Marshal(server)
+	var stnServer domain.SpeedTestNetServer
+	err = db.GetItem(&stnServer, server.SpeedTestNetServerID)
 	if err != nil {
-		return domain.ServerError(err)
+		return domain.ReturnJsonOrError(server, err)
 	}
 
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	server.ServerHost = stnServer.Host
+	server.ServerCountry = stnServer.Country
+	server.ServerCountryCode = stnServer.CountryCode
+	return domain.ReturnJsonOrError(server, nil)
 }
 
 func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	servers, err := db.ListNamedServers()
-	if err != nil {
-		return domain.ServerError(err)
+	var servers []domain.NamedServer
+
+	namedServerType, exists := req.QueryStringParameters["type"]
+
+	if !exists {
+		err := db.ListItems(&servers, "name asc")
+		return domain.ReturnJsonOrError(servers, err)
 	}
 
-	jsBody, err := domain.GetJSONFromSlice(servers)
-	if err != nil {
-		return domain.ServerError(err)
+	if namedServerType != domain.ServerTypeSpeedTestNet && namedServerType != domain.ServerTypePing {
+		return domain.ReturnJsonOrError(servers, nil)
 	}
 
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       jsBody,
-	}, nil
+	servers, err := db.ListNamedServersByType(namedServerType)
+	return domain.ReturnJsonOrError(servers, err)
 }
 
 func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -105,19 +109,23 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 
 	var server domain.NamedServer
 
-	// If {uid} was provided in request, get existing record to update
-	if req.PathParameters["uid"] != "" {
-		var err error
-		server, err = db.GetNamedServer(req.PathParameters["uid"])
+	// If ID is provided, load existing server for updating, otherwise we'll create a new one
+	if req.PathParameters["id"] != "" {
+		id := domain.GetResourceIDFromRequest(req)
+		if id == 0 {
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+		}
+
+		err := db.GetItem(&server, id)
 		if err != nil {
+			if gorm.IsRecordNotFoundError(err) {
+				return events.APIGatewayProxyResponse{
+					StatusCode: http.StatusNotFound,
+					Body:       "",
+				}, nil
+			}
 			return domain.ServerError(err)
 		}
-	}
-
-	// If UID is not set generate a UID
-	if server.UID == "" {
-		server.UID = domain.GetRandString(4)
-		server.ID = SelfType + "-" + server.UID
 	}
 
 	// Get the NamedServer struct from the request body
@@ -127,32 +135,62 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 		return domain.ServerError(err)
 	}
 
+	if updatedServer.ServerType != domain.ServerTypeSpeedTestNet &&
+		updatedServer.ServerType != domain.ServerTypePing {
+		errMsg := fmt.Sprintf(
+			"Invalid Type: %s. Must be %s or %s.",
+			updatedServer.ServerType,
+			domain.ServerTypePing,
+			domain.ServerTypeSpeedTestNet,
+		)
+		return domain.ClientError(http.StatusBadRequest, errMsg)
+	}
+
 	server.ServerType = updatedServer.ServerType
-	server.SpeedTestNetServerID = updatedServer.SpeedTestNetServerID
 	server.ServerHost = updatedServer.ServerHost
+	server.ServerCountry = updatedServer.ServerCountry
+	server.ServerCountryCode = updatedServer.ServerCountryCode
 	server.Name = updatedServer.Name
 	server.Description = updatedServer.Description
-	server.Country = updatedServer.Country
 	server.Notes = updatedServer.Notes
 
+	var stnServer domain.SpeedTestNetServer
+	if updatedServer.ServerType == domain.ServerTypeSpeedTestNet {
+		if updatedServer.SpeedTestNetServerID == 0 {
+			err := fmt.Errorf("For server of type %s, the SpeedTestNetServerID cannot be 0.", domain.ServerTypeSpeedTestNet)
+			return domain.ServerError(err)
+		}
+
+		err = db.GetItem(&stnServer, updatedServer.SpeedTestNetServerID)
+		if err != nil {
+			err := fmt.Errorf(
+				"Error retrieving SpeedTestNet Server with ID %d.\n%s",
+				updatedServer.SpeedTestNetServerID,
+				err.Error(),
+			)
+			return domain.ServerError(err)
+		}
+		server.ServerHost = stnServer.Host
+		server.ServerCountry = stnServer.Country
+		server.ServerCountryCode = stnServer.CountryCode
+	}
+
+	replacement := []domain.AssociationReplacements{
+		{
+			Replacements:    []domain.SpeedTestNetServer{stnServer},
+			AssociationName: "SpeedTestNetServer",
+		},
+	}
+
 	// Update the namedserver in the database
-	err = db.PutItem(domain.DataTable, server)
-	if err != nil {
-		return domain.ServerError(err)
+	err = db.PutItemWithAssociations(&server, replacement)
+	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
+		return domain.ClientError(http.StatusConflict, UniqueNameErrorMessage)
 	}
-
-	// Return the updated namedserver as json
-	js, err := json.Marshal(server)
-	if err != nil {
-		return domain.ServerError(err)
-	}
-
-	return events.APIGatewayProxyResponse{
-		StatusCode: http.StatusOK,
-		Body:       string(js),
-	}, nil
+	return domain.ReturnJsonOrError(server, err)
 }
 
 func main() {
+	defer db.Db.Close()
 	lambda.Start(router)
 }

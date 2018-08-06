@@ -10,48 +10,35 @@ service: speedsnitch
 provider:
   name: aws
   runtime: go1.x
-  timeout: 300
+  timeout: 30
+  versionFunctions: false
   apiKeys:
     - ${self:custom.namespace}-admin
-# you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
-
-  # you can add statements to the Lambda function's IAM Role here
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "dynamodb:DeleteItem"
-        - "dynamodb:GetItem"
-        - "dynamodb:PutItem"
-        - "dynamodb:Query"
-        - "dynamodb:Scan"
-        - "dynamodb:UpdateItem"
-      Resource:
-        - Fn::GetAtt:
-          - dataTable
-          - Arn
-        - Fn::GetAtt:
-          - taskLogTable
-          - Arn
+  vpc:
+    securityGroupIds:
+      - ${env:VPC_SG_ID}
+    subnetIds:
+      - ${env:VPC_SUBNET1}
+      - ${env:VPC_SUBNET2}
+      - ${env:VPC_SUBNET3}
 
   # you can define service wide environment variables here
   environment:
     stage: ${self:custom.stage}
     namespace: ${self:custom.namespace}
-    dataTable: ${self:custom.dataTable}
-    taskLogTable: ${self:custom.taskLogTable}
     downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
+    MYSQL_HOST: ${env:MYSQL_HOST}
+    MYSQL_USER: ${env:MYSQL_USER}
+    MYSQL_PASS: ${env:MYSQL_PASS}
+    MYSQL_DB: ${env:MYSQL_DB}
+
+  stackTags:
+    app: speedsnitch
+    app_env: ${opt:stage, self:provider.stage}
 
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
-  dataTable: ${self:custom.namespace}_data
-  taskLogTable: speedsnitch_${self:custom.stage}_task_log
-  maxRcu: 100
-  minRcu: 5
-  maxWcu: 100
-  minWcu: 5
 
 package:
  exclude:
@@ -62,8 +49,16 @@ package:
 functions:
   dailysnapshot:
       handler: bin/dailysnapshot
+      timeout: 300
       events:
         - schedule: cron(0 1 * * ? *) # every day at 1 AM UTC
+
+  migrations:
+      handler: bin/migrations
+      events:
+        - schedule:
+            rate: rate(365 days)
+            enabled: true
 
   node:
       handler: bin/node
@@ -74,49 +69,57 @@ functions:
             private: true
 
         - http:
-            path: /node/{macAddr}
+            path: /node/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
         - http:
-            path: /node/{macAddr}/tag
+            path: /node/{id}/tag
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
         - http:
-            path: /node/{macAddr}
+            path: /node/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
         - http:
-            path: /node/{macAddr}
+            path: /node/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
 
   report:
       handler: bin/report
       events:
         - http:
-            path: /report/node/{macAddr}
+            path: /report/node/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  macAddr: true
+                  id: true
+        - http:
+            path: /report/node/{id}/raw
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  id: true
 
   tag:
       handler: bin/tag
@@ -132,29 +135,29 @@ functions:
             private: true
 
         - http:
-            path: /tag/{uid}
+            path: /tag/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /tag/{uid}
+            path: /tag/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /tag/{uid}
+            path: /tag/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
   namedserver:
       handler: bin/namedserver
       events:
@@ -167,29 +170,29 @@ functions:
             method: POST
             private: true
         - http:
-            path: /namedserver/{uid}
+            path: /namedserver/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /namedserver/{uid}
+            path: /namedserver/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /namedserver/{uid}
+            path: /namedserver/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
 
   speedtestnetserver:
       handler: bin/speedtestnetserver
@@ -207,21 +210,21 @@ functions:
                 paths:
                   countryCode: true
         - http:
-            path: speedtestnetserver/country/{countryCode}/{serverID}
+            path: speedtestnetserver/country/{countryCode}/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
                   countryCode: true
-                  serverID: true
+                  id: true
 
   speedtestnetserverupdate:
       handler: bin/speedtestnetserverupdate
+      timeout: 300
       events:
         # - schedule: cron(10 * * * ? *)
-
-          # cron(1 0 ? * SUN *) = Sunday at 00:01
+        # cron(1 0 ? * SUN *) = Sunday at 00:01
         - schedule: cron(1 0 ? * SUN *)
 
   user:
@@ -243,38 +246,29 @@ functions:
             private: true
 
         - http:
-            path: /user/{uid}
+            path: /user/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /user/{uid}/tag
-            method: GET
-            private: true
-
-            request:
-              parameters:
-                paths:
-                  uid: true
-        - http:
-            path: /user/{uid}
+            path: /user/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
         - http:
-            path: /user/{uid}
+            path: /user/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  uid: true
+                  id: true
   version:
       handler: bin/version
       events:
@@ -289,204 +283,26 @@ functions:
             private: true
 
         - http:
-            path: /version/{number}
+            path: /version/{id}
             method: GET
             private: true
             request:
               parameters:
                 paths:
-                  number: true
+                  id: true
         - http:
-            path: /version/{number}
+            path: /version/{id}
             method: PUT
             private: true
             request:
               parameters:
                 paths:
-                  number: true
+                  id: true
         - http:
-            path: /version/{number}
+            path: /version/{id}
             method: DELETE
             private: true
             request:
               parameters:
                 paths:
-                  number: true
-
-resources:
-  Resources:
-    dataTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: '${self:custom.dataTable}'
-        AttributeDefinitions:
-          - AttributeName: ID
-            AttributeType: S
-        KeySchema:
-          - AttributeName: ID
-            KeyType: HASH
-        ProvisionedThroughput:
-          ReadCapacityUnits: 8
-          WriteCapacityUnits: 8
-    taskLogTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: '${self:custom.taskLogTable}'
-        AttributeDefinitions:
-          - AttributeName: ID
-            AttributeType: S
-          - AttributeName: Timestamp
-            AttributeType: N
-        KeySchema:
-          - AttributeName: ID
-            KeyType: HASH
-          - AttributeName: Timestamp
-            KeyType: RANGE
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-        TimeToLiveSpecification:
-          AttributeName: ExpirationTime
-          Enabled: true
-
-    ScalingRole:
-      Type: "AWS::IAM::Role"
-      Properties:
-       AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-         -
-          Effect: Allow
-          Principal:
-           Service:
-            -
-             "application-autoscaling.amazonaws.com"
-          Action:
-           -
-            "sts:AssumeRole"
-       Path: "/"
-       Policies:
-        -
-         PolicyName: root
-         PolicyDocument:
-          Version: "2012-10-17"
-          Statement:
-           -
-            Effect: Allow
-            Action:
-             - "dynamodb:DescribeTable"
-             - "dynamodb:UpdateTable"
-             - "cloudwatch:PutMetricAlarm"
-             - "cloudwatch:DescribeAlarms"
-             - "cloudwatch:GetMetricStatistics"
-             - "cloudwatch:SetAlarmState"
-             - "cloudwatch:DeleteAlarms"
-            Resource: "*"
-
-    DataTableReadCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxRcu}
-       MinCapacity: ${self:custom.minRcu}
-       ResourceId: 'table/${self:custom.dataTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:ReadCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    DataTableWriteCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxWcu}
-       MinCapacity: ${self:custom.minWcu}
-       ResourceId: 'table/${self:custom.dataTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:WriteCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    DataTableReadScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: ReadAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: DataTableReadCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBReadCapacityUtilization
-
-    DataTableWriteScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: WriteAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: DataTableWriteCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBWriteCapacityUtilization
-
-    TaskLogTableReadCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxRcu}
-       MinCapacity: ${self:custom.minRcu}
-       ResourceId: 'table/${self:custom.taskLogTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:ReadCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    TaskLogTableWriteCapacityScalableTarget:
-      Type: "AWS::ApplicationAutoScaling::ScalableTarget"
-      Properties:
-       MaxCapacity: ${self:custom.maxWcu}
-       MinCapacity: ${self:custom.minWcu}
-       ResourceId: 'table/${self:custom.taskLogTable}'
-       RoleARN:
-        Fn::GetAtt:
-          - ScalingRole
-          - Arn
-       ScalableDimension: "dynamodb:table:WriteCapacityUnits"
-       ServiceNamespace: dynamodb
-
-    TaskLogTableReadScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: ReadAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: TaskLogTableReadCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBReadCapacityUtilization
-
-    TaskLogTableWriteScalingPolicy:
-      Type: "AWS::ApplicationAutoScaling::ScalingPolicy"
-      Properties:
-       PolicyName: WriteAutoScalingPolicy
-       PolicyType: TargetTrackingScaling
-       ScalingTargetId:
-        Ref: TaskLogTableWriteCapacityScalableTarget
-       TargetTrackingScalingPolicyConfiguration:
-        TargetValue: 70
-        ScaleInCooldown: 60
-        ScaleOutCooldown: 5
-        PredefinedMetricSpecification:
-         PredefinedMetricType: DynamoDBWriteCapacityUtilization
+                  id: true
