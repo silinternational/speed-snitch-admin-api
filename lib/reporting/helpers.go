@@ -3,10 +3,12 @@ package reporting
 import (
 	"fmt"
 	"github.com/silinternational/speed-snitch-admin-api"
+	"log"
 	"time"
 )
 
 const DateTimeLayout = "2006-January-2 15:04:05"
+const DateLayout = "2006-01-02"
 
 func GetYesterday() time.Time {
 	today := time.Now().UTC()
@@ -67,4 +69,14 @@ func IsValidReportingInterval(needle string) bool {
 	haystack := []string{domain.ReportingIntervalDaily, domain.ReportingIntervalWeekly, domain.ReportingIntervalMonthly}
 	isValid, _ := domain.InArray(needle, haystack)
 	return isValid
+}
+
+func StringDateToTime(date string) (time.Time, error) {
+	timeObj, err := time.Parse(DateLayout, date)
+	if err != nil {
+		log.Fatal("Error parsing requested config: ", err.Error())
+		return time.Time{}, err
+	}
+
+	return timeObj, nil
 }
