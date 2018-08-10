@@ -161,3 +161,34 @@ func TestIsValidReportingInterval(t *testing.T) {
 		}
 	}
 }
+
+func TestStringDateToTime(t *testing.T) {
+	tests := []struct {
+		given    string
+		expected int64
+	}{
+		{
+			given:    "2018-08-01",
+			expected: 1533081600,
+		},
+		{
+			given:    "2018-08-02",
+			expected: 1533168000,
+		},
+		{
+			given:    "2018-08-03",
+			expected: 1533254400,
+		},
+	}
+
+	for _, test := range tests {
+		result, err := StringDateToTime(test.given)
+		if err != nil {
+			t.Error(err)
+		}
+		if result.Unix() != test.expected {
+			t.Errorf("String date was not converted to right time, expected timestamp %v, got %v. Result time obj: %s",
+				test.expected, result.Unix(), result.Format(time.RFC3339))
+		}
+	}
+}

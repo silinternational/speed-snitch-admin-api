@@ -9,7 +9,29 @@ import (
 	"time"
 )
 
-func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
+// Iterate through range of days to create snapshots for, and for each date call GenerateDailySnapshotsForDate
+// Returns number of snapshots generated and error/nil
+func GenerateDailySnapshots(date time.Time, numDaysToProcess int64, forceOverwrite bool) (int64, error) {
+	var snapshotsGenerated int64 = 0
+
+	var days int64
+	for days = 0; days < numDaysToProcess; days++ {
+		dateToBeProcessed := date.AddDate(0, 0, -int(days))
+		dateSnapshots, err := GenerateDailySnapshotsForDate(dateToBeProcessed, forceOverwrite)
+		snapshotsGenerated += dateSnapshots
+		if err != nil {
+			return snapshotsGenerated, err
+		}
+	}
+
+	return snapshotsGenerated, nil
+}
+
+// Iterate through all nodes and generate daily snapshots for given date
+// Returns number of snapshots created and error/nil
+func GenerateDailySnapshotsForDate(date time.Time, forceOverwrite bool) (int64, error) {
+	var snapshotsCreated int64 = 0
+
 	var nodes []domain.Node
 	err := db.ListItems(&nodes, "id asc")
 	if err != nil {
@@ -17,13 +39,85 @@ func GenerateDailySnapshotsForDate(date time.Time) (int64, error) {
 	}
 
 	for _, n := range nodes {
-		err = GenerateDailySnapshotsForNode(n, date)
+		created, err := GenerateDailySnapshotForNodeForDate(n, date, forceOverwrite)
+		if created {
+			snapshotsCreated++
+		}
 		if err != nil {
 			fmt.Fprintf(os.Stdout, "%v - error generating snapshot for node %v - %s. err: %s", date, n.ID, n.Nickname, err.Error())
+			return snapshotsCreated, err
 		}
 	}
 
-	return int64(len(nodes)), nil
+	return snapshotsCreated, nil
+}
+
+// Generates daily snapshot for the given node/date. If snapshot already exists for node/date it will not be
+// regenerated or overwritten unless forceOverwrite is true
+// Returns true/false for if a snapshot was created along with an error if one is present
+func GenerateDailySnapshotForNodeForDate(node domain.Node, date time.Time, forceOverwrite bool) (bool, error) {
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
+	if err != nil {
+		return false, err
+	}
+
+	// check for existing snapshot to update, or create new one
+	snapshot := domain.ReportingSnapshot{
+		Timestamp: startTime,
+		NodeID:    node.ID,
+		Interval:  domain.ReportingIntervalDaily,
+	}
+	err = db.FindOne(&snapshot)
+	if !gorm.IsRecordNotFoundError(err) && err != nil {
+		return false, err
+	} else if snapshot.ID != 0 && !forceOverwrite {
+		return false, nil
+	}
+
+	err = hydrateSnapshotWithPingLogs(&snapshot, node, startTime, endTime)
+	if err != nil {
+		return false, err
+	}
+
+	// Process speed test results
+	err = hydrateSnapshotWithSpeedTestLogs(&snapshot, node, startTime, endTime)
+	if err != nil {
+		return false, err
+	}
+
+	err = hydrateSnapshotWithBusinessHourLogs(&snapshot, node, date)
+	if err != nil {
+		return false, err
+	}
+
+	// Track system restart
+	var restarts []domain.TaskLogRestart
+	err = db.GetTaskLogForRange(&restarts, node.ID, startTime, endTime)
+	if err != nil {
+		return false, err
+	}
+
+	snapshot.RestartsCount = int64(len(restarts))
+
+	// Process network outages
+	var outages []domain.TaskLogNetworkDowntime
+	err = db.GetTaskLogForRange(&outages, node.ID, startTime, endTime)
+	if err != nil {
+		return false, err
+	}
+
+	for _, i := range outages {
+		snapshot.NetworkDowntimeSeconds += i.DowntimeSeconds
+	}
+
+	snapshot.NetworkOutagesCount = int64(len(outages))
+
+	err = db.PutItem(&snapshot)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 func hydrateSnapshotWithPingLogs(
@@ -253,62 +347,4 @@ func hydrateSnapshotWithBusinessHourLogs(
 
 	snapshot.BizNetworkOutagesCount = int64(len(outages))
 	return nil
-}
-
-func GenerateDailySnapshotsForNode(node domain.Node, date time.Time) error {
-	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
-	if err != nil {
-		return err
-	}
-
-	// check for existing snapshot to update, or create new one
-	snapshot := domain.ReportingSnapshot{
-		Timestamp: startTime,
-		NodeID:    node.ID,
-		Interval:  domain.ReportingIntervalDaily,
-	}
-	err = db.FindOne(&snapshot)
-	if !gorm.IsRecordNotFoundError(err) && err != nil {
-		return err
-	}
-
-	err = hydrateSnapshotWithPingLogs(&snapshot, node, startTime, endTime)
-	if err != nil {
-		return err
-	}
-
-	// Process speed test results
-	err = hydrateSnapshotWithSpeedTestLogs(&snapshot, node, startTime, endTime)
-	if err != nil {
-		return err
-	}
-
-	err = hydrateSnapshotWithBusinessHourLogs(&snapshot, node, date)
-	if err != nil {
-		return err
-	}
-
-	// Track system restart
-	var restarts []domain.TaskLogRestart
-	err = db.GetTaskLogForRange(&restarts, node.ID, startTime, endTime)
-	if err != nil {
-		return err
-	}
-
-	snapshot.RestartsCount = int64(len(restarts))
-
-	// Process network outages
-	var outages []domain.TaskLogNetworkDowntime
-	err = db.GetTaskLogForRange(&outages, node.ID, startTime, endTime)
-	if err != nil {
-		return err
-	}
-
-	for _, i := range outages {
-		snapshot.NetworkDowntimeSeconds += i.DowntimeSeconds
-	}
-
-	snapshot.NetworkOutagesCount = int64(len(outages))
-
-	return db.PutItem(&snapshot)
 }

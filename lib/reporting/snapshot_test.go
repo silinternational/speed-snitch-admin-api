@@ -130,7 +130,7 @@ func TestGenerateDailySnapshotsForDateNoBusinessHours(t *testing.T) {
 
 	// Process daily snapshots
 	date, _ := time.Parse(DateTimeLayout, "2018-June-4 20:51:25")
-	count, err := GenerateDailySnapshotsForDate(date)
+	count, err := GenerateDailySnapshotsForDate(date, false)
 	if err != nil {
 		t.Error("Unable to generate daily snapshots:", err)
 	}
@@ -341,7 +341,7 @@ func TestGenerateDailySnapshotsForDateWithBusinessHours(t *testing.T) {
 
 	// Process daily snapshots
 	date, _ := time.Parse(DateTimeLayout, "2018-June-4 20:51:25")
-	count, err := GenerateDailySnapshotsForDate(date)
+	count, err := GenerateDailySnapshotsForDate(date, false)
 	if err != nil {
 		t.Error("Unable to generate daily snapshots:", err)
 	}
@@ -414,4 +414,72 @@ func TestGenerateDailySnapshotsForDateWithBusinessHours(t *testing.T) {
 		)
 	}
 
+}
+
+func TestGenerateDailySnapshotsForThreeDaysForTwoNodes(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	node2 := domain.Node{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		MacAddr: "bb:bb:bb:bb:bb:bb",
+	}
+	db.PutItem(&node2)
+
+	logs := []domain.TaskLogPingTest{
+		{
+			Latency:   1,
+			NodeID:    node1.ID,
+			Timestamp: 1533081600, // 2018-08-01 00:00:00
+		},
+		{
+			Latency:   1,
+			NodeID:    node1.ID,
+			Timestamp: 1533168000, // 2018-08-02 00:00:00
+		},
+		{
+			Latency:   1,
+			NodeID:    node1.ID,
+			Timestamp: 1533254400, // 2018-08-03 00:00:00
+		},
+		{
+			Latency:   2,
+			NodeID:    node2.ID,
+			Timestamp: 1533081600, // 2018-08-01 00:00:00
+		},
+		{
+			Latency:   2,
+			NodeID:    node2.ID,
+			Timestamp: 1533168000, // 2018-08-02 00:00:00
+		},
+		{
+			Latency:   2,
+			NodeID:    node2.ID,
+			Timestamp: 1533254400, // 2018-08-03 00:00:00
+		},
+	}
+
+	for _, i := range logs {
+		db.PutItem(&i)
+	}
+
+	reportDate, _ := StringDateToTime("2018-08-03")
+
+	snapsCreated, err := GenerateDailySnapshots(reportDate, 3, false)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if snapsCreated != int64(len(logs)) {
+		t.Errorf("Not enough daily snapshots created, expected %v, got %v", len(logs), snapsCreated)
+	}
 }
