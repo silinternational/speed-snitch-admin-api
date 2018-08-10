@@ -483,3 +483,55 @@ func TestGenerateDailySnapshotsForThreeDaysForTwoNodes(t *testing.T) {
 		t.Errorf("Not enough daily snapshots created, expected %v, got %v", len(logs), snapsCreated)
 	}
 }
+
+func TestGenerateDailySnapshotForceOverwrite(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	existingSnap := domain.ReportingSnapshot{
+		Timestamp:  1533081600, // 2018-08-01 00:00:00
+		NodeID:     node1.ID,
+		LatencyAvg: 1,
+		LatencyMax: 1,
+		LatencyMin: 1,
+	}
+	db.PutItem(&existingSnap)
+
+	log := domain.TaskLogPingTest{
+		Latency:   5,
+		NodeID:    node1.ID,
+		Timestamp: 1533081600, // 2018-08-01 00:00:00
+	}
+	db.PutItem(&log)
+
+	reportDate, _ := StringDateToTime("2018-08-01")
+
+	snapsCreated, err := GenerateDailySnapshots(reportDate, 1, true)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if snapsCreated != 1 {
+		t.Errorf("Not enough daily snapshots created, expected %v, got %v", 1, snapsCreated)
+	}
+
+	foundSnaps, err := db.GetSnapshotsForRange(domain.ReportingIntervalDaily, node1.ID, 1533081600, 1533081600)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(foundSnaps) != 1 {
+		t.Errorf("Not expected number of snapshots found, expected 1, got %v", len(foundSnaps))
+	}
+
+	if foundSnaps[0].LatencyAvg != log.Latency {
+		t.Errorf("Snapshot was not overwritten, has LatencyAvg value of %v but expected %v", foundSnaps[0].LatencyAvg, log.Latency)
+	}
+}
