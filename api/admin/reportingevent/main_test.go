@@ -121,7 +121,7 @@ func TestListEvents(t *testing.T) {
 
 	method := "GET"
 
-	// List versions
+	// List events
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod:     method,
 		Path:           "/reportingevent",
@@ -154,9 +154,9 @@ func updateEventWithSuperAdmin(event domain.ReportingEvent, eventID uint) (event
 	pathParams := map[string]string{}
 
 	if eventID != 0 {
-		strVersionID := fmt.Sprintf("%v", eventID)
-		path = path + "/" + strVersionID
-		pathParams["id"] = strVersionID
+		strEventID := fmt.Sprintf("%v", eventID)
+		path = path + "/" + strEventID
+		pathParams["id"] = strEventID
 	}
 
 	req := events.APIGatewayProxyRequest{
@@ -169,7 +169,7 @@ func updateEventWithSuperAdmin(event domain.ReportingEvent, eventID uint) (event
 
 	resp, err := updateEvent(req)
 	if err != nil {
-		return resp, "Got error trying to update version, err: " + err.Error()
+		return resp, "Got error trying to update event, err: " + err.Error()
 	}
 
 	return resp, ""
@@ -215,7 +215,7 @@ func TestUpdateEvent(t *testing.T) {
 	}
 
 	if resp.StatusCode != 404 {
-		t.Error("Wrong status code returned updating version, expected 404, got", resp.StatusCode, resp.Body)
+		t.Error("Wrong status code returned updating event, expected 404, got", resp.StatusCode, resp.Body)
 		return
 	}
 
@@ -254,4 +254,60 @@ func TestUpdateEvent(t *testing.T) {
 		t.Errorf("Update reporting-event lost the Node ID. \n Got %+v", resultEvent)
 	}
 
+}
+
+func TestViewEvent(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+
+	db.PutItem(&node)
+
+	event1 := domain.ReportingEvent{
+		NodeID: node.ID,
+		Name:   "Event1",
+	}
+
+	event2 := domain.ReportingEvent{
+		Name: "Event2",
+	}
+
+	eventFixtures := []*domain.ReportingEvent{
+		&event1,
+		&event2,
+	}
+
+	for _, fix := range eventFixtures {
+		err := db.PutItem(fix)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	strID := fmt.Sprintf("%v", event1.ID)
+
+	// Get event
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/reportingevent/" + strID,
+		PathParameters: map[string]string{
+			"id": strID,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+	}
+	response, err := viewEvent(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+	if !strings.Contains(response.Body, event1.Name) {
+		t.Errorf("Did not get back the event.\nGot: %v", response.Body)
+	}
 }
