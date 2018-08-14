@@ -52,7 +52,7 @@ func TestDeleteNode(t *testing.T) {
 		return
 	}
 
-	createNode := domain.Node{
+	deleteMeNode := domain.Node{
 		MacAddr: "aa:aa:aa:aa:aa:aa",
 		Contacts: []domain.Contact{
 			{
@@ -64,7 +64,7 @@ func TestDeleteNode(t *testing.T) {
 
 	// Create the node in the database
 	err = db.PutItemWithAssociations(
-		&createNode,
+		&deleteMeNode,
 		[]domain.AssociationReplacements{
 			{AssociationName: "Tags", Replacements: []domain.Tag{targetNodeTag1, targetNodeTag2}},
 		},
@@ -82,7 +82,21 @@ func TestDeleteNode(t *testing.T) {
 		return
 	}
 
-	idStr := fmt.Sprintf("%v", createNode.ID)
+	nodeEvent := domain.ReportingEvent{
+		NodeID:      deleteMeNode.ID,
+		Name:        "Test Event",
+		Description: "Should get deleted with node",
+		Date:        "2006-01-02",
+	}
+
+	err = db.PutItem(&nodeEvent)
+	if err != nil {
+		errMsg := "Error saving reporting_event fixture.\n" + err.Error()
+		t.Error(errMsg)
+		return
+	}
+
+	idStr := fmt.Sprintf("%v", deleteMeNode.ID)
 
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
@@ -110,16 +124,23 @@ func TestDeleteNode(t *testing.T) {
 
 	// try to find node via db to ensure doesn't exist
 	var find domain.Node
-	err = db.GetItem(&find, createNode.ID)
+	err = db.GetItem(&find, deleteMeNode.ID)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Error("node still exists after deletion")
 	}
 
 	// Check if contact was removed too
 	var contact domain.Contact
-	err = db.GetItem(&contact, createNode.Contacts[0].ID)
+	err = db.GetItem(&contact, deleteMeNode.Contacts[0].ID)
 	if !gorm.IsRecordNotFoundError(err) {
 		t.Errorf("contact still exists after node deletion: %+v", contact)
+	}
+
+	// Check if reporting_event was removed too
+	var deleteMeEvent domain.ReportingEvent
+	err = db.GetItem(&deleteMeEvent, nodeEvent.ID)
+	if !gorm.IsRecordNotFoundError(err) {
+		t.Errorf("reporting_event still exists after node deletion: %+v", contact)
 	}
 
 	// Check that the node_tags were deleted
