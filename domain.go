@@ -19,13 +19,8 @@ import (
 	"time"
 )
 
-const DataTypeNamedServer = "namedserver"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
 const DataTypeSTNetServerList = "stnetserverlist"
-
-const DataTypeTag = "tag"
-const DataTypeUser = "user"
-const DataTypeVersion = "version"
 
 const LogTypeDowntime = "downtime"
 const LogTypeRestart = "restarted"
@@ -61,6 +56,8 @@ const PermissionTagBased = "tagBased"
 const ReportingIntervalDaily = "daily"
 const ReportingIntervalWeekly = "weekly"
 const ReportingIntervalMonthly = "monthly"
+
+const DateLayout = "2006-01-02"
 
 /***************************************************************
 /*
@@ -429,6 +426,29 @@ type ReportingSnapshot struct {
 	BizNetworkDowntimeSeconds int64   `gorm:"not null;default:0"`
 	BizNetworkOutagesCount    int64   `gorm:"not null;default:0"`
 	BizRestartsCount          int64   `gorm:"not null;default:0"`
+}
+
+type ReportingEvent struct {
+	gorm.Model
+	Node        Node   `gorm:"foreignkey:NodeID" json:"-"`
+	NodeID      uint   `gorm:"default:null"`
+	Timestamp   int64  `gorm:"type:int(11); not null;default:0"`
+	Date        string `gorm:"not null"`
+	Name        string `gorm:"not null;unique_index"`
+	Description string `gorm:"type:varchar(2048)"`
+}
+
+func (r *ReportingEvent) SetTimestamp() error {
+
+	timestamp, err := time.Parse(DateLayout, r.Date)
+
+	if err != nil {
+		errMsg := fmt.Sprintf("Error interpreting date %s. %s", r.Date, err.Error())
+		return fmt.Errorf(errMsg)
+	}
+
+	r.Timestamp = timestamp.Unix()
+	return nil
 }
 
 /***************************************************************
