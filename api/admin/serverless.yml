@@ -306,3 +306,40 @@ functions:
               parameters:
                 paths:
                   id: true
+  event:
+      handler: bin/reportingevent
+      events:
+        - http:
+            path: event
+            method: GET
+            private: true
+
+        - http:
+            path: reportingevent
+            method: POST
+            private: true
+
+        - http:
+            path: /reportingevent/{id}
+            method: GET
+            private: true
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /reportingevent/{id}
+            method: PUT
+            private: true
+            request:
+              parameters:
+                paths:
+                  id: true
+        - http:
+            path: /reportingevent/{id}
+            method: DELETE
+            private: true
+            request:
+              parameters:
+                paths:
+                  id: true
