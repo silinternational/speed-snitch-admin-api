@@ -94,8 +94,8 @@ func updateEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ServerError(err)
 	}
 
-	if updatedEvent.Name == "" {
-		return domain.ClientError(http.StatusUnprocessableEntity, "Name is required")
+	if updatedEvent.Name == "" || updatedEvent.Date == "" {
+		return domain.ClientError(http.StatusUnprocessableEntity, "Name and Date are required")
 	}
 
 	reportingEvent.Date = updatedEvent.Date
