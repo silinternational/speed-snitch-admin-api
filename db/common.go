@@ -27,7 +27,7 @@ var DatabaseTables = []interface{}{
 	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Task{}, &domain.SpeedTestNetServer{},
 	&domain.UserTags{}, &domain.User{}, &domain.Version{}, &domain.TaskLogSpeedTest{},
 	&domain.TaskLogPingTest{}, &domain.TaskLogError{}, &domain.TaskLogRestart{}, &domain.TaskLogNetworkDowntime{},
-	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.NodeTags{}, &domain.Node{}}
+	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.NodeTags{}, &domain.Node{}, &domain.ReportingEvent{}}
 
 func GetDb() (*gorm.DB, error) {
 	if Db == nil {
@@ -224,6 +224,14 @@ func CreateForeignKeys() error {
 			ChildModel:  &domain.NodeTags{},
 			ChildField:  "tag_id",
 			ParentTable: "tag",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.ReportingEvent{},
+			ChildField:  "node_id",
+			ParentTable: "node",
 			ParentField: "id",
 			OnDelete:    CASCADE,
 			OnUpdate:    NOACTION,
