@@ -188,6 +188,34 @@ func TestCanUserUseNode(t *testing.T) {
 	}
 }
 
+func TestReportingEvent_SetTimestamp(t *testing.T) {
+
+	rEvent := ReportingEvent{
+		Date:        "2018-06-26",
+		Name:        "Test",
+		Description: "Test Reporting Event",
+	}
+
+	err := rEvent.SetTimestamp()
+	if err != nil {
+		t.Errorf("Got unexpected error:\n%s", err.Error())
+		return
+	}
+
+	expected := int64(1529971200)
+	if rEvent.Timestamp != expected {
+		t.Errorf("Got wrong timestamp. Expected: %v, but got: %v", expected, rEvent.Timestamp)
+	}
+
+	rEvent.Date = "2018-29-29"
+
+	err = rEvent.SetTimestamp()
+	if err == nil {
+		t.Errorf("Expected an error but didn't get one")
+		return
+	}
+}
+
 func TestGetJSONFromSliceEmpty(t *testing.T) {
 	testData := []Country{}
 	results, err := GetSliceSafeJSON(testData)
