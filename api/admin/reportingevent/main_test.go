@@ -89,17 +89,25 @@ func TestDeleteEvent(t *testing.T) {
 
 func TestListEvents(t *testing.T) {
 	testutils.ResetDb(t)
+	testutils.CreateAdminUser(t)
+
+	node := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+
+	db.PutItem(&node)
 
 	event1 := domain.ReportingEvent{
 		Date:        "2018-06-26",
 		Name:        "E1",
-		Description: "This is event 1",
+		Description: "This is event 1 (nodeless)",
 	}
 
 	event2 := domain.ReportingEvent{
 		Date:        "2018-06-27",
 		Name:        "E2",
-		Description: "This is event 2",
+		Description: "This is event 2 and has a node",
+		NodeID:      node.ID,
 	}
 
 	eventFixtures := []domain.ReportingEvent{event1, event2}
@@ -121,7 +129,7 @@ func TestListEvents(t *testing.T) {
 
 	method := "GET"
 
-	// List events
+	// List events with superAdmin
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod:     method,
 		Path:           "/reportingevent",
@@ -141,6 +149,28 @@ func TestListEvents(t *testing.T) {
 	results := response.Body
 	if !strings.Contains(results, event1.Name) || !strings.Contains(results, event2.Name) {
 		t.Errorf("listEvents did not include the fixture events. Got:\n%s\n", results)
+	}
+
+	// list events with normal admin
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod:     method,
+		Path:           "/reportingevent",
+		PathParameters: map[string]string{},
+		Headers:        testutils.GetAdminUserReqHeader(),
+	}
+	response, err = listEvents(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results = response.Body
+	if !strings.Contains(results, event1.Name) || strings.Contains(results, event2.Name) {
+		t.Errorf("For a normal user, listEvents should have returned event1 only. Got:\n%s\n", results)
 	}
 }
 

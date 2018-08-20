@@ -148,6 +148,54 @@ func TestDoTagsOverlap(t *testing.T) {
 	}
 }
 
+func TestCanUserSeeReportingEvent(t *testing.T) {
+	allTags := getTestTags()
+	user := User{
+		Name:  "Andy Admin",
+		Email: "andy_admin@some.org",
+		Role:  "admin",
+		Tags:  []Tag{allTags[3]},
+	}
+
+	node := Node{}
+	node.MacAddr = "11:22:33:44:55:66"
+	node.ID = 1
+
+	event := ReportingEvent{
+		Name:   "Test Event",
+		Node:   node,
+		NodeID: 1,
+	}
+
+	type testData struct {
+		nodeTags []Tag
+		expected bool
+	}
+
+	allTestData := []testData{
+		{
+			nodeTags: []Tag{allTags[0], allTags[1]},
+			expected: false,
+		},
+		{
+			nodeTags: []Tag{allTags[1], allTags[2], allTags[3]},
+			expected: true,
+		},
+	}
+
+	for index, nextData := range allTestData {
+		event.Node.Tags = nextData.nodeTags
+		results := CanUserSeeReportingEvent(user, event)
+
+		if results != nextData.expected {
+			msg := "Bad results for data set %d. Expected %v, but got %v."
+			t.Errorf(msg, index, nextData.expected, results)
+			break
+		}
+	}
+
+}
+
 func TestCanUserUseNode(t *testing.T) {
 	allTags := getTestTags()
 	user := User{

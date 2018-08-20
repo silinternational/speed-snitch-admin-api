@@ -556,8 +556,8 @@ func CleanBusinessTimes(start, close string) (string, string, error) {
 		return start, close, nil
 	}
 
-	lenBoth := len(start) + len(close)
-	if lenBoth != 2*len(BusinessTimeFormat) {
+	// If only one is set, error
+	if start == "" || close == "" {
 		errMsg := fmt.Sprintf(
 			`Error with business hours.  If one value is set, the other must also be set.\n Got "%s" and "%s".`,
 			start, close)
@@ -624,6 +624,17 @@ func CanUserUseNode(user User, node Node) bool {
 		return true
 	}
 	return DoTagsOverlap(user.Tags, node.Tags)
+}
+
+// CanUserSeeReportingEvent returns true if the user has a superAdmin role or
+//   if the event has no node associated with it or
+//   if the user has a tag that the event's node has
+func CanUserSeeReportingEvent(user User, event ReportingEvent) bool {
+	if user.Role == UserRoleSuperAdmin || event.NodeID == 0 {
+		return true
+	}
+
+	return DoTagsOverlap(user.Tags, event.Node.Tags)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
