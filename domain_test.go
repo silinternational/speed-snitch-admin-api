@@ -329,7 +329,7 @@ func TestCleanBusinessTimes(t *testing.T) {
 
 	resultStart, resultClose, err = CleanBusinessTimes(start, close)
 	if err == nil {
-		t.Errorf("Expected an error, but didn't get one.")
+		t.Error("Expected an error, but didn't get one.")
 		return
 	}
 
@@ -339,7 +339,7 @@ func TestCleanBusinessTimes(t *testing.T) {
 
 	resultStart, resultClose, err = CleanBusinessTimes(start, close)
 	if err == nil {
-		t.Errorf("Expected an error, but didn't get one.")
+		t.Error("Expected an error, but didn't get one.")
 		return
 	}
 
@@ -349,8 +349,27 @@ func TestCleanBusinessTimes(t *testing.T) {
 
 	resultStart, resultClose, err = CleanBusinessTimes(start, close)
 	if err == nil {
-		t.Errorf("Expected an error, but didn't get one.\n%s", err)
+		t.Error("Expected an error, but didn't get one.")
 		return
 	}
 
+	// Only start time given
+	start = "08:00"
+	close = ""
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err == nil {
+		t.Error("Expected an error, but didn't get one.")
+		return
+	}
+
+	// Only close time given
+	start = ""
+	close = "18:00"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
+	if err == nil {
+		t.Error("Expected an error, but didn't get one.")
+		return
+	}
 }

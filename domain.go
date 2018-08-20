@@ -556,6 +556,14 @@ func CleanBusinessTimes(start, close string) (string, string, error) {
 		return start, close, nil
 	}
 
+	lenBoth := len(start) + len(close)
+	if lenBoth != 2*len(BusinessTimeFormat) {
+		errMsg := fmt.Sprintf(
+			`Error with business hours.  If one value is set, the other must also be set.\n Got "%s" and "%s".`,
+			start, close)
+		return start, close, fmt.Errorf("Error parsing business start time.\n %s", errMsg)
+	}
+
 	startTime, err := time.Parse(BusinessTimeFormat, start)
 	if err != nil {
 		return start, close, fmt.Errorf("Error parsing business start time.\n %s", err.Error())
