@@ -315,7 +315,7 @@ func TestUpdateVersion(t *testing.T) {
 		return
 	}
 
-	// Test that a normal admin user cannot delete a version
+	// Test that a normal admin user cannot update a version
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "PUT",
 		Path:       "/version/1",
@@ -378,7 +378,7 @@ func TestUpdateVersionFailUniqueNumber(t *testing.T) {
 			ID: 2,
 		},
 		Number:      "3.3.3",
-		Description: "This tag is NOT to be updated",
+		Description: "This version is NOT to be updated",
 	}
 
 	versionFixtures := []domain.Version{

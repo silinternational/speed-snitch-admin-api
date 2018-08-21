@@ -20,6 +20,9 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 		if strings.HasSuffix(req.Path, "/raw") {
 			return getNodeRawData(req)
 		}
+		if strings.HasSuffix(req.Path, "/event") {
+			return getNodeReportingEvents(req)
+		}
 		return viewNodeReport(req)
 	}
 
@@ -64,6 +67,41 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	// Fetch snapshots
 	snapshots, err := db.GetSnapshotsForRange(interval, id, periodStartTimestamp, periodEndTimestamp)
 	return domain.ReturnJsonOrError(snapshots, err)
+}
+
+func getNodeReportingEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	nodeID := domain.GetResourceIDFromRequest(req)
+	if nodeID == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid Node ID")
+	}
+
+	// Validate Inputs
+	periodStartTimestamp, err := getTimestampFromString(req.QueryStringParameters["start"], "start")
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	periodEndTimestamp, err := getTimestampFromString(req.QueryStringParameters["end"], "end")
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	// Fetch node to ensure exists and get tags for authorization
+	var node domain.Node
+	err = db.GetItem(&node, nodeID)
+	if err != nil {
+		return domain.ReturnJsonOrError(domain.Node{}, err)
+	}
+
+	// Ensure user is authorized ...
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
+	// Fetch events
+	events, err := db.GetReportingEventsForRange(nodeID, periodStartTimestamp, periodEndTimestamp)
+	return domain.ReturnJsonOrError(events, err)
 }
 
 func getTaskLogPingTestCSV(node domain.Node, startTimestamp, endTimestamp int64) (events.APIGatewayProxyResponse, error) {

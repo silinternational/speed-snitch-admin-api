@@ -19,13 +19,8 @@ import (
 	"time"
 )
 
-const DataTypeNamedServer = "namedserver"
 const DataTypeSpeedTestNetServer = "speedtestnetserver"
 const DataTypeSTNetServerList = "stnetserverlist"
-
-const DataTypeTag = "tag"
-const DataTypeUser = "user"
-const DataTypeVersion = "version"
 
 const LogTypeDowntime = "downtime"
 const LogTypeRestart = "restarted"
@@ -61,6 +56,8 @@ const PermissionTagBased = "tagBased"
 const ReportingIntervalDaily = "daily"
 const ReportingIntervalWeekly = "weekly"
 const ReportingIntervalMonthly = "monthly"
+
+const DateLayout = "2006-01-02"
 
 /***************************************************************
 /*
@@ -431,6 +428,29 @@ type ReportingSnapshot struct {
 	BizRestartsCount          int64   `gorm:"not null;default:0"`
 }
 
+type ReportingEvent struct {
+	gorm.Model
+	Node        Node   `gorm:"foreignkey:NodeID" json:"-"`
+	NodeID      uint   `gorm:"default:null"`
+	Timestamp   int64  `gorm:"type:int(11); not null;default:0"`
+	Date        string `gorm:"not null"`
+	Name        string `gorm:"not null;unique_index"`
+	Description string `gorm:"type:varchar(2048)"`
+}
+
+func (r *ReportingEvent) SetTimestamp() error {
+
+	timestamp, err := time.Parse(DateLayout, r.Date)
+
+	if err != nil {
+		errMsg := fmt.Sprintf("Error interpreting date %s. %s", r.Date, err.Error())
+		return fmt.Errorf(errMsg)
+	}
+
+	r.Timestamp = timestamp.Unix()
+	return nil
+}
+
 /***************************************************************
 /*
 /* Define non-database types
@@ -536,6 +556,14 @@ func CleanBusinessTimes(start, close string) (string, string, error) {
 		return start, close, nil
 	}
 
+	// If only one is set, error
+	if start == "" || close == "" {
+		errMsg := fmt.Sprintf(
+			`Error with business hours.  If one value is set, the other must also be set.\n Got "%s" and "%s".`,
+			start, close)
+		return start, close, fmt.Errorf("Error parsing business start time.\n %s", errMsg)
+	}
+
 	startTime, err := time.Parse(BusinessTimeFormat, start)
 	if err != nil {
 		return start, close, fmt.Errorf("Error parsing business start time.\n %s", err.Error())
@@ -596,6 +624,17 @@ func CanUserUseNode(user User, node Node) bool {
 		return true
 	}
 	return DoTagsOverlap(user.Tags, node.Tags)
+}
+
+// CanUserSeeReportingEvent returns true if the user has a superAdmin role or
+//   if the event has no node associated with it or
+//   if the user has a tag that the event's node has
+func CanUserSeeReportingEvent(user User, event ReportingEvent) bool {
+	if user.Role == UserRoleSuperAdmin || event.NodeID == 0 {
+		return true
+	}
+
+	return DoTagsOverlap(user.Tags, event.Node.Tags)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

@@ -442,3 +442,109 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 }
+
+func TestGetReportingEventsForRange(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	node2 := domain.Node{
+		MacAddr: "bb:bb:bb:bb:bb:bb",
+	}
+	db.PutItem(&node2)
+
+	june4 := int64(1528070400)
+	june5 := int64(1528156800)
+
+	eventsInRange := []domain.ReportingEvent{
+		{
+			Timestamp: june4,
+			Name:      "No Node June 4th",
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: june4,
+			Name:      "Node1 June 4th",
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: june5,
+			Name:      "Node1 June 5th",
+		},
+		{
+			NodeID:    node2.ID,
+			Timestamp: june5,
+			Name:      "Node2 June 5th",
+		},
+	}
+
+	for _, i := range eventsInRange {
+		db.PutItem(&i)
+	}
+
+	eventsOutOfRange := []domain.ReportingEvent{
+		{
+			Timestamp: 1527984000,
+			Name:      "No Node June 3rd",
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528243200,
+			Name:      "Node1 June 6th",
+		},
+	}
+
+	for _, i := range eventsOutOfRange {
+		db.PutItem(&i)
+	}
+
+	strNodeID := fmt.Sprintf("%d", node1.ID)
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/report/node/" + strNodeID + "/events",
+		PathParameters: map[string]string{
+			"id": strNodeID,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		QueryStringParameters: map[string]string{
+			"start": "2018-06-04",
+			"end":   "2018-06-05",
+		},
+	}
+
+	response, err := getNodeReportingEvents(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	var eventResults []domain.ReportingEvent
+	err = json.Unmarshal([]byte(response.Body), &eventResults)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expectedLen := len(eventsInRange) - 1
+	if len(eventResults) != expectedLen {
+		t.Errorf("Wrong number of Reporting Events returned. Expected: %d. Got: %d", expectedLen, len(eventResults))
+		return
+	}
+
+	for _, event := range eventResults {
+		if event.NodeID != 0 && event.NodeID != node1.ID {
+			t.Errorf("Got an unexpected event in the results. \n%+v", event)
+		}
+		if event.Timestamp != june4 && event.Timestamp != june5 {
+			t.Errorf("Got an unexpected event in the results. \n%+v", event)
+		}
+	}
+}
