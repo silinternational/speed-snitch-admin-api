@@ -192,7 +192,7 @@ func TestViewNodeReport(t *testing.T) {
 	}
 }
 
-func getRawDataRequest(nodeID, logType, date string) events.APIGatewayProxyRequest {
+func getRawDataRequest(nodeID, logType, startDate, endDate string) events.APIGatewayProxyRequest {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
 		Path:       "/report/node/nodeID/raw",
@@ -204,8 +204,9 @@ func getRawDataRequest(nodeID, logType, date string) events.APIGatewayProxyReque
 			"x-user-mail": testutils.SuperAdmin.Email,
 		},
 		QueryStringParameters: map[string]string{
-			"type": logType,
-			"date": date,
+			"type":  logType,
+			"start": startDate,
+			"end":   endDate,
 		},
 	}
 
@@ -276,6 +277,12 @@ func TestGetNodeRawData(t *testing.T) {
 			Timestamp: 1528145385,
 			Upload:    30.0,
 			Download:  30.0,
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528160000,
+			Upload:    40.0,
+			Download:  40.0,
 		},
 	}
 
@@ -349,7 +356,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's speedTest logs
-	response, err := getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypeSpeedTest, "2018-06-04"))
+	response, err := getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypeSpeedTest, "2018-06-04", "2018-06-05"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -362,12 +369,14 @@ func TestGetNodeRawData(t *testing.T) {
 	results := response.Body
 	if !strings.Contains(results, `,10.000,`) ||
 		!strings.Contains(results, `,20.000,`) ||
+		!strings.Contains(results, `,40.000,`) ||
+		// should not have this one
 		strings.Contains(results, `30.000`) {
-		t.Errorf("Expected two logs with values of 10.000 and 20.000, but got\n%s", results)
+		t.Errorf("Expected three logs with values of 10.000, 20.000 and 40.000, but got\n%s", results)
 	}
 
 	// Test for passNode's ping logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypePing, "2018-06-04"))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypePing, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -392,7 +401,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's downtime logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04"))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -417,7 +426,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's Restart logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04"))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
