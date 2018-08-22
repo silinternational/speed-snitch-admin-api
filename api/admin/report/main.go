@@ -212,11 +212,18 @@ func getNodeRawData(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 		)
 	}
 
-	dateParam := req.QueryStringParameters["date"]
-	startTimestamp, err := getTimestampFromString(dateParam, "date")
+	// Validate Inputs
+	periodStartTimestamp, err := getTimestampFromString(req.QueryStringParameters["start"], "start")
 	if err != nil {
 		return domain.ClientError(http.StatusBadRequest, err.Error())
 	}
+
+	periodEndTimestamp, err := getTimestampFromString(req.QueryStringParameters["end"], "end")
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	periodEndTimestamp = periodEndTimestamp + domain.SecondsPerDay - 1
 
 	// Fetch node to ensure exists and get tags for authorization
 	var node domain.Node
@@ -231,20 +238,18 @@ func getNodeRawData(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 		return domain.ClientError(statusCode, errMsg)
 	}
 
-	endTimestamp := startTimestamp + domain.SecondsPerDay - 1
-
 	switch taskType {
 	case domain.TaskTypePing:
-		return getTaskLogPingTestCSV(node, startTimestamp, endTimestamp)
+		return getTaskLogPingTestCSV(node, periodStartTimestamp, periodEndTimestamp)
 
 	case domain.TaskTypeSpeedTest:
-		return getTaskLogSpeedTestCSV(node, startTimestamp, endTimestamp)
+		return getTaskLogSpeedTestCSV(node, periodStartTimestamp, periodEndTimestamp)
 
 	case domain.LogTypeDowntime:
-		return getTaskLogDowntimeCSV(node, startTimestamp, endTimestamp)
+		return getTaskLogDowntimeCSV(node, periodStartTimestamp, periodEndTimestamp)
 
 	case domain.LogTypeRestart:
-		return getTaskLogRestartCSV(node, startTimestamp, endTimestamp)
+		return getTaskLogRestartCSV(node, periodStartTimestamp, periodEndTimestamp)
 
 	}
 
