@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 )
 
 const CASCADE = "CASCADE"
@@ -504,6 +505,32 @@ func ListNamedServersByType(serverType string) ([]domain.NamedServer, error) {
 	where := fmt.Sprintf("server_type = ?")
 	gdb.Set("gorm:auto_preload", true).Unscoped().Order(order).Where(where, serverType).Find(&serverList)
 	return serverList, gdb.Error
+}
+
+func ListMIANodes(daysMissing int) ([]domain.Node, error) {
+
+	if daysMissing < 1 {
+		return []domain.Node{}, fmt.Errorf("Bad input: daysMissing must be at least 1. Got: %v", daysMissing)
+	}
+
+	gdb, err := GetDb()
+	if err != nil {
+		return []domain.Node{}, err
+	}
+
+	t := time.Now().UTC()
+	cutOff := t.AddDate(0, 0, -daysMissing).Format(time.RFC3339)
+
+	// Example last_seen value: 2018-07-30T14:55:15Z
+	nodeList := []domain.Node{}
+	where := fmt.Sprintf("last_seen < ?")
+	gdb.Set("gorm:auto_preload", true).Unscoped().Where(where, cutOff).Find(&nodeList)
+
+	if gdb.RecordNotFound() {
+		return []domain.Node{}, nil
+	}
+
+	return nodeList, gdb.Error
 }
 
 // AreTagsValid returns a bool based on this ...
