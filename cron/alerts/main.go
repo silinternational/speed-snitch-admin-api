@@ -12,17 +12,46 @@ import (
 	"log"
 )
 
+const DaysMissing = int(1)
+const SESCharSet = "UTF-8"
+const SESReturnToAddr = "no_reply@sil.org"
+const SESAWSRegion = "us-east-1"
+const SESSubjectText = "MIA Speedsnitch Nodes"
+
 type AlertsConfig struct {
-	DaysMissing int `json:"DaysMissing"`
+	DaysMissing     int    `json:"DaysMissing"`
+	SESAWSRegion    string `json:"SESAWSRegion"`
+	SESCharSet      string `json:"SESCharSet"`
+	SESReturnToAddr string `json:"SESReturnToAddr"`
+	SESSubjectText  string `json:"SESSubjectText"`
+}
+
+func (a *AlertsConfig) setDefaults() {
+	if a.DaysMissing == 0 {
+		a.DaysMissing = DaysMissing
+	}
+
+	if a.SESCharSet == "" {
+		a.SESCharSet = SESCharSet
+	}
+
+	if a.SESReturnToAddr == "" {
+		a.SESReturnToAddr = SESReturnToAddr
+	}
+
+	if a.SESAWSRegion == "" {
+		a.SESAWSRegion = SESAWSRegion
+	}
+
+	if a.SESSubjectText == "" {
+		a.SESSubjectText = SESSubjectText
+	}
 }
 
 func handler(config AlertsConfig) []domain.Node {
 	log.Println("Starting Alert for MIA Nodes")
 
-	// Set default number of past days to process to 7 if not already set in config
-	if config.DaysMissing == 0 {
-		config.DaysMissing = 1
-	}
+	config.setDefaults()
 
 	nodes, err := db.ListMIANodes(config.DaysMissing)
 	if err != nil {
@@ -52,9 +81,9 @@ func handler(config AlertsConfig) []domain.Node {
 		return scheduledNodes
 	}
 
-	charSet := "UTF-8"
+	charSet := config.SESCharSet
 
-	subject := "MIA Speedsnitch Nodes"
+	subject := config.SESSubjectText
 	subjContent := ses.Content{
 		Charset: &charSet,
 		Data:    &subject,
@@ -83,11 +112,11 @@ func handler(config AlertsConfig) []domain.Node {
 			ToAddresses: recipients,
 		},
 		Message: &emailMsg,
-		Source:  aws.String("no_reply@sil.org"),
+		Source:  aws.String(config.SESReturnToAddr),
 	}
 
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String("us-east-1")},
+		Region: aws.String(config.SESAWSRegion)},
 	)
 
 	// Create an SES session.
