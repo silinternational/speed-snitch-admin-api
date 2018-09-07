@@ -8,6 +8,7 @@ import (
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/reporting"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -115,7 +116,7 @@ func getTaskLogPingTestCSV(node domain.Node, startTimestamp, endTimestamp int64)
 			endTimestamp,
 			err.Error(),
 		)
-		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, err)
+		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, "", err)
 	}
 
 	// You can't use a slice of structs as a slice of interfaces
@@ -124,7 +125,8 @@ func getTaskLogPingTestCSV(node domain.Node, startTimestamp, endTimestamp int64)
 		logMappers[i] = logItems[i]
 	}
 
-	return domain.ReturnCSVOrError(logMappers, nil)
+	filename := getCSVFilename(node, "ping", startTimestamp, endTimestamp)
+	return domain.ReturnCSVOrError(logMappers, filename, nil)
 
 }
 
@@ -140,7 +142,7 @@ func getTaskLogSpeedTestCSV(node domain.Node, startTimestamp, endTimestamp int64
 			endTimestamp,
 			err.Error(),
 		)
-		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, err)
+		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, "", err)
 	}
 
 	// You can't use a slice of structs as a slice of interfaces
@@ -149,7 +151,8 @@ func getTaskLogSpeedTestCSV(node domain.Node, startTimestamp, endTimestamp int64
 		logMappers[i] = logItems[i]
 	}
 
-	return domain.ReturnCSVOrError(logMappers, nil)
+	filename := getCSVFilename(node, "speed", startTimestamp, endTimestamp)
+	return domain.ReturnCSVOrError(logMappers, filename, nil)
 }
 
 func getTaskLogDowntimeCSV(node domain.Node, startTimestamp, endTimestamp int64) (events.APIGatewayProxyResponse, error) {
@@ -163,14 +166,15 @@ func getTaskLogDowntimeCSV(node domain.Node, startTimestamp, endTimestamp int64)
 			endTimestamp,
 			err.Error(),
 		)
-		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, err)
+		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, "", err)
 	}
 	logMappers := make([]domain.TaskLogMapper, len(logItems))
 	for i := range logItems {
 		logMappers[i] = logItems[i]
 	}
 
-	return domain.ReturnCSVOrError(logMappers, nil)
+	filename := getCSVFilename(node, "downtime", startTimestamp, endTimestamp)
+	return domain.ReturnCSVOrError(logMappers, filename, nil)
 }
 
 func getTaskLogRestartCSV(node domain.Node, startTimestamp, endTimestamp int64) (events.APIGatewayProxyResponse, error) {
@@ -184,14 +188,15 @@ func getTaskLogRestartCSV(node domain.Node, startTimestamp, endTimestamp int64) 
 			endTimestamp,
 			err.Error(),
 		)
-		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, err)
+		return domain.ReturnCSVOrError([]domain.TaskLogMapper{}, "", err)
 	}
 	logMappers := make([]domain.TaskLogMapper, len(logItems))
 	for i := range logItems {
 		logMappers[i] = logItems[i]
 	}
 
-	return domain.ReturnCSVOrError(logMappers, nil)
+	filename := getCSVFilename(node, "restart", startTimestamp, endTimestamp)
+	return domain.ReturnCSVOrError(logMappers, filename, nil)
 }
 
 func getNodeRawData(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -275,6 +280,28 @@ func getTimestampFromString(date, paramName string) (int64, error) {
 	}
 
 	return timestamp, nil
+}
+
+func getCSVFilename(node domain.Node, dataType string, startTimestamp, endTimestamp int64) string {
+
+	// Borrowed this regex stuff from https://github.com/kennygrant/sanitize/blob/master/sanitize.go
+	var (
+		illegalPath = regexp.MustCompile(`[^[:alnum:]\~\-\./]`)
+		separators  = regexp.MustCompile(`[ &_=+:]`)
+		dashes      = regexp.MustCompile(`[\-]+`)
+	)
+
+	nodeName := node.Nickname
+	nodeName = separators.ReplaceAllString(nodeName, "-")
+	nodeName = illegalPath.ReplaceAllString(nodeName, " ")
+	nodeName = dashes.ReplaceAllString(nodeName, "-")
+	nodeName = strings.Trim(nodeName, " ")
+
+	startDate := time.Unix(startTimestamp, 0).UTC().Format(domain.DateLayout)
+	endDate := time.Unix(endTimestamp, 0).UTC().Format(domain.DateLayout)
+
+	filename := fmt.Sprintf("%s %s from %s to %s.csv", dataType, nodeName, startDate, endDate)
+	return filename
 }
 
 func main() {
