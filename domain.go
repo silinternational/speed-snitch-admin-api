@@ -729,7 +729,7 @@ type TaskLogMapper interface {
 	GetTaskLogKeys() []string
 }
 
-func ReturnCSVOrError(items []TaskLogMapper, err error) (events.APIGatewayProxyResponse, error) {
+func ReturnCSVOrError(items []TaskLogMapper, filename string, err error) (events.APIGatewayProxyResponse, error) {
 	if len(items) == 0 {
 		return events.APIGatewayProxyResponse{
 			StatusCode: http.StatusOK,
@@ -772,10 +772,16 @@ func ReturnCSVOrError(items []TaskLogMapper, err error) (events.APIGatewayProxyR
 	csvWriter.Flush()
 	csvOutput := b.String()
 
-	return events.APIGatewayProxyResponse{
+	response := events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
 		Body:       csvOutput,
-	}, nil
+		Headers: map[string]string{
+			"Content-Type":        "text/csv",
+			"Content-Disposition": "attachment;filename=" + filename,
+		},
+	}
+
+	return response, nil
 }
 
 func GetEnv(name, defaultValue string) string {
