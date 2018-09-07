@@ -239,7 +239,8 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	passNode := domain.Node{
-		MacAddr: "aa:aa:aa:aa:aa:aa",
+		MacAddr:  "aa:aa:aa:aa:aa:aa",
+		Nickname: "Africa(test)",
 	}
 
 	// Create the node in the database
@@ -397,6 +398,30 @@ func TestGetNodeRawData(t *testing.T) {
 	err = isCSVValid(results)
 	if err != nil {
 		t.Errorf("Error reading results as csv.\n %s", err.Error())
+		return
+	}
+
+	contType, ok := response.Headers["Content-Type"]
+	expectedCT := "text/csv"
+
+	if !ok {
+		t.Errorf("Missing Content Type. \nExpected: %s ", expectedCT)
+		return
+	}
+	if expectedCT != contType {
+		t.Errorf("Wrong Content Type. \nExpected: %s \n But Got: %s", expectedCT, contType)
+		return
+	}
+
+	contDisposition, ok := response.Headers["Content-Disposition"]
+	expectedCD := "attachment;filename=ping Africa test from 2018-06-04 to 2018-06-04.csv"
+
+	if !ok {
+		t.Errorf("Missing Content Disposition. \nExpected: %s ", expectedCD)
+		return
+	}
+	if expectedCD != contDisposition {
+		t.Errorf("Wrong Content Disposition. \nExpected: %s \n But Got: %s", expectedCD, contDisposition)
 		return
 	}
 
