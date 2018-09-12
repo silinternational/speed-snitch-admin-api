@@ -129,12 +129,12 @@ func TestListEvents(t *testing.T) {
 
 	method := "GET"
 
-	// List events with superAdmin
+	// list events with normal admin
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod:     method,
 		Path:           "/reportingevent",
 		PathParameters: map[string]string{},
-		Headers:        testutils.GetSuperAdminReqHeader(),
+		Headers:        testutils.GetAdminUserReqHeader(),
 	}
 	response, err := listEvents(req)
 	if err != nil {
@@ -147,30 +147,8 @@ func TestListEvents(t *testing.T) {
 	}
 
 	results := response.Body
-	if !strings.Contains(results, event1.Name) || !strings.Contains(results, event2.Name) {
-		t.Errorf("listEvents did not include the fixture events. Got:\n%s\n", results)
-	}
-
-	// list events with normal admin
-	req = events.APIGatewayProxyRequest{
-		HTTPMethod:     method,
-		Path:           "/reportingevent",
-		PathParameters: map[string]string{},
-		Headers:        testutils.GetAdminUserReqHeader(),
-	}
-	response, err = listEvents(req)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if response.StatusCode != 200 {
-		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
-		return
-	}
-
-	results = response.Body
 	if !strings.Contains(results, event1.Name) || strings.Contains(results, event2.Name) {
-		t.Errorf("For a normal user, listEvents should have returned event1 only. Got:\n%s\n", results)
+		t.Errorf("listEvents should have returned event1 only. Got:\n%s\n", results)
 	}
 }
 
@@ -228,16 +206,17 @@ func TestListEventsForNodes(t *testing.T) {
 	}
 
 	method := "GET"
-	pathParams := map[string]string{"id": fmt.Sprintf("%d", node2.ID)}
+	queryParams := map[string]string{"id": fmt.Sprintf("%d", node2.ID)}
 
 	// List events with superAdmin
 	req := events.APIGatewayProxyRequest{
-		HTTPMethod:     method,
-		Path:           "/reportingevent/node",
-		PathParameters: pathParams,
-		Headers:        testutils.GetSuperAdminReqHeader(),
+		HTTPMethod:            method,
+		Path:                  "/reportingevent/node",
+		PathParameters:        map[string]string{},
+		Headers:               testutils.GetSuperAdminReqHeader(),
+		QueryStringParameters: queryParams,
 	}
-	response, err := listEventsForNode(req)
+	response, err := listEventsForNode(req, node2.ID)
 	if err != nil {
 		t.Error(err)
 		return
@@ -248,18 +227,19 @@ func TestListEventsForNodes(t *testing.T) {
 	}
 
 	results := response.Body
-	if !strings.Contains(results, event1.Name) || !strings.Contains(results, event3.Name) {
-		t.Errorf("listEvents did not include the fixture events. Got:\n%s\n", results)
+	if strings.Contains(results, event1.Name) || strings.Contains(results, event2.Name) || !strings.Contains(results, event3.Name) {
+		t.Errorf("listEventsForNode has returns the wrong events. Got:\n%s\n", results)
 	}
 
 	// list events with normal admin
 	req = events.APIGatewayProxyRequest{
-		HTTPMethod:     method,
-		Path:           "/reportingevent/node",
-		PathParameters: pathParams,
-		Headers:        testutils.GetAdminUserReqHeader(),
+		HTTPMethod:            method,
+		Path:                  "/reportingevent/node",
+		PathParameters:        map[string]string{},
+		Headers:               testutils.GetAdminUserReqHeader(),
+		QueryStringParameters: queryParams,
 	}
-	response, err = listEventsForNode(req)
+	response, err = listEventsForNode(req, node2.ID)
 	if err != nil {
 		t.Error(err)
 		return

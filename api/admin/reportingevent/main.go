@@ -18,14 +18,6 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 	_, idProvided := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "GET":
-		if strings.Contains(req.Path, "node") {
-			if idProvided {
-				return listEventsForNode(req)
-			}
-
-			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
-		}
-
 		if idProvided {
 			return viewEvent(req)
 		}
@@ -70,21 +62,17 @@ func viewEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	return domain.ReturnJsonOrError(reportingEvent, err)
 }
 
-func listEventsForNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func listEventsForNode(req events.APIGatewayProxyRequest, nodeID uint) (events.APIGatewayProxyResponse, error) {
 	user, err := db.GetUserFromRequest(req)
 	if err != nil {
 		errMsg := fmt.Sprintf("error getting user from database: %s", err.Error())
 		return domain.ClientError(http.StatusBadRequest, errMsg)
 	}
-	id := domain.GetResourceIDFromRequest(req)
-	if id == 0 {
-		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
-	}
 
 	node := domain.Node{}
-	err = db.GetItem(&node, id)
+	err = db.GetItem(&node, nodeID)
 	if err != nil {
-		errMsg := fmt.Sprintf("error getting node from database (id %v): %s", id, err.Error())
+		errMsg := fmt.Sprintf("error getting node from database (id %v): %s", nodeID, err.Error())
 		return domain.ClientError(http.StatusBadRequest, errMsg)
 	}
 
@@ -92,7 +80,7 @@ func listEventsForNode(req events.APIGatewayProxyRequest) (events.APIGatewayProx
 		return domain.ClientError(http.StatusForbidden, http.StatusText(http.StatusForbidden))
 	}
 
-	eventsForNode, err := db.GetReportingEventsForNode(id)
+	eventsForNode, err := db.GetReportingEvents(nodeID)
 	if err != nil {
 		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
 	}
@@ -101,26 +89,25 @@ func listEventsForNode(req events.APIGatewayProxyRequest) (events.APIGatewayProx
 }
 
 func listEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	user, err := db.GetUserFromRequest(req)
-	if err != nil {
-		errMsg := fmt.Sprintf("error getting user from database: %s", err.Error())
-		return domain.ClientError(http.StatusBadRequest, errMsg)
+
+	nodeID := uint(0)
+	nodeParam, exists := req.QueryStringParameters["node"]
+	if exists {
+		nodeID = domain.GetUintFromString(nodeParam)
 	}
 
-	var allEvents []domain.ReportingEvent
-	err = db.ListItems(&allEvents, "timestamp asc")
+	if nodeID > 0 {
+		return listEventsForNode(req, nodeID)
+	}
+
+	// Just return global events
+	globalEvents, err := db.GetReportingEvents(0)
 	if err != nil {
+		err := fmt.Errorf("Error getting global reporting events. %s", err.Error())
 		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
 	}
 
-	visibleEvents := []domain.ReportingEvent{}
-	for _, event := range allEvents {
-		if domain.CanUserSeeReportingEvent(user, event) {
-			visibleEvents = append(visibleEvents, event)
-		}
-	}
-
-	return domain.ReturnJsonOrError(visibleEvents, err)
+	return domain.ReturnJsonOrError(globalEvents, err)
 }
 
 func updateEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
