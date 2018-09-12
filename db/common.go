@@ -631,3 +631,16 @@ func GetReportingEventsForRange(nodeId uint, rangeStart, rangeEnd int64) ([]doma
 
 	return events, gdb.Error
 }
+
+func GetReportingEventsForNode(nodeId uint) ([]domain.ReportingEvent, error) {
+	gdb, err := GetDb()
+	if err != nil {
+		return []domain.ReportingEvent{}, err
+	}
+
+	var events []domain.ReportingEvent
+	where := "(`node_id` IS NULL OR `node_id` = ?)"
+	gdb.Set("gorm:auto_preload", true).Order("timestamp asc").Where(where, nodeId).Find(&events)
+
+	return events, gdb.Error
+}

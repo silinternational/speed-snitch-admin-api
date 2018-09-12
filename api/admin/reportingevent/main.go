@@ -15,10 +15,18 @@ import (
 const UniqueNameErrorMessage = "Cannot update a Reporting Event with a Name that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, eventSpecified := req.PathParameters["id"]
+	_, idProvided := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "GET":
-		if eventSpecified {
+		if strings.Contains(req.Path, "node") {
+			if idProvided {
+				return listEventsForNode(req)
+			}
+
+			return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+		}
+
+		if idProvided {
 			return viewEvent(req)
 		}
 		return listEvents(req)
@@ -60,6 +68,36 @@ func viewEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	}
 
 	return domain.ReturnJsonOrError(reportingEvent, err)
+}
+
+func listEventsForNode(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	user, err := db.GetUserFromRequest(req)
+	if err != nil {
+		errMsg := fmt.Sprintf("error getting user from database: %s", err.Error())
+		return domain.ClientError(http.StatusBadRequest, errMsg)
+	}
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
+	}
+
+	node := domain.Node{}
+	err = db.GetItem(&node, id)
+	if err != nil {
+		errMsg := fmt.Sprintf("error getting node from database (id %v): %s", id, err.Error())
+		return domain.ClientError(http.StatusBadRequest, errMsg)
+	}
+
+	if !domain.CanUserUseNode(user, node) {
+		return domain.ClientError(http.StatusForbidden, http.StatusText(http.StatusForbidden))
+	}
+
+	eventsForNode, err := db.GetReportingEventsForNode(id)
+	if err != nil {
+		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
+	}
+
+	return domain.ReturnJsonOrError(eventsForNode, err)
 }
 
 func listEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {

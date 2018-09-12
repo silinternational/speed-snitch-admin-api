@@ -37,7 +37,7 @@ func TestDeleteEvent(t *testing.T) {
 	// Test that using an invalid tag id results in 404 error
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
-		Path:       "/reportingevent/404",
+		Path:       "/reportingevent",
 		PathParameters: map[string]string{
 			"id": "404",
 		},
@@ -56,7 +56,7 @@ func TestDeleteEvent(t *testing.T) {
 	// Delete deleteme tag and check user and node to ensure they no longer have the tag
 	req = events.APIGatewayProxyRequest{
 		HTTPMethod: "DELETE",
-		Path:       "/reportingevent/" + strDeleteID,
+		Path:       "/reportingevent",
 		PathParameters: map[string]string{
 			"id": strDeleteID,
 		},
@@ -123,7 +123,7 @@ func TestListEvents(t *testing.T) {
 	reportingEvents := []domain.ReportingEvent{}
 	err := db.ListItems(&reportingEvents, "")
 	if err != nil {
-		t.Errorf("Error trying to get entries in reporting_events table following the test.\n%s", err.Error())
+		t.Errorf("Error trying to get entries in reporting_events table before the test.\n%s", err.Error())
 		return
 	}
 
@@ -171,6 +171,102 @@ func TestListEvents(t *testing.T) {
 	results = response.Body
 	if !strings.Contains(results, event1.Name) || strings.Contains(results, event2.Name) {
 		t.Errorf("For a normal user, listEvents should have returned event1 only. Got:\n%s\n", results)
+	}
+}
+
+func TestListEventsForNodes(t *testing.T) {
+	testutils.ResetDb(t)
+	testutils.CreateAdminUser(t)
+
+	node1 := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+
+	db.PutItem(&node1)
+
+	node2 := domain.Node{
+		MacAddr: "bb:bb:bb:bb:bb:bb",
+	}
+
+	db.PutItem(&node2)
+
+	event1 := domain.ReportingEvent{
+		Date:        "2018-06-26",
+		Name:        "E1",
+		Description: "This is event 1 (nodeless)",
+	}
+
+	event2 := domain.ReportingEvent{
+		Date:        "2018-06-27",
+		Name:        "E2",
+		Description: "This is event 2 and is with node1",
+		NodeID:      node1.ID,
+	}
+
+	event3 := domain.ReportingEvent{
+		Date:        "2018-06-27",
+		Name:        "E3",
+		Description: "This is event 3 and is with node2",
+		NodeID:      node2.ID,
+	}
+
+	eventFixtures := []domain.ReportingEvent{event1, event2, event3}
+
+	for _, fix := range eventFixtures {
+		err := db.PutItem(&fix)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+	}
+
+	reportingEvents := []domain.ReportingEvent{}
+	err := db.ListItems(&reportingEvents, "")
+	if err != nil {
+		t.Errorf("Error trying to get entries in reporting_events table before the test.\n%s", err.Error())
+		return
+	}
+
+	method := "GET"
+	pathParams := map[string]string{"id": fmt.Sprintf("%d", node2.ID)}
+
+	// List events with superAdmin
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod:     method,
+		Path:           "/reportingevent/node",
+		PathParameters: pathParams,
+		Headers:        testutils.GetSuperAdminReqHeader(),
+	}
+	response, err := listEventsForNode(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	results := response.Body
+	if !strings.Contains(results, event1.Name) || !strings.Contains(results, event3.Name) {
+		t.Errorf("listEvents did not include the fixture events. Got:\n%s\n", results)
+	}
+
+	// list events with normal admin
+	req = events.APIGatewayProxyRequest{
+		HTTPMethod:     method,
+		Path:           "/reportingevent/node",
+		PathParameters: pathParams,
+		Headers:        testutils.GetAdminUserReqHeader(),
+	}
+	response, err = listEventsForNode(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 403 {
+		t.Error("Wrong status code returned, expected 403, got", response.StatusCode, response.Body)
+		return
 	}
 }
 
@@ -322,7 +418,7 @@ func TestViewEvent(t *testing.T) {
 	// Get event
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/reportingevent/" + strID,
+		Path:       "/reportingevent",
 		PathParameters: map[string]string{
 			"id": strID,
 		},
