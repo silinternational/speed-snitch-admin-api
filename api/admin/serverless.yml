@@ -318,7 +318,7 @@ functions:
       handler: bin/reportingevent
       events:
         - http:
-            path: event
+            path: reportingevent
             method: GET
             private: true
 
