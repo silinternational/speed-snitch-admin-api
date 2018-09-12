@@ -63,26 +63,51 @@ func viewEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 }
 
 func listEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+
+	nodeID := uint(0)
+	nodeParam, exists := req.QueryStringParameters["node_id"]
+	if exists {
+		nodeID = domain.GetUintFromString(nodeParam)
+	}
+
+	if nodeID > 0 {
+		return listEventsForNode(req, nodeID)
+	}
+
+	// Just return global events
+	globalEvents, err := db.GetReportingEvents(0)
+	if err != nil {
+		err := fmt.Errorf("Error getting global reporting events. %s", err.Error())
+		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
+	}
+
+	return domain.ReturnJsonOrError(globalEvents, err)
+}
+
+func listEventsForNode(req events.APIGatewayProxyRequest, nodeID uint) (events.APIGatewayProxyResponse, error) {
 	user, err := db.GetUserFromRequest(req)
 	if err != nil {
 		errMsg := fmt.Sprintf("error getting user from database: %s", err.Error())
 		return domain.ClientError(http.StatusBadRequest, errMsg)
 	}
 
-	var allEvents []domain.ReportingEvent
-	err = db.ListItems(&allEvents, "timestamp asc")
+	node := domain.Node{}
+	err = db.GetItem(&node, nodeID)
+	if err != nil {
+		errMsg := fmt.Sprintf("error getting node from database (id %v): %s", nodeID, err.Error())
+		return domain.ClientError(http.StatusBadRequest, errMsg)
+	}
+
+	if !domain.CanUserUseNode(user, node) {
+		return domain.ClientError(http.StatusForbidden, http.StatusText(http.StatusForbidden))
+	}
+
+	eventsForNode, err := db.GetReportingEvents(nodeID)
 	if err != nil {
 		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
 	}
 
-	visibleEvents := []domain.ReportingEvent{}
-	for _, event := range allEvents {
-		if domain.CanUserSeeReportingEvent(user, event) {
-			visibleEvents = append(visibleEvents, event)
-		}
-	}
-
-	return domain.ReturnJsonOrError(visibleEvents, err)
+	return domain.ReturnJsonOrError(eventsForNode, err)
 }
 
 func updateEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
