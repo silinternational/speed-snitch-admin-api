@@ -328,15 +328,6 @@ functions:
             private: true
 
         - http:
-            path: /reportingevent/node/{id}
-            method: GET
-            private: true
-            request:
-              parameters:
-                paths:
-                  id: true
-
-        - http:
             path: /reportingevent/{id}
             method: GET
             private: true
