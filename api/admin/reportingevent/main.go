@@ -15,10 +15,10 @@ import (
 const UniqueNameErrorMessage = "Cannot update a Reporting Event with a Name that is already in use."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	_, idProvided := req.PathParameters["id"]
+	_, eventSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "GET":
-		if idProvided {
+		if eventSpecified {
 			return viewEvent(req)
 		}
 		return listEvents(req)
@@ -62,6 +62,28 @@ func viewEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	return domain.ReturnJsonOrError(reportingEvent, err)
 }
 
+func listEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+
+	nodeID := uint(0)
+	nodeParam, exists := req.QueryStringParameters["node"]
+	if exists {
+		nodeID = domain.GetUintFromString(nodeParam)
+	}
+
+	if nodeID > 0 {
+		return listEventsForNode(req, nodeID)
+	}
+
+	// Just return global events
+	globalEvents, err := db.GetReportingEvents(0)
+	if err != nil {
+		err := fmt.Errorf("Error getting global reporting events. %s", err.Error())
+		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
+	}
+
+	return domain.ReturnJsonOrError(globalEvents, err)
+}
+
 func listEventsForNode(req events.APIGatewayProxyRequest, nodeID uint) (events.APIGatewayProxyResponse, error) {
 	user, err := db.GetUserFromRequest(req)
 	if err != nil {
@@ -86,28 +108,6 @@ func listEventsForNode(req events.APIGatewayProxyRequest, nodeID uint) (events.A
 	}
 
 	return domain.ReturnJsonOrError(eventsForNode, err)
-}
-
-func listEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-
-	nodeID := uint(0)
-	nodeParam, exists := req.QueryStringParameters["node"]
-	if exists {
-		nodeID = domain.GetUintFromString(nodeParam)
-	}
-
-	if nodeID > 0 {
-		return listEventsForNode(req, nodeID)
-	}
-
-	// Just return global events
-	globalEvents, err := db.GetReportingEvents(0)
-	if err != nil {
-		err := fmt.Errorf("Error getting global reporting events. %s", err.Error())
-		return domain.ReturnJsonOrError([]domain.ReportingEvent{}, err)
-	}
-
-	return domain.ReturnJsonOrError(globalEvents, err)
 }
 
 func updateEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
