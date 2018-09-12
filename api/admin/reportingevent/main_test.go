@@ -206,7 +206,7 @@ func TestListEventsForNodes(t *testing.T) {
 	}
 
 	method := "GET"
-	queryParams := map[string]string{"id": fmt.Sprintf("%d", node2.ID)}
+	queryParams := map[string]string{"node_id": fmt.Sprintf("%d", node2.ID)}
 
 	// List events with superAdmin
 	req := events.APIGatewayProxyRequest{
@@ -228,7 +228,7 @@ func TestListEventsForNodes(t *testing.T) {
 
 	results := response.Body
 	if strings.Contains(results, event1.Name) || strings.Contains(results, event2.Name) || !strings.Contains(results, event3.Name) {
-		t.Errorf("listEventsForNode has returns the wrong events. Got:\n%s\n", results)
+		t.Errorf("listEventsForNode returned the wrong events. Got:\n%s\n", results)
 	}
 
 	// list events with normal admin

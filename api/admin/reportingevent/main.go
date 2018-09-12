@@ -65,7 +65,7 @@ func viewEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 func listEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 
 	nodeID := uint(0)
-	nodeParam, exists := req.QueryStringParameters["node"]
+	nodeParam, exists := req.QueryStringParameters["node_id"]
 	if exists {
 		nodeID = domain.GetUintFromString(nodeParam)
 	}
