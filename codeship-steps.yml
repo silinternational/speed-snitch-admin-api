@@ -10,7 +10,7 @@
 - name: dbmigrate_dev
   service: lambda
   tag: develop
-  command: lambda invoke --function speedsnitch-dev-migrations --payload ""
+  command: lambda invoke --function speedsnitch-dev-migrations
 
 - name: deploy_prod
   service: app
@@ -20,7 +20,7 @@
 - name: dbmigrate_prod
   service: lambda
   tag: master
-  command: lambda invoke --function speedsnitch-prod-migrations --payload ""
+  command: lambda invoke --function speedsnitch-prod-migrations
 
 - name: track_deployment
   service: tracker
