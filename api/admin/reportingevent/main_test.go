@@ -291,7 +291,7 @@ func TestUpdateEvent(t *testing.T) {
 	db.PutItem(&node)
 
 	updateMeEvent := domain.ReportingEvent{
-		NodeID:      node.ID,
+		NodeID:      0,
 		Name:        "Update Me",
 		Description: "This event is to be updated",
 	}
@@ -327,10 +327,12 @@ func TestUpdateEvent(t *testing.T) {
 
 	newDate := "2018-06-25"
 	newDescription := "This event has been updated"
+	newNodeID := node.ID
 
 	// Update an existing reporting event
 	updateMeEvent.Date = newDate
 	updateMeEvent.Description = newDescription
+	updateMeEvent.NodeID = node.ID
 
 	resp, errMsg = updateEventWithSuperAdmin(updateMeEvent, updateMeEvent.ID)
 	if errMsg != "" {
@@ -346,20 +348,55 @@ func TestUpdateEvent(t *testing.T) {
 	resultEvent := domain.ReportingEvent{}
 	db.GetItem(&resultEvent, updateMeEvent.ID)
 
-	if resultEvent.Date != newDate || resultEvent.Description != newDescription {
+	if resultEvent.Date != newDate || resultEvent.Description != newDescription || resultEvent.NodeID != newNodeID {
 		t.Errorf(
-			"Update did not work. Expected to see Date: %s and Description: %s.\n But got: \n%+v",
+			"Update did not work. Expected to see Date: %s, Description: %s and NodeID: %v.\n But got: \n%+v",
 			newDate,
 			newDescription,
+			newNodeID,
 			resultEvent,
 		)
 		return
 	}
 
-	if resultEvent.NodeID != node.ID {
-		t.Errorf("Update reporting-event lost the Node ID. \n Got %+v", resultEvent)
+	// Create a new reporting event
+	newDate = "2018-06-30"
+	newName := "New Test Event"
+
+	newEvent := domain.ReportingEvent{}
+	newEvent.Name = newName
+	newEvent.Date = newDate
+	newEvent.NodeID = node.ID
+
+	resp, errMsg = updateEventWithSuperAdmin(newEvent, 0)
+	if errMsg != "" {
+		t.Error(errMsg)
+		return
 	}
 
+	if resp.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", resp.StatusCode, resp.Body)
+		return
+	}
+
+	resultEvents, err := db.GetReportingEvents(node.ID)
+	if err != nil {
+		t.Errorf("Got unexpected error retrieving ReportingEvents from db ...\n %s", err.Error())
+		return
+	}
+
+	resultEvent = resultEvents[len(resultEvents)-1]
+
+	if resultEvent.Date != newDate || resultEvent.Name != newName || resultEvent.NodeID != node.ID {
+		t.Errorf(
+			"Update did not work. Expected to see Date: %s, Name: %s and NodeID: %v.\n But got: \n%+v",
+			newDate,
+			newName,
+			newNodeID,
+			resultEvent,
+		)
+		return
+	}
 }
 
 func TestViewEvent(t *testing.T) {
