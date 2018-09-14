@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const UniqueNameErrorMessage = "Cannot update a Reporting Event with a Name that is already in use."
+const UniqueNameErrorMessage = "Cannot update a Reporting Event with a NodeID, Name and Date that are already in use together."
 
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, eventSpecified := req.PathParameters["id"]
