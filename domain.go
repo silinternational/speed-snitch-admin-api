@@ -431,10 +431,10 @@ type ReportingSnapshot struct {
 type ReportingEvent struct {
 	gorm.Model
 	Node        Node   `gorm:"foreignkey:NodeID" json:"-"`
-	NodeID      uint   `gorm:"default:null"`
+	NodeID      uint   `gorm:"default:null;unique_index:idx_node_name_date"`
 	Timestamp   int64  `gorm:"type:int(11); not null;default:0"`
-	Date        string `gorm:"not null"`
-	Name        string `gorm:"not null;unique_index"`
+	Date        string `gorm:"not null;unique_index:idx_node_name_date"`
+	Name        string `gorm:"not null;unique_index:idx_node_name_date"`
 	Description string `gorm:"type:varchar(2048)"`
 }
 
