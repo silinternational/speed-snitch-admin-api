@@ -156,6 +156,30 @@ func updateEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 		return domain.ClientError(http.StatusUnprocessableEntity, "Name and Date are required")
 	}
 
+	var newNode domain.Node
+	replacements := []domain.Node{}
+
+	// Get new nodeID
+	if updatedEvent.NodeID > 0 {
+		err := db.GetItem(&newNode, updatedEvent.NodeID)
+		if err != nil {
+			err = fmt.Errorf(
+				"error getting updated node with ID: %d\n%s",
+				updatedEvent.NodeID,
+				err.Error(),
+			)
+			return domain.ReturnJsonOrError(domain.ReportingEvent{}, err)
+		}
+		replacements = []domain.Node{newNode}
+	}
+
+	replaceAssoc := []domain.AssociationReplacements{
+		{
+			Replacements:    replacements,
+			AssociationName: "Node",
+		},
+	}
+
 	reportingEvent.Date = updatedEvent.Date
 	err = reportingEvent.SetTimestamp()
 	if err != nil {
@@ -164,8 +188,11 @@ func updateEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	reportingEvent.Name = updatedEvent.Name
 	reportingEvent.Description = updatedEvent.Description
+	reportingEvent.NodeID = updatedEvent.NodeID
 
-	err = db.PutItem(&reportingEvent)
+	// Update the ReportingEvent (with its Node) in the database
+	// Note: This will never let you null out the Node association, but we're not concerned with that.
+	err = db.PutItemWithAssociations(&reportingEvent, replaceAssoc)
 	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
 		return domain.ClientError(http.StatusConflict, UniqueNameErrorMessage)
 	}
