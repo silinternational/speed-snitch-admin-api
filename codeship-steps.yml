@@ -7,10 +7,20 @@
   tag: develop
   command: ./codeship/deploy-dev.sh
 
+- name: dbmigrate_dev
+  service: lambda
+  tag: develop
+  command: lambda invoke --function speedsnitch-dev-migrations
+
 - name: deploy_prod
   service: app
   tag: master
   command: ./codeship/deploy-prod.sh
+
+- name: dbmigrate_prod
+  service: lambda
+  tag: master
+  command: lambda invoke --function speedsnitch-prod-migrations
 
 - name: track_deployment
   service: tracker

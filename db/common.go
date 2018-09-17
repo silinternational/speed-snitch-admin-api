@@ -27,7 +27,7 @@ var DatabaseTables = []interface{}{
 	&domain.Contact{}, &domain.Country{}, &domain.Tag{}, &domain.Task{}, &domain.SpeedTestNetServer{},
 	&domain.UserTags{}, &domain.User{}, &domain.Version{}, &domain.TaskLogSpeedTest{},
 	&domain.TaskLogPingTest{}, &domain.TaskLogError{}, &domain.TaskLogRestart{}, &domain.TaskLogNetworkDowntime{},
-	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.NodeTags{}, &domain.Node{}}
+	&domain.ReportingSnapshot{}, &domain.NamedServer{}, &domain.NodeTags{}, &domain.Node{}, &domain.ReportingEvent{}}
 
 func GetDb() (*gorm.DB, error) {
 	if Db == nil {
@@ -224,6 +224,14 @@ func CreateForeignKeys() error {
 			ChildModel:  &domain.NodeTags{},
 			ChildField:  "tag_id",
 			ParentTable: "tag",
+			ParentField: "id",
+			OnDelete:    CASCADE,
+			OnUpdate:    NOACTION,
+		},
+		{
+			ChildModel:  &domain.ReportingEvent{},
+			ChildField:  "node_id",
+			ParentTable: "node",
 			ParentField: "id",
 			OnDelete:    CASCADE,
 			OnUpdate:    NOACTION,
@@ -609,4 +617,36 @@ func GetSnapshotsForRange(interval string, nodeId uint, rangeStart, rangeEnd int
 	gdb.Set("gorm:auto_preload", true).Order("timestamp asc").Where(where, nodeId, interval, rangeStart, rangeEnd).Find(&snapshots)
 
 	return snapshots, gdb.Error
+}
+
+func GetReportingEventsForRange(nodeId uint, rangeStart, rangeEnd int64) ([]domain.ReportingEvent, error) {
+	gdb, err := GetDb()
+	if err != nil {
+		return []domain.ReportingEvent{}, err
+	}
+
+	var events []domain.ReportingEvent
+	where := "(`node_id` IS NULL OR `node_id` = ?) AND `timestamp` between ? AND ?"
+	gdb.Set("gorm:auto_preload", true).Order("timestamp asc").Where(where, nodeId, rangeStart, rangeEnd).Find(&events)
+
+	return events, gdb.Error
+}
+
+func GetReportingEvents(nodeID uint) ([]domain.ReportingEvent, error) {
+	gdb, err := GetDb()
+	if err != nil {
+		return []domain.ReportingEvent{}, err
+	}
+
+	var events []domain.ReportingEvent
+
+	if nodeID > 0 {
+		where := "(`node_id` = ?)"
+		gdb.Set("gorm:auto_preload", true).Order("timestamp asc").Where(where, nodeID).Find(&events)
+	} else {
+		where := "(`node_id` is null)"
+		gdb.Set("gorm:auto_preload", true).Order("timestamp asc").Where(where).Find(&events)
+	}
+
+	return events, gdb.Error
 }

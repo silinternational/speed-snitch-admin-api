@@ -192,7 +192,7 @@ func TestViewNodeReport(t *testing.T) {
 	}
 }
 
-func getRawDataRequest(nodeID, logType, date string) events.APIGatewayProxyRequest {
+func getRawDataRequest(nodeID, logType, startDate, endDate string) events.APIGatewayProxyRequest {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
 		Path:       "/report/node/nodeID/raw",
@@ -204,8 +204,9 @@ func getRawDataRequest(nodeID, logType, date string) events.APIGatewayProxyReque
 			"x-user-mail": testutils.SuperAdmin.Email,
 		},
 		QueryStringParameters: map[string]string{
-			"type": logType,
-			"date": date,
+			"type":  logType,
+			"start": startDate,
+			"end":   endDate,
 		},
 	}
 
@@ -238,7 +239,8 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	passNode := domain.Node{
-		MacAddr: "aa:aa:aa:aa:aa:aa",
+		MacAddr:  "aa:aa:aa:aa:aa:aa",
+		Nickname: "Africa(test)",
 	}
 
 	// Create the node in the database
@@ -276,6 +278,12 @@ func TestGetNodeRawData(t *testing.T) {
 			Timestamp: 1528145385,
 			Upload:    30.0,
 			Download:  30.0,
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528160000,
+			Upload:    40.0,
+			Download:  40.0,
 		},
 	}
 
@@ -349,7 +357,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's speedTest logs
-	response, err := getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypeSpeedTest, "2018-06-04"))
+	response, err := getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypeSpeedTest, "2018-06-04", "2018-06-05"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -362,12 +370,14 @@ func TestGetNodeRawData(t *testing.T) {
 	results := response.Body
 	if !strings.Contains(results, `,10.000,`) ||
 		!strings.Contains(results, `,20.000,`) ||
+		!strings.Contains(results, `,40.000,`) ||
+		// should not have this one
 		strings.Contains(results, `30.000`) {
-		t.Errorf("Expected two logs with values of 10.000 and 20.000, but got\n%s", results)
+		t.Errorf("Expected three logs with values of 10.000, 20.000 and 40.000, but got\n%s", results)
 	}
 
 	// Test for passNode's ping logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypePing, "2018-06-04"))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypePing, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -391,8 +401,32 @@ func TestGetNodeRawData(t *testing.T) {
 		return
 	}
 
+	contType, ok := response.Headers["Content-Type"]
+	expectedCT := "text/csv"
+
+	if !ok {
+		t.Errorf("Missing Content Type. \nExpected: %s ", expectedCT)
+		return
+	}
+	if expectedCT != contType {
+		t.Errorf("Wrong Content Type. \nExpected: %s \n But Got: %s", expectedCT, contType)
+		return
+	}
+
+	contDisposition, ok := response.Headers["Content-Disposition"]
+	expectedCD := "attachment;filename=ping Africa test from 2018-06-04 to 2018-06-04.csv"
+
+	if !ok {
+		t.Errorf("Missing Content Disposition. \nExpected: %s ", expectedCD)
+		return
+	}
+	if expectedCD != contDisposition {
+		t.Errorf("Wrong Content Disposition. \nExpected: %s \n But Got: %s", expectedCD, contDisposition)
+		return
+	}
+
 	// Test for passNode's downtime logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04"))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -417,7 +451,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's Restart logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04"))
+	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -441,4 +475,110 @@ func TestGetNodeRawData(t *testing.T) {
 		return
 	}
 
+}
+
+func TestGetReportingEventsForRange(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	node2 := domain.Node{
+		MacAddr: "bb:bb:bb:bb:bb:bb",
+	}
+	db.PutItem(&node2)
+
+	june4 := int64(1528070400)
+	june5 := int64(1528156800)
+
+	eventsInRange := []domain.ReportingEvent{
+		{
+			Timestamp: june4,
+			Name:      "No Node June 4th",
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: june4,
+			Name:      "Node1 June 4th",
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: june5,
+			Name:      "Node1 June 5th",
+		},
+		{
+			NodeID:    node2.ID,
+			Timestamp: june5,
+			Name:      "Node2 June 5th",
+		},
+	}
+
+	for _, i := range eventsInRange {
+		db.PutItem(&i)
+	}
+
+	eventsOutOfRange := []domain.ReportingEvent{
+		{
+			Timestamp: 1527984000,
+			Name:      "No Node June 3rd",
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528243200,
+			Name:      "Node1 June 6th",
+		},
+	}
+
+	for _, i := range eventsOutOfRange {
+		db.PutItem(&i)
+	}
+
+	strNodeID := fmt.Sprintf("%d", node1.ID)
+
+	req := events.APIGatewayProxyRequest{
+		HTTPMethod: "GET",
+		Path:       "/report/node/" + strNodeID + "/events",
+		PathParameters: map[string]string{
+			"id": strNodeID,
+		},
+		Headers: testutils.GetSuperAdminReqHeader(),
+		QueryStringParameters: map[string]string{
+			"start": "2018-06-04",
+			"end":   "2018-06-05",
+		},
+	}
+
+	response, err := getNodeReportingEvents(req)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	var eventResults []domain.ReportingEvent
+	err = json.Unmarshal([]byte(response.Body), &eventResults)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	expectedLen := len(eventsInRange) - 1
+	if len(eventResults) != expectedLen {
+		t.Errorf("Wrong number of Reporting Events returned. Expected: %d. Got: %d", expectedLen, len(eventResults))
+		return
+	}
+
+	for _, event := range eventResults {
+		if event.NodeID != 0 && event.NodeID != node1.ID {
+			t.Errorf("Got an unexpected event in the results. \n%+v", event)
+		}
+		if event.Timestamp != june4 && event.Timestamp != june5 {
+			t.Errorf("Got an unexpected event in the results. \n%+v", event)
+		}
+	}
 }
