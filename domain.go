@@ -108,8 +108,8 @@ type Node struct {
 	ConfiguredBy        string
 	Nickname            string
 	Notes               string
-	BusinessStartTime   string `gorm:"type:varchar(5)"`
-	BusinessCloseTime   string `gorm:"type:varchar(5)"`
+	BusinessStartTime   string `gorm:"type:varchar(5);default:'00:00'"`
+	BusinessCloseTime   string `gorm:"type:varchar(5);default:'00:00'"`
 }
 
 func (n *Node) IsScheduled() bool {
