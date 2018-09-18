@@ -197,4 +197,8 @@ func TestHandler(t *testing.T) {
 		t.Errorf("Wrong 'ConfiguredVersion' on node. Expected ID: %d\n But got: %+v.", version1.ID, node.ConfiguredVersion)
 		return
 	}
+
+	if node.BusinessCloseTime != "00:00" {
+		t.Errorf("BusinessCloseTime not the default (00:00). Got: %s", node.BusinessCloseTime)
+	}
 }
