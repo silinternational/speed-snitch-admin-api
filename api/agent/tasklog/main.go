@@ -66,6 +66,10 @@ func putPingTest(req events.APIGatewayProxyRequest, node domain.Node, macAddr st
 	taskLogEntry.NodeIPAddress = node.IPAddress
 	taskLogEntry.NodeRunningVersionID = node.RunningVersionID
 
+	if taskLogEntry.PacketLossPercent < 0 {
+		taskLogEntry.PacketLossPercent = 0
+	}
+
 	if taskLogEntry.NamedServerID != 0 {
 		var namedServer domain.NamedServer
 		err = db.GetItem(&namedServer, taskLogEntry.NamedServerID)
