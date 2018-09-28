@@ -20,6 +20,8 @@ export VPC_SG_ID="${DEV_VPC_SG_ID}"
 export VPC_SUBNET1="${DEV_VPC_SUBNET1}"
 export VPC_SUBNET2="${DEV_VPC_SUBNET2}"
 export VPC_SUBNET3="${DEV_VPC_SUBNET3}"
+export SES_RETURN_TO_ADDR="${DEV_SES_RETURN_TO_ADDR}"
+export SES_AWS_REGION="${DEV_SES_AWS_REGION}"
 
 cd api/admin
 serverless deploy -v --stage dev
