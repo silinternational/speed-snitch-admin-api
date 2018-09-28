@@ -10,13 +10,25 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ses"
 	"log"
+	"os"
 )
 
 const DaysMissing = int(1)
 const SESCharSet = "UTF-8"
-const SESReturnToAddr = "no_reply@sil.org"
-const SESAWSRegion = "us-east-1"
 const SESSubjectText = "MIA Speedsnitch Nodes"
+
+func getSESReturnToAddr() string {
+	envKey := "SES_RETURN_TO_ADDR"
+	value := os.Getenv(envKey)
+	if value == "" {
+		log.Println("Error: required value missing for environment variable " + envKey)
+	}
+	return value
+}
+
+func getSESAWSRegion() string {
+	return domain.GetEnv("SES_AWS_REGION", "us-east-1")
+}
 
 type AlertsConfig struct {
 	DaysMissing     int    `json:"DaysMissing"`
@@ -36,11 +48,11 @@ func (a *AlertsConfig) setDefaults() {
 	}
 
 	if a.SESReturnToAddr == "" {
-		a.SESReturnToAddr = SESReturnToAddr
+		a.SESReturnToAddr = getSESReturnToAddr()
 	}
 
 	if a.SESAWSRegion == "" {
-		a.SESAWSRegion = SESAWSRegion
+		a.SESAWSRegion = getSESAWSRegion()
 	}
 
 	if a.SESSubjectText == "" {
