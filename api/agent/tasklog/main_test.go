@@ -161,7 +161,7 @@ func TestHandlerPing(t *testing.T) {
 			Timestamp:         1531246104,
 			NamedServerID:     namedServer.ID,
 			Latency:           3,
-			PacketLossPercent: 0,
+			PacketLossPercent: -3,
 		},
 	}
 
@@ -201,7 +201,27 @@ func TestHandlerPing(t *testing.T) {
 		t.Errorf("Task log entry was not created properly, wrong country code, expected %s, got %s", namedServer.ServerCountry, taskLogEntry.ServerCountry)
 	}
 	if taskLogEntry.Latency != logsToSend[0].Latency {
-		t.Errorf("Task log entry does not have correct upload value, expected %v, got %v", logsToSend[0].Latency, taskLogEntry.Latency)
+		t.Errorf("Task log entry does not have correct latency value, expected %v, got %v", logsToSend[0].Latency, taskLogEntry.Latency)
+	}
+	if taskLogEntry.PacketLossPercent != logsToSend[0].PacketLossPercent {
+		t.Errorf(
+			"Task log entry does not have correct packet loss percent value, expected %v, got %v",
+			logsToSend[0].PacketLossPercent,
+			taskLogEntry.PacketLossPercent,
+		)
+	}
+
+	var taskLogEntry3 domain.TaskLogPingTest
+	err = db.GetTaskLogForRange(&taskLogEntry3, node1.ID, logsToSend[2].Timestamp, logsToSend[2].Timestamp)
+	if err != nil {
+		t.Error("Unable to retrieve task log for third entry, err: ", err.Error())
+	}
+
+	if taskLogEntry3.PacketLossPercent != 0.0 {
+		t.Errorf(
+			"Task log entry does not have correct packet loss percent value, expected 0, got %v",
+			taskLogEntry3.PacketLossPercent,
+		)
 	}
 }
 
