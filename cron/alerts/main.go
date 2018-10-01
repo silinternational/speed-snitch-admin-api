@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/ses"
 	"log"
 	"os"
+	"strings"
 )
 
 const DaysMissing = int(1)
@@ -58,6 +59,28 @@ func (a *AlertsConfig) setDefaults() {
 	if a.SESSubjectText == "" {
 		a.SESSubjectText = SESSubjectText
 	}
+}
+
+func sendAnEmail(emailMsg ses.Message, recipient *string, config AlertsConfig) error {
+	recipients := []*string{recipient}
+
+	input := &ses.SendEmailInput{
+		Destination: &ses.Destination{
+			ToAddresses: recipients,
+		},
+		Message: &emailMsg,
+		Source:  aws.String(config.SESReturnToAddr),
+	}
+
+	sess, err := session.NewSession(&aws.Config{
+		Region: aws.String(config.SESAWSRegion)},
+	)
+
+	// Create an SES session.
+	svc := ses.New(sess)
+	result, err := svc.SendEmail(input)
+	log.Println(result)
+	return err
 }
 
 func handler(config AlertsConfig) ([]domain.Node, error) {
@@ -121,36 +144,35 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 	emailMsg.SetSubject(&subjContent)
 	emailMsg.SetBody(&msgBody)
 
-	input := &ses.SendEmailInput{
-		Destination: &ses.Destination{
-			ToAddresses: recipients,
-		},
-		Message: &emailMsg,
-		Source:  aws.String(config.SESReturnToAddr),
+	lastError := ""
+	badRecipients := []string{}
+
+	for _, admin := range superAdmins {
+		recipient := aws.String(admin.Email)
+		err = sendAnEmail(emailMsg, recipient, config)
+		if err != nil {
+			lastError = err.Error()
+			badRecipients = append(badRecipients, *recipient)
+		}
 	}
 
-	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(config.SESAWSRegion)},
-	)
+	err = nil
 
-	// Create an SES session.
-	svc := ses.New(sess)
-	result, err := svc.SendEmail(input)
-	if err != nil {
-		msg := fmt.Sprintf("Error sending MIA nodes email from %s to the following superAdmins. ", *aws.String(config.SESReturnToAddr))
-		for _, addr := range recipients {
-			msg += *addr + " "
-		}
-		err := fmt.Errorf("%s ... \n %s", msg, err.Error())
-		log.Println(err.Error())
-		return []domain.Node{}, err
+	if lastError != "" {
+		addresses := strings.Join(badRecipients, ", ")
+		msg := fmt.Sprintf(
+			"Error sending MIA nodes emails from %s to \n %s: \n %s",
+			*aws.String(config.SESReturnToAddr),
+			addresses,
+			lastError,
+		)
+		err = fmt.Errorf(msg)
 	}
 
 	log.Printf("%v MIA nodes found\n", len(nodes))
-	log.Printf("%v MIA node email sent to %v superAdmins\n", len(nodes), len(recipients))
-	log.Println(result)
+	log.Printf("%v MIA node email sent to %v superAdmins\n", len(nodes), len(superAdmins)-len(badRecipients))
 
-	return scheduledNodes, nil
+	return scheduledNodes, err
 }
 
 func main() {
