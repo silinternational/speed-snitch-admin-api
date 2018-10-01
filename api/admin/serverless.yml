@@ -31,6 +31,8 @@ provider:
     MYSQL_USER: ${env:MYSQL_USER}
     MYSQL_PASS: ${env:MYSQL_PASS}
     MYSQL_DB: ${env:MYSQL_DB}
+    SES_RETURN_TO_ADDR: ${env:SES_RETURN_TO_ADDR}
+    SES_AWS_REGION: ${env:SES_AWS_REGION}
 
   stackTags:
     app: speedsnitch
