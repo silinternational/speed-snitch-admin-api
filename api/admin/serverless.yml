@@ -42,7 +42,7 @@ provider:
     - Effect: "Allow"
       Action:
         - "ses:SendEmail"
-      Resource: "arn:aws:sts::369020531563:assumed-role/speedsnitch-dev-us-east-1-lambdaRole/speedsnitch-"${self:provider.stage}"-alerts"
+      Resource: arn:aws:sts::369020531563:assumed-role/speedsnitch-dev-us-east-1-lambdaRole/speedsnitch-${self:provider.stage}-alerts
 
 custom:
   stage: ${opt:stage, self:provider.stage}
