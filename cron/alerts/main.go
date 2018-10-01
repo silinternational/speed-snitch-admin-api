@@ -60,22 +60,24 @@ func (a *AlertsConfig) setDefaults() {
 	}
 }
 
-func handler(config AlertsConfig) []domain.Node {
+func handler(config AlertsConfig) ([]domain.Node, error) {
 	log.Println("Starting Alert for MIA Nodes")
 
 	config.setDefaults()
 
 	nodes, err := db.ListMIANodes(config.DaysMissing)
 	if err != nil {
-		log.Println("Error getting list of MIA Nodes: " + err.Error())
-		return []domain.Node{}
+		err := fmt.Errorf("Error getting list of MIA Nodes: %s", err.Error())
+		log.Println(err.Error())
+		return []domain.Node{}, err
 	}
 
 	superAdmins := []domain.User{}
 	err = db.ListItems(&superAdmins, "")
 	if err != nil {
-		log.Println("Error getting list of SuperAdmin users: " + err.Error())
-		return []domain.Node{}
+		err := fmt.Errorf("Error getting list of SuperAdmin users: %s", err.Error())
+		log.Println(err.Error())
+		return []domain.Node{}, err
 	}
 
 	msg := fmt.Sprintf("The following nodes have been MIA for more than %d day(s).", config.DaysMissing)
@@ -90,7 +92,7 @@ func handler(config AlertsConfig) []domain.Node {
 
 	if len(scheduledNodes) < 1 {
 		log.Print("No MIA nodes found")
-		return scheduledNodes
+		return scheduledNodes, nil
 	}
 
 	charSet := config.SESCharSet
@@ -135,15 +137,16 @@ func handler(config AlertsConfig) []domain.Node {
 	svc := ses.New(sess)
 	result, err := svc.SendEmail(input)
 	if err != nil {
-		log.Println("Error sending MIA nodes email to superAdmins: " + err.Error())
-		return []domain.Node{}
+		err := fmt.Errorf("Error sending MIA nodes email to superAdmins: %s", err.Error())
+		log.Println(err.Error())
+		return []domain.Node{}, err
 	}
 
 	log.Printf("%v MIA nodes found\n", len(nodes))
 	log.Printf("%v MIA node email sent to %v superAdmins\n", len(nodes), len(recipients))
 	log.Println(result)
 
-	return scheduledNodes
+	return scheduledNodes, nil
 }
 
 func main() {
