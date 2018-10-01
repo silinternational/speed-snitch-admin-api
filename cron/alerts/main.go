@@ -137,7 +137,7 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 	svc := ses.New(sess)
 	result, err := svc.SendEmail(input)
 	if err != nil {
-		msg := fmt.Sprintf("Error sending MIA nodes email from %s to the following superAdmins. ", aws.String(config.SESReturnToAddr))
+		msg := fmt.Sprintf("Error sending MIA nodes email from %s to the following superAdmins. ", *aws.String(config.SESReturnToAddr))
 		for _, addr := range recipients {
 			msg += *addr + " "
 		}
