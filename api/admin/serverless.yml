@@ -38,6 +38,12 @@ provider:
     app: speedsnitch
     app_env: ${opt:stage, self:provider.stage}
 
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "ses:SendEmail"
+      Resource: "arn:aws:sts::369020531563:assumed-role/speedsnitch-dev-us-east-1-lambdaRole/speedsnitch-"${self:provider.stage}"-alerts"
+
 custom:
   stage: ${opt:stage, self:provider.stage}
   namespace: ${self:service}_${self:custom.stage}
