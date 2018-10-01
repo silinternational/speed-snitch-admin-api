@@ -108,7 +108,7 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 
 	for _, node := range nodes {
 		if node.IsScheduled() {
-			msg = fmt.Sprintf("%s\n%s", node.Nickname)
+			msg = fmt.Sprintf("%s\n%s", msg, node.Nickname)
 			scheduledNodes = append(scheduledNodes, node)
 		}
 	}
@@ -133,11 +133,6 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 
 	msgBody := ses.Body{
 		Text: &msgContent,
-	}
-
-	recipients := []*string{}
-	for _, admin := range superAdmins {
-		recipients = append(recipients, aws.String(admin.Email))
 	}
 
 	emailMsg := ses.Message{}
