@@ -16,6 +16,7 @@ go build -ldflags="-s -w" -o bin/report                     api/admin/report/mai
 go build -ldflags="-s -w" -o bin/reportingevent             api/admin/reportingevent/main.go
 go build -ldflags="-s -w" -o bin/speedtestnetserver         api/admin/speedtestnetserver/main.go
 go build -ldflags="-s -w" -o bin/speedtestnetserverupdate   cron/speedtestnetserverupdate/main.go
+go build -ldflags="-s -w" -o bin/alerts                     cron/alerts/main.go
 go build -ldflags="-s -w" -o bin/dailysnapshot              cron/dailysnapshot/main.go
 go build -ldflags="-s -w" -o bin/migrations                 cron/migrations/main.go
 go build -ldflags="-s -w" -o bin/tasklog                    api/agent/tasklog/main.go
