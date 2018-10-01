@@ -96,7 +96,8 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 	}
 
 	superAdmins := []domain.User{}
-	err = db.ListItems(&superAdmins, "")
+	users := []domain.User{}
+	err = db.ListItems(&users, "")
 	if err != nil {
 		err := fmt.Errorf("Error getting list of SuperAdmin users: %s", err.Error())
 		log.Println(err.Error())
@@ -142,8 +143,12 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 	lastError := ""
 	badRecipients := []string{}
 
-	for _, admin := range superAdmins {
-		recipient := aws.String(admin.Email)
+	for _, user := range users {
+		if user.Role != domain.UserRoleSuperAdmin {
+			continue
+		}
+		superAdmins = append(superAdmins, user)
+		recipient := aws.String(user.Email)
 		err = sendAnEmail(emailMsg, recipient, config)
 		if err != nil {
 			lastError = err.Error()
@@ -164,8 +169,8 @@ func handler(config AlertsConfig) ([]domain.Node, error) {
 		err = fmt.Errorf(msg)
 	}
 
-	log.Printf("%v MIA nodes found\n", len(nodes))
-	log.Printf("%v MIA node email sent to %v superAdmins\n", len(nodes), len(superAdmins)-len(badRecipients))
+	log.Printf("%v MIA nodes found\n", len(scheduledNodes))
+	log.Printf("MIA node emails sent to %v superAdmins\n", len(superAdmins)-len(badRecipients))
 
 	return scheduledNodes, err
 }
