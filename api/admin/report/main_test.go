@@ -414,7 +414,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	contDisposition, ok := response.Headers["Content-Disposition"]
-	expectedCD := "attachment;filename=ping Africa test from 2018-06-04 to 2018-06-04.csv"
+	expectedCD := `attachment;filename="ping Africa test from 2018-06-04 to 2018-06-04.csv"`
 
 	if !ok {
 		t.Errorf("Missing Content Disposition. \nExpected: %s ", expectedCD)
