@@ -300,7 +300,7 @@ func getCSVFilename(node domain.Node, dataType string, startTimestamp, endTimest
 	startDate := time.Unix(startTimestamp, 0).UTC().Format(domain.DateLayout)
 	endDate := time.Unix(endTimestamp, 0).UTC().Format(domain.DateLayout)
 
-	filename := fmt.Sprintf("%s %s from %s to %s.csv", dataType, nodeName, startDate, endDate)
+	filename := fmt.Sprintf(`"%s %s from %s to %s.csv"`, dataType, nodeName, startDate, endDate)
 	return filename
 }
 
