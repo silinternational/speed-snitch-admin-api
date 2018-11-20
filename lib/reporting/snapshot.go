@@ -348,3 +348,108 @@ func hydrateSnapshotWithBusinessHourLogs(
 	snapshot.BizNetworkOutagesCount = int64(len(outages))
 	return nil
 }
+
+func getPingLogsAsSnapshots(
+	node domain.Node,
+	startTime, endTime int64,
+) ([]domain.ReportingSnapshot, error) {
+
+	var pingLogs []domain.TaskLogPingTest
+	err := db.GetTaskLogForRange(&pingLogs, node.ID, startTime, endTime)
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	var snapshots []domain.ReportingSnapshot
+	for _, pingLog := range pingLogs {
+		snapshot := domain.ReportingSnapshot{
+			NodeID:          node.ID,
+			Timestamp:       pingLog.Timestamp,
+			LatencyTotal:    pingLog.Latency,
+			PacketLossTotal: pingLog.PacketLossPercent,
+		}
+
+		snapshots = append(snapshots, snapshot)
+	}
+
+	return snapshots, nil
+}
+
+func getSpeedTestLogsAsSnapshots(
+	node domain.Node,
+	startTime, endTime int64,
+) ([]domain.ReportingSnapshot, error) {
+
+	var speedLogs []domain.TaskLogSpeedTest
+	err := db.GetTaskLogForRange(&speedLogs, node.ID, startTime, endTime)
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	var snapshots []domain.ReportingSnapshot
+	for _, speedLog := range speedLogs {
+		snapshot := domain.ReportingSnapshot{
+			NodeID:        node.ID,
+			Timestamp:     speedLog.Timestamp,
+			DownloadTotal: speedLog.Download,
+			UploadTotal:   speedLog.Upload,
+		}
+
+		snapshots = append(snapshots, snapshot)
+	}
+
+	return snapshots, nil
+}
+
+func getRestartsAsSnapshots(
+	node domain.Node,
+	startTime, endTime int64,
+) ([]domain.ReportingSnapshot, error) {
+	// Track system restart
+	var restarts []domain.TaskLogRestart
+	err := db.GetTaskLogForRange(&restarts, node.ID, startTime, endTime)
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	var snapshots []domain.ReportingSnapshot
+	for _, restart := range restarts {
+		snapshot := domain.ReportingSnapshot{
+			NodeID:        node.ID,
+			Timestamp:     restart.Timestamp,
+			RestartsCount: 1,
+		}
+
+		snapshots = append(snapshots, snapshot)
+	}
+
+	return snapshots, nil
+
+}
+
+func getNetworkDowntimeAsSnapshots(
+	node domain.Node,
+	startTime, endTime int64,
+) ([]domain.ReportingSnapshot, error) {
+	// Track system restart
+	var downtimes []domain.TaskLogNetworkDowntime
+
+	err := db.GetTaskLogForRange(&downtimes, node.ID, startTime, endTime)
+	if err != nil {
+		return []domain.ReportingSnapshot{}, err
+	}
+
+	var snapshots []domain.ReportingSnapshot
+	for _, downtime := range downtimes {
+		snapshot := domain.ReportingSnapshot{
+			NodeID:                 node.ID,
+			Timestamp:              downtime.Timestamp,
+			NetworkDowntimeSeconds: downtime.DowntimeSeconds,
+		}
+
+		snapshots = append(snapshots, snapshot)
+	}
+
+	return snapshots, nil
+
+}

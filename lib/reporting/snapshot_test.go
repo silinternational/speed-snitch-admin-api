@@ -535,3 +535,335 @@ func TestGenerateDailySnapshotForceOverwrite(t *testing.T) {
 		t.Errorf("Snapshot was not overwritten, has LatencyAvg value of %v but expected %v", foundSnaps[0].LatencyAvg, log.Latency)
 	}
 }
+
+func TestGetPingLogsAsSnapshots(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	node2 := domain.Node{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		MacAddr: "bb:bb:bb:bb:bb:bb",
+	}
+	db.PutItem(&node2)
+
+	speedLogs := []domain.TaskLogSpeedTest{
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528099200, // 2018-06-04 8:00
+			Upload:    10.0,
+			Download:  10.0,
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528185600, // 2018-06-05 8:00
+			Upload:    10.0,
+			Download:  10.0,
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528192800, // 2018-06-05 10:00
+			Upload:    10.0,
+			Download:  10.0,
+		},
+	}
+
+	for _, i := range speedLogs {
+		db.PutItem(&i)
+	}
+
+	pingLogs := []domain.TaskLogPingTest{
+		{
+			NodeID:            node1.ID,
+			Timestamp:         1528099200, // 2018-06-04 8:00
+			Latency:           5,
+			PacketLossPercent: 1,
+		},
+		{
+			NodeID:            node1.ID,
+			Timestamp:         1528100100, // 2018-06-04 8:15
+			Latency:           10,
+			PacketLossPercent: 2,
+		},
+		{
+			NodeID:            node1.ID,
+			Timestamp:         1528185600, // 2018-06-05 8:00
+			Latency:           7,
+			PacketLossPercent: 3,
+		},
+	}
+
+	for _, i := range pingLogs {
+		db.PutItem(&i)
+	}
+
+	date, _ := time.Parse(DateTimeLayout, "2018-June-4 00:00:00")
+
+	// Get Ping Log snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
+	results, err := getPingLogsAsSnapshots(node1, startTime, endTime)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(results) != 2 {
+		t.Error("Not enough results returned, got ", len(results), "expected 2.")
+	}
+
+	pingResult := results[1]
+	expected := 10.0
+	if pingResult.LatencyTotal != expected {
+		t.Errorf("Bad Latency value, got %v, expected %v.", pingResult.LatencyTotal, expected)
+	}
+
+	expected = 2
+	if pingResult.PacketLossTotal != expected {
+		t.Errorf("Bad Packet Loss value, got %v, expected %v.", pingResult.PacketLossTotal, expected)
+	}
+}
+
+func TestGetSpeedTestLogsAsSnapshots(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	node2 := domain.Node{
+		Model: gorm.Model{
+			ID: 2,
+		},
+		MacAddr: "bb:bb:bb:bb:bb:bb",
+	}
+	db.PutItem(&node2)
+
+	speedLogs := []domain.TaskLogSpeedTest{
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528099200, // 2018-06-04 8:00
+			Upload:    9.0,
+			Download:  90.0,
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528185600, // 2018-06-05 8:00
+			Upload:    10.0,
+			Download:  100.0,
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528192800, // 2018-06-05 10:00
+			Upload:    11.0,
+			Download:  110.0,
+		},
+	}
+
+	for _, i := range speedLogs {
+		db.PutItem(&i)
+	}
+
+	pingLogs := []domain.TaskLogPingTest{
+		{
+			NodeID:            node1.ID,
+			Timestamp:         1528099200, // 2018-06-04 8:00
+			Latency:           5,
+			PacketLossPercent: 1,
+		},
+		{
+			NodeID:            node1.ID,
+			Timestamp:         1528100100, // 2018-06-04 8:15
+			Latency:           10,
+			PacketLossPercent: 2,
+		},
+		{
+			NodeID:            node1.ID,
+			Timestamp:         1528185600, // 2018-06-05 8:00
+			Latency:           7,
+			PacketLossPercent: 3,
+		},
+	}
+
+	for _, i := range pingLogs {
+		db.PutItem(&i)
+	}
+
+	date, _ := time.Parse(DateTimeLayout, "2018-June-5 00:00:00")
+
+	// Get Speed Test Snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
+	results, err := getSpeedTestLogsAsSnapshots(node1, startTime, endTime)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(results) != 2 {
+		t.Error("Not enough results returned, got ", len(results), "expected 2.")
+	}
+
+	speedResults := results[1]
+	expected := 11.0
+	if speedResults.UploadTotal != expected {
+		t.Errorf("Bad Upload value, got %v, expected %v.", speedResults.UploadTotal, expected)
+	}
+
+	expected = 110
+	if speedResults.DownloadTotal != expected {
+		t.Errorf("Bad Download value, got %v, expected %v.", speedResults.DownloadTotal, expected)
+	}
+}
+
+func TestGetRestartsAsSnapshots(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	downtimeLogs := []domain.TaskLogNetworkDowntime{
+		{
+			NodeID:          node1.ID,
+			Timestamp:       1528012980, // 2018-06-03 8:30
+			DowntimeSeconds: 30,
+		},
+		{
+			NodeID:          node1.ID,
+			Timestamp:       1528092000, // 2018-06-04 6:00
+			DowntimeSeconds: 60,
+		},
+		{
+			NodeID:          node1.ID,
+			Timestamp:       1528128000, // 2018-06-04 16:00
+			DowntimeSeconds: 160,
+		},
+	}
+
+	for _, i := range downtimeLogs {
+		db.PutItem(&i)
+	}
+
+	restartLogs := []domain.TaskLogRestart{
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528102800, // 2018-06-04 9:00
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528110000, // 2018-06-04 11:00
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528196400, // 2018-06-05 11:00
+		},
+	}
+	for _, i := range restartLogs {
+		db.PutItem(&i)
+	}
+
+	date, _ := time.Parse(DateTimeLayout, "2018-June-4 00:00:00")
+
+	// Get Restart Test Snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
+	results, err := getRestartsAsSnapshots(node1, startTime, endTime)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(results) != 2 {
+		t.Error("Not enough results returned, got ", len(results), "expected 2.")
+	}
+
+	restartResults := results[1]
+	expected := int64(1)
+	if restartResults.RestartsCount != expected {
+		t.Errorf("Bad Restarts Count value, got %v, expected %v.", restartResults.RestartsCount, expected)
+	}
+
+}
+
+func TestGetNetworkDowntimeAsSnapshots(t *testing.T) {
+	testutils.ResetDb(t)
+
+	node1 := domain.Node{
+		Model: gorm.Model{
+			ID: 1,
+		},
+		MacAddr: "aa:aa:aa:aa:aa:aa",
+	}
+	db.PutItem(&node1)
+
+	downtimeLogs := []domain.TaskLogNetworkDowntime{
+		{
+			NodeID:          node1.ID,
+			Timestamp:       1528012980, // 2018-06-03 8:30
+			DowntimeSeconds: 30,
+		},
+		{
+			NodeID:          node1.ID,
+			Timestamp:       1528092000, // 2018-06-04 6:00
+			DowntimeSeconds: 60,
+		},
+		{
+			NodeID:          node1.ID,
+			Timestamp:       1528128000, // 2018-06-04 16:00
+			DowntimeSeconds: 160,
+		},
+	}
+
+	for _, i := range downtimeLogs {
+		db.PutItem(&i)
+	}
+
+	restartLogs := []domain.TaskLogRestart{
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528102800, // 2018-06-04 9:00
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528110000, // 2018-06-04 11:00
+		},
+		{
+			NodeID:    node1.ID,
+			Timestamp: 1528196400, // 2018-06-05 11:00
+		},
+	}
+	for _, i := range restartLogs {
+		db.PutItem(&i)
+	}
+
+	date, _ := time.Parse(DateTimeLayout, "2018-June-4 00:00:00")
+
+	// Get Restart Test Snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
+	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
+	results, err := getNetworkDowntimeAsSnapshots(node1, startTime, endTime)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(results) != 2 {
+		t.Error("Not enough results returned, got ", len(results), "expected 2.")
+	}
+
+	downtimeResults := results[1]
+	expected := int64(160)
+	if downtimeResults.NetworkDowntimeSeconds != expected {
+		t.Errorf("Bad Network Downtime value, got %v, expected %v.", downtimeResults.NetworkDowntimeSeconds, expected)
+	}
+
+	expected = 1528128000
+	if downtimeResults.Timestamp != expected {
+		t.Errorf("Bad Network Downtime Timestamp, got %v, expected %v.", downtimeResults.Timestamp, expected)
+	}
+}
