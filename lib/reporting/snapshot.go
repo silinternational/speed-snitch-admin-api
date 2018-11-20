@@ -349,7 +349,7 @@ func hydrateSnapshotWithBusinessHourLogs(
 	return nil
 }
 
-func getPingLogsAsSnapshots(
+func GetPingLogsAsSnapshots(
 	node domain.Node,
 	startTime, endTime int64,
 ) ([]domain.ReportingSnapshot, error) {
@@ -375,7 +375,7 @@ func getPingLogsAsSnapshots(
 	return snapshots, nil
 }
 
-func getSpeedTestLogsAsSnapshots(
+func GetSpeedTestLogsAsSnapshots(
 	node domain.Node,
 	startTime, endTime int64,
 ) ([]domain.ReportingSnapshot, error) {
@@ -401,7 +401,7 @@ func getSpeedTestLogsAsSnapshots(
 	return snapshots, nil
 }
 
-func getRestartsAsSnapshots(
+func GetRestartsAsSnapshots(
 	node domain.Node,
 	startTime, endTime int64,
 ) ([]domain.ReportingSnapshot, error) {
@@ -427,7 +427,7 @@ func getRestartsAsSnapshots(
 
 }
 
-func getNetworkDowntimeAsSnapshots(
+func GetNetworkDowntimeAsSnapshots(
 	node domain.Node,
 	startTime, endTime int64,
 ) ([]domain.ReportingSnapshot, error) {

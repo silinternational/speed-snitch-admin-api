@@ -609,7 +609,7 @@ func TestGetPingLogsAsSnapshots(t *testing.T) {
 
 	// Get Ping Log snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
 	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
-	results, err := getPingLogsAsSnapshots(node1, startTime, endTime)
+	results, err := GetPingLogsAsSnapshots(node1, startTime, endTime)
 	if err != nil {
 		t.Error(err)
 	}
@@ -702,7 +702,7 @@ func TestGetSpeedTestLogsAsSnapshots(t *testing.T) {
 
 	// Get Speed Test Snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
 	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
-	results, err := getSpeedTestLogsAsSnapshots(node1, startTime, endTime)
+	results, err := GetSpeedTestLogsAsSnapshots(node1, startTime, endTime)
 	if err != nil {
 		t.Error(err)
 	}
@@ -777,7 +777,7 @@ func TestGetRestartsAsSnapshots(t *testing.T) {
 
 	// Get Restart Test Snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
 	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
-	results, err := getRestartsAsSnapshots(node1, startTime, endTime)
+	results, err := GetRestartsAsSnapshots(node1, startTime, endTime)
 	if err != nil {
 		t.Error(err)
 	}
@@ -848,7 +848,7 @@ func TestGetNetworkDowntimeAsSnapshots(t *testing.T) {
 
 	// Get Restart Test Snapshots for MacAddr aa:aa:aa:aa:aa:aa and make sure values are right
 	startTime, endTime, err := GetStartEndTimestampsForDate(date, "", "")
-	results, err := getNetworkDowntimeAsSnapshots(node1, startTime, endTime)
+	results, err := GetNetworkDowntimeAsSnapshots(node1, startTime, endTime)
 	if err != nil {
 		t.Error(err)
 	}
