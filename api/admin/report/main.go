@@ -18,6 +18,9 @@ const PeriodTimeFormat = "2006-01-02"
 func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	id := req.PathParameters["id"]
 	if id != "" {
+		if strings.HasSuffix(req.Path, "/detail") {
+			return getNodeDetailData(req)
+		}
 		if strings.HasSuffix(req.Path, "/raw") {
 			return getNodeRawData(req)
 		}
@@ -68,6 +71,59 @@ func viewNodeReport(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 	// Fetch snapshots
 	snapshots, err := db.GetSnapshotsForRange(interval, id, periodStartTimestamp, periodEndTimestamp)
 	return domain.ReturnJsonOrError(snapshots, err)
+}
+
+func getNodeDetailData(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+	id := domain.GetResourceIDFromRequest(req)
+	if id == 0 {
+		return domain.ClientError(http.StatusBadRequest, "Invalid Node ID")
+	}
+
+	// Validate Inputs
+	periodStartTimestamp, err := getTimestampFromString(req.QueryStringParameters["start"], "start")
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	periodEndTimestamp, err := getTimestampFromString(req.QueryStringParameters["end"], "end")
+	if err != nil {
+		return domain.ClientError(http.StatusBadRequest, err.Error())
+	}
+
+	periodEndTimestamp = periodEndTimestamp + domain.SecondsPerDay - 1
+
+	// Fetch node to ensure exists and get tags for authorization
+	var node domain.Node
+	err = db.GetItem(&node, id)
+	if err != nil {
+		return domain.ReturnJsonOrError(domain.Node{}, err)
+	}
+
+	// Ensure user is authorized ...
+	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionTagBased, node.Tags)
+	if statusCode > 0 {
+		return domain.ClientError(statusCode, errMsg)
+	}
+
+	data := []domain.ReportingSnapshot{}
+
+	taskType, errString := getTaskTypeIfValid(req)
+	if errString != "" {
+		return domain.ClientError(http.StatusBadRequest, errString)
+	}
+
+	switch taskType {
+	case domain.TaskTypePing:
+		data, err = reporting.GetPingLogsAsSnapshots(node, periodStartTimestamp, periodEndTimestamp)
+	case domain.TaskTypeSpeedTest:
+		data, err = reporting.GetSpeedTestLogsAsSnapshots(node, periodStartTimestamp, periodEndTimestamp)
+	case domain.LogTypeRestart:
+		data, err = reporting.GetRestartsAsSnapshots(node, periodStartTimestamp, periodEndTimestamp)
+	case domain.LogTypeDowntime:
+		data, err = reporting.GetNetworkDowntimeAsSnapshots(node, periodStartTimestamp, periodEndTimestamp)
+	}
+
+	return domain.ReturnJsonOrError(data, err)
 }
 
 func getNodeReportingEvents(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -205,16 +261,9 @@ func getNodeRawData(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRe
 		return domain.ClientError(http.StatusBadRequest, "Invalid Node ID")
 	}
 
-	taskType := req.QueryStringParameters["type"]
-	if taskType != domain.TaskTypePing &&
-		taskType != domain.TaskTypeSpeedTest &&
-		taskType != domain.LogTypeDowntime &&
-		taskType != domain.LogTypeRestart {
-		return domain.ClientError(
-			http.StatusBadRequest,
-			fmt.Sprintf(`Invalid "type"" query parameter. Must be "%s", "%s", "%s", or "%s". Got %s.`,
-				domain.TaskTypePing, domain.TaskTypeSpeedTest, domain.LogTypeDowntime, domain.LogTypeRestart, taskType),
-		)
+	taskType, errString := getTaskTypeIfValid(req)
+	if errString != "" {
+		return domain.ClientError(http.StatusBadRequest, errString)
 	}
 
 	// Validate Inputs
@@ -280,6 +329,21 @@ func getTimestampFromString(date, paramName string) (int64, error) {
 	}
 
 	return timestamp, nil
+}
+
+func getTaskTypeIfValid(req events.APIGatewayProxyRequest) (string, string) {
+	taskType := req.QueryStringParameters["type"]
+	if taskType != domain.TaskTypePing &&
+		taskType != domain.TaskTypeSpeedTest &&
+		taskType != domain.LogTypeDowntime &&
+		taskType != domain.LogTypeRestart {
+		return "", fmt.Sprintf(
+			`Invalid "type"" query parameter. Must be "%s", "%s", "%s", or "%s". Got %s.`,
+			domain.TaskTypePing, domain.TaskTypeSpeedTest, domain.LogTypeDowntime, domain.LogTypeRestart, taskType,
+		)
+	}
+
+	return taskType, ""
 }
 
 func getCSVFilename(node domain.Node, dataType string, startTimestamp, endTimestamp int64) string {

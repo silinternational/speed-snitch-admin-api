@@ -192,10 +192,10 @@ func TestViewNodeReport(t *testing.T) {
 	}
 }
 
-func getRawDataRequest(nodeID, logType, startDate, endDate string) events.APIGatewayProxyRequest {
+func getDataRequest(nodeID, reportType, logType, startDate, endDate string) events.APIGatewayProxyRequest {
 	req := events.APIGatewayProxyRequest{
 		HTTPMethod: "GET",
-		Path:       "/report/node/nodeID/raw",
+		Path:       "/report/node/nodeID/" + reportType,
 		PathParameters: map[string]string{
 			"id": nodeID,
 		},
@@ -357,7 +357,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's speedTest logs
-	response, err := getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypeSpeedTest, "2018-06-04", "2018-06-05"))
+	response, err := getNodeRawData(getDataRequest(strPassNodeID, "raw", domain.TaskTypeSpeedTest, "2018-06-04", "2018-06-05"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -377,7 +377,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's ping logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.TaskTypePing, "2018-06-04", "2018-06-04"))
+	response, err = getNodeRawData(getDataRequest(strPassNodeID, "raw", domain.TaskTypePing, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -426,7 +426,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's downtime logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeDowntime, "2018-06-04", "2018-06-04"))
+	response, err = getNodeRawData(getDataRequest(strPassNodeID, "raw", domain.LogTypeDowntime, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -451,7 +451,7 @@ func TestGetNodeRawData(t *testing.T) {
 	}
 
 	// Test for passNode's Restart logs
-	response, err = getNodeRawData(getRawDataRequest(strPassNodeID, domain.LogTypeRestart, "2018-06-04", "2018-06-04"))
+	response, err = getNodeRawData(getDataRequest(strPassNodeID, "raw", domain.LogTypeRestart, "2018-06-04", "2018-06-04"))
 	if err != nil {
 		t.Error(err)
 	}
@@ -475,6 +475,291 @@ func TestGetNodeRawData(t *testing.T) {
 		return
 	}
 
+}
+
+func TestGetNodeDetailData(t *testing.T) {
+	testutils.ResetDb(t)
+
+	tagPass := domain.Tag{
+		Name: "tag-pass",
+	}
+	tagFail := domain.Tag{
+		Name: "tag-fail",
+	}
+
+	tagFixtures := []*domain.Tag{&tagPass, &tagFail}
+
+	for _, i := range tagFixtures {
+		db.PutItem(i)
+	}
+
+	passUser := domain.User{
+		UUID:  "pass_test",
+		Email: "userPass@test.com",
+		Role:  domain.UserRoleAdmin,
+	}
+
+	failUser := domain.User{
+		UUID:  "fail_test",
+		Email: "userFail@test.com",
+		Role:  domain.UserRoleAdmin,
+	}
+
+	// Create the user in the database
+	err := db.PutItemWithAssociations(
+		&passUser,
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagPass}, AssociationName: "tags"}},
+	)
+
+	if err != nil {
+		t.Error("Got Error loading user fixture.\n", err.Error())
+		return
+	}
+
+	// Create the user in the database
+	err = db.PutItemWithAssociations(
+		&failUser,
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagFail}, AssociationName: "tags"}},
+	)
+
+	if err != nil {
+		t.Error("Got Error loading user fixture.\n", err.Error())
+		return
+	}
+
+	passNode := domain.Node{
+		MacAddr:  "aa:aa:aa:aa:aa:aa",
+		Nickname: "Africa(test)",
+	}
+
+	// Create the node in the database
+	err = db.PutItemWithAssociations(
+		&passNode,
+		[]domain.AssociationReplacements{{Replacements: []domain.Tag{tagPass}, AssociationName: "tags"}},
+	)
+	if err != nil {
+		t.Errorf("Error creating Node fixture.\n%s", err.Error())
+	}
+
+	strPassNodeID := fmt.Sprintf("%d", passNode.ID)
+
+	failNode := domain.Node{
+		MacAddr: "21:22:23:24:25:26",
+	}
+
+	db.PutItem(&failNode)
+
+	speedInRange := []*domain.TaskLogSpeedTest{
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145185, // 2018-06-04 8:46:25
+			Upload:    10.0,
+			Download:  100.0,
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145285, // 2018-06-04 8:48:05
+			Upload:    20.0,
+			Download:  200.0,
+		},
+		{
+			NodeID:    failNode.ID,
+			Timestamp: 1528145385, // 2018-06-04 8:49:45
+			Upload:    30.0,
+			Download:  300.0,
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528160000, // 2018-06-05
+			Upload:    40.0,
+			Download:  400.0,
+		},
+	}
+
+	for _, i := range speedInRange {
+		db.PutItem(i)
+	}
+
+	pingInRange := []*domain.TaskLogPingTest{
+		{
+			NodeID:            passNode.ID,
+			Timestamp:         1528145485, // 2018-06-04 8:51:25
+			Latency:           1,
+			PacketLossPercent: 5,
+		},
+		{
+			NodeID:            passNode.ID,
+			Timestamp:         1528145486, // 2018-06-04 8:51:26
+			Latency:           2,
+			PacketLossPercent: 10,
+		},
+		{
+			NodeID:            failNode.ID,
+			Timestamp:         1528145489, // 2018-06-04 8:51:29
+			Latency:           3,
+			PacketLossPercent: 15,
+		},
+	}
+
+	for _, i := range pingInRange {
+		db.PutItem(i)
+	}
+
+	downtimeInRange := []*domain.TaskLogNetworkDowntime{
+		{
+			NodeID:          passNode.ID,
+			Timestamp:       1528145000, // 2018-06-04 8:43:20
+			DowntimeSeconds: 111,
+		},
+		{
+			NodeID:          passNode.ID,
+			Timestamp:       1528146000, // 2018-06-04 9:00:00
+			DowntimeSeconds: 222,
+		},
+		{
+			NodeID:          failNode.ID,
+			Timestamp:       1528145489, // 2018-06-04 8:51:29
+			DowntimeSeconds: 333,
+		},
+	}
+
+	for _, i := range downtimeInRange {
+		db.PutItem(i)
+	}
+
+	restartsInRange := []*domain.TaskLogRestart{
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145490, // 2018-06-04 8:51:30
+		},
+		{
+			NodeID:    passNode.ID,
+			Timestamp: 1528145491, // 2018-06-04 8:51:31
+		},
+		{
+			NodeID:    failNode.ID,
+			Timestamp: 1528145491, // 2018-06-04 8:51:31
+		},
+	}
+	for _, i := range restartsInRange {
+		db.PutItem(i)
+	}
+
+	// Test for passNode's speedTest logs
+	response, err := getNodeDetailData(getDataRequest(strPassNodeID, "detail", domain.TaskTypeSpeedTest, "2018-06-04", "2018-06-04"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	var snapResults []domain.ReportingSnapshot
+	err = json.Unmarshal([]byte(response.Body), &snapResults)
+	if err != nil {
+		t.Error(err)
+		t.Fail()
+	}
+
+	expectedLen := 2
+	if len(snapResults) != expectedLen {
+		t.Error("Incorrect number of snapshots returned. Expected", expectedLen, "got", len(snapResults))
+		return
+	}
+
+	results := snapResults[1].UploadTotal
+	expected := 20.0
+	if results != expected {
+		t.Errorf("Incorrect UploadTotal. Expected %v, got %v.", expected, results)
+		return
+	}
+
+	results = snapResults[1].DownloadTotal
+	expected = 200.0
+	if results != expected {
+		t.Errorf("Incorrect DownloadTotal. Expected %v, got %v.", expected, results)
+		return
+	}
+
+	// Test for passNode's ping logs
+	response, err = getNodeDetailData(getDataRequest(strPassNodeID, "detail", domain.TaskTypePing, "2018-06-04", "2018-06-04"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	err = json.Unmarshal([]byte(response.Body), &snapResults)
+
+	expectedLen = 2
+	if len(snapResults) != expectedLen {
+		t.Error("Incorrect number of snapshots returned. Expected", expectedLen, "got", len(snapResults))
+		return
+	}
+
+	results = snapResults[1].LatencyTotal
+	expected = 2.0
+	if results != expected {
+		t.Errorf("Incorrect LatencyTotal. Expected %v, got %v.", expected, results)
+		return
+	}
+
+	results = snapResults[1].PacketLossTotal
+	expected = 10.0
+	if results != expected {
+		t.Errorf("Incorrect PacketLossTotal. Expected %v, got %v.", expected, results)
+		return
+	}
+
+	// Test for passNode's downtime logs
+	response, err = getNodeDetailData(getDataRequest(strPassNodeID, "detail", domain.LogTypeDowntime, "2018-06-04", "2018-06-04"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	err = json.Unmarshal([]byte(response.Body), &snapResults)
+
+	expectedLen = 2
+	if len(snapResults) != expectedLen {
+		t.Error("Incorrect number of snapshots returned. Expected", expectedLen, "got", len(snapResults))
+		return
+	}
+
+	intResults := snapResults[1].NetworkDowntimeSeconds
+	intExpected := int64(222)
+	if intResults != intExpected {
+		t.Errorf("Incorrect NetworkDowntimeSeconds. Expected %v, got %v.", expected, intResults)
+		return
+	}
+
+	// Test for passNode's Restart logs
+	response, err = getNodeDetailData(getDataRequest(strPassNodeID, "detail", domain.LogTypeRestart, "2018-06-04", "2018-06-04"))
+	if err != nil {
+		t.Error(err)
+	}
+
+	if response.StatusCode != 200 {
+		t.Error("Wrong status code returned, expected 200, got", response.StatusCode, response.Body)
+		return
+	}
+
+	err = json.Unmarshal([]byte(response.Body), &snapResults)
+
+	expectedLen = 2
+	if len(snapResults) != expectedLen {
+		t.Error("Incorrect number of snapshots returned. Expected", expectedLen, "got", len(snapResults))
+		return
+	}
 }
 
 func TestGetReportingEventsForRange(t *testing.T) {
