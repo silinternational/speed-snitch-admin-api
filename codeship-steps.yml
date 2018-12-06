@@ -2,6 +2,11 @@
   service: app
   command: ./codeship/test.sh
 
+- name: deploy_feature
+  service: app
+  tag: feature/detailed_report_for_charts
+  command: ./codeship/deploy-dev.sh
+
 - name: deploy_dev
   service: app
   tag: develop
