@@ -74,11 +74,15 @@ functions:
             rate: rate(365 days)
             enabled: true
 
-  node:
-      handler: bin/node
+  all:
+      handler: bin/all
+
       events:
+        ##############
+        # node events
+        ##############
         - http:
-            path: node
+            path: /node
             method: GET
             private: true
 
@@ -115,9 +119,9 @@ functions:
                 paths:
                   id: true
 
-  report:
-      handler: bin/report
-      events:
+        ################
+        # report events
+        ################
         - http:
             path: /report/node/{id}
             method: GET
@@ -143,16 +147,16 @@ functions:
                 paths:
                   id: true
 
-  tag:
-      handler: bin/tag
-      events:
+        ################
+        # tag events
+        ################
         - http:
-            path: tag
+            path: /tag
             method: GET
             private: true
 
         - http:
-            path: tag
+            path: /tag
             method: POST
             private: true
 
@@ -180,15 +184,16 @@ functions:
               parameters:
                 paths:
                   id: true
-  namedserver:
-      handler: bin/namedserver
-      events:
+
+        #####################
+        # namedserver events
+        #####################
         - http:
-            path: namedserver
+            path: /namedserver
             method: GET
             private: true
         - http:
-            path: namedserver
+            path: /namedserver
             method: POST
             private: true
         - http:
@@ -216,15 +221,15 @@ functions:
                 paths:
                   id: true
 
-  speedtestnetserver:
-      handler: bin/speedtestnetserver
-      events:
+        #############################
+        # speedtestnetserver events
+        #############################
         - http:
-            path: speedtestnetserver/country
+            path: /speedtestnetserver/country
             method: GET
             private: true
         - http:
-            path: speedtestnetserver/country/{countryCode}
+            path: /speedtestnetserver/country/{countryCode}
             method: GET
             private: true
             request:
@@ -232,7 +237,7 @@ functions:
                 paths:
                   countryCode: true
         - http:
-            path: speedtestnetserver/country/{countryCode}/{id}
+            path: /speedtestnetserver/country/{countryCode}/{id}
             method: GET
             private: true
             request:
@@ -241,29 +246,21 @@ functions:
                   countryCode: true
                   id: true
 
-  speedtestnetserverupdate:
-      handler: bin/speedtestnetserverupdate
-      timeout: 300
-      events:
-        # - schedule: cron(10 * * * ? *)
-        # cron(1 0 ? * SUN *) = Sunday at 00:01
-        - schedule: cron(1 0 ? * SUN *)
-
-  user:
-      handler: bin/user
-      events:
+        ##############
+        # user events
+        ##############
         - http:
-            path: user
+            path: /user
             method: GET
             private: true
 
         - http:
-            path: user
+            path: /user
             method: POST
             private: true
 
         - http:
-            path: user/me
+            path: /user/me
             method: GET
             private: true
 
@@ -291,16 +288,17 @@ functions:
               parameters:
                 paths:
                   id: true
-  version:
-      handler: bin/version
-      events:
+
+        #################
+        # version events
+        #################
         - http:
-            path: version
+            path: /version
             method: GET
             private: true
 
         - http:
-            path: version
+            path: /version
             method: POST
             private: true
 
@@ -328,16 +326,17 @@ functions:
               parameters:
                 paths:
                   id: true
-  event:
-      handler: bin/reportingevent
-      events:
+
+        ###################
+        # reporting events
+        ###################
         - http:
-            path: reportingevent
+            path: /reportingevent
             method: GET
             private: true
 
         - http:
-            path: reportingevent
+            path: /reportingevent
             method: POST
             private: true
 
