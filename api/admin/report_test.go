@@ -1,4 +1,4 @@
-package admin
+package main
 
 import (
 	"encoding/csv"
