@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -30,7 +29,7 @@ func GetDefaultSpeedTestUploadSizes() []int {
 	return []int{32768, 65536, 131072, 262144, 524288}
 }
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func nodeRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, nodeSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
@@ -390,9 +389,4 @@ func setStringValue(stringValues map[string]string, key string, value string) ma
 
 	stringValues[key] = value
 	return stringValues
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }

@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
@@ -13,7 +12,7 @@ import (
 
 const UniqueEmailErrorMessage = "Cannot update a User with an Email that is already in use."
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func userRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, userSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
@@ -152,11 +151,6 @@ func updateUser(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 		return domain.ClientError(http.StatusConflict, UniqueEmailErrorMessage)
 	}
 	return domain.ReturnJsonOrError(user, err)
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }
 
 func isValidRole(role string) bool {

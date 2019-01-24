@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
@@ -11,9 +10,9 @@ import (
 	"strings"
 )
 
-const UniqueNameErrorMessage = "Cannot update a Tag with a Name that is already in use."
+const UniqueTagNameErrorMessage = "Cannot update a Tag with a Name that is already in use."
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func tagRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, tagSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "GET":
@@ -103,7 +102,7 @@ func updateTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 
 	err = db.PutItem(&tag)
 	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
-		return domain.ClientError(http.StatusConflict, UniqueNameErrorMessage)
+		return domain.ClientError(http.StatusConflict, UniqueTagNameErrorMessage)
 	}
 	return domain.ReturnJsonOrError(tag, err)
 }
@@ -122,9 +121,4 @@ func deleteTag(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespons
 	var tag domain.Tag
 	err := db.DeleteItem(&tag, id)
 	return domain.ReturnJsonOrError(tag, err)
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }

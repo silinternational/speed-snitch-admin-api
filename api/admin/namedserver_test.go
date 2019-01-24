@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func TestDeleteServer(t *testing.T) {
+func TestDeleteNamedServer(t *testing.T) {
 	testutils.ResetDb(t)
 
 	// Create server record that stays
@@ -77,7 +77,7 @@ func TestDeleteServer(t *testing.T) {
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
 
-	resp, err := deleteServer(req)
+	resp, err := deleteNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to delete newly created server: ", err.Error())
 	}
@@ -97,7 +97,7 @@ func TestDeleteServer(t *testing.T) {
 		},
 	}
 
-	resp, err = viewServer(req)
+	resp, err = viewNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to check on the deleted server: ", err.Error())
 	}
@@ -136,7 +136,7 @@ func TestDeleteServer(t *testing.T) {
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
 
-	resp, err = deleteServer(req)
+	resp, err = deleteNamedServer(req)
 	if resp.StatusCode != http.StatusConflict {
 		t.Errorf("Did not get expected http status (%v). Got: %v", http.StatusConflict, resp.StatusCode)
 	}
@@ -146,7 +146,7 @@ func TestDeleteServer(t *testing.T) {
 
 }
 
-func TestListServers(t *testing.T) {
+func TestListNamedServers(t *testing.T) {
 	testutils.ResetDb(t)
 
 	// First, test that with no servers the response json is an empty array
@@ -156,7 +156,7 @@ func TestListServers(t *testing.T) {
 		Headers:    testutils.GetSuperAdminReqHeader(),
 	}
 
-	resp, err := listServers(req)
+	resp, err := listNamedServers(req)
 	if err != nil {
 		t.Error("Got error trying to list servers: ", err.Error())
 	}
@@ -186,7 +186,7 @@ func TestListServers(t *testing.T) {
 	}
 
 	// Call API to get list of servers
-	resp, err = listServers(req)
+	resp, err = listNamedServers(req)
 	if err != nil {
 		t.Error("Got error trying to list servers: ", err.Error())
 		return
@@ -208,7 +208,7 @@ func TestListServers(t *testing.T) {
 	}
 
 	// Call API to get filtered list of servers
-	resp, err = listServers(req)
+	resp, err = listNamedServers(req)
 	if err != nil {
 		t.Error("Got error trying to get filtered list of servers: ", err.Error())
 		return
@@ -228,7 +228,7 @@ func TestListServers(t *testing.T) {
 	}
 
 	// Call API to get filtered list of servers
-	resp, err = listServers(req)
+	resp, err = listNamedServers(req)
 	if err != nil {
 		t.Error("Got error trying to get filtered list of servers: ", err.Error())
 		return
@@ -240,7 +240,7 @@ func TestListServers(t *testing.T) {
 	}
 }
 
-func TestUpdateServer(t *testing.T) {
+func TestUpdateNamedServer(t *testing.T) {
 	testutils.ResetDb(t)
 
 	// Create server record to update
@@ -271,7 +271,7 @@ func TestUpdateServer(t *testing.T) {
 		Body:    string(js),
 	}
 
-	resp, err := updateServer(req)
+	resp, err := updateNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to update test record: ", err.Error())
 	}
@@ -290,7 +290,7 @@ func TestUpdateServer(t *testing.T) {
 	}
 }
 
-func TestUpdateServerFailUniqueName(t *testing.T) {
+func TestUpdateNamedServerFailUniqueName(t *testing.T) {
 	testutils.ResetDb(t)
 
 	// Create server fixtures
@@ -334,7 +334,7 @@ func TestUpdateServerFailUniqueName(t *testing.T) {
 		Body:           string(js),
 	}
 
-	resp, err := updateServer(req)
+	resp, err := updateNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to update test record: ", err.Error())
 		return
@@ -343,8 +343,12 @@ func TestUpdateServerFailUniqueName(t *testing.T) {
 		t.Errorf("Expected status code %v for update server, got: %v", http.StatusConflict, resp.StatusCode)
 	}
 
-	if !strings.Contains(resp.Body, UniqueNameErrorMessage) {
-		t.Errorf("Did not get the expected response. \nExpected it to include: %s\n But got: %s", UniqueNameErrorMessage, resp.Body)
+	if !strings.Contains(resp.Body, UniqueServerNameErrorMessage) {
+		t.Errorf(
+			"Did not get the expected response. \nExpected it to include: %s\n But got: %s",
+			UniqueServerNameErrorMessage,
+			resp.Body,
+		)
 	}
 
 	// Updating an existing Server should fail using same name as the other fixture
@@ -366,7 +370,7 @@ func TestUpdateServerFailUniqueName(t *testing.T) {
 		Body:    string(js),
 	}
 
-	resp, err = updateServer(req)
+	resp, err = updateNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to update test record: ", err.Error())
 		return
@@ -375,12 +379,16 @@ func TestUpdateServerFailUniqueName(t *testing.T) {
 		t.Errorf("Expected status code %v for update server, got: %v", http.StatusConflict, resp.StatusCode)
 	}
 
-	if !strings.Contains(resp.Body, UniqueNameErrorMessage) {
-		t.Errorf("Did not get the expected response. \nExpected it to include: %s\n But got: %s", UniqueNameErrorMessage, resp.Body)
+	if !strings.Contains(resp.Body, UniqueServerNameErrorMessage) {
+		t.Errorf(
+			"Did not get the expected response. \nExpected it to include: %s\n But got: %s",
+			UniqueServerNameErrorMessage,
+			resp.Body,
+		)
 	}
 }
 
-func TestViewServer(t *testing.T) {
+func TestViewNamedServer(t *testing.T) {
 	testutils.ResetDb(t)
 
 	// Test error 400 if id is missing in path parameters
@@ -390,7 +398,7 @@ func TestViewServer(t *testing.T) {
 		Headers:    testutils.GetSuperAdminReqHeader(),
 	}
 
-	resp, err := viewServer(req)
+	resp, err := viewNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to view server without id: ", err.Error())
 	}
@@ -408,7 +416,7 @@ func TestViewServer(t *testing.T) {
 		Headers: testutils.GetSuperAdminReqHeader(),
 	}
 
-	resp, err = viewServer(req)
+	resp, err = viewNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to view server: ", err.Error())
 	}
@@ -437,7 +445,7 @@ func TestViewServer(t *testing.T) {
 		},
 	}
 
-	resp, err = viewServer(req)
+	resp, err = viewNamedServer(req)
 	if err != nil {
 		t.Error("Got error trying to view newly created server: ", err.Error())
 	}
