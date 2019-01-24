@@ -33,7 +33,7 @@ func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, 
 		return versionRouter(req)
 
 	default:
-		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: "+req.HTTPMethod)
+		return domain.ClientError(http.StatusNotFound, "Bad path: "+req.Path)
 	}
 }
 
