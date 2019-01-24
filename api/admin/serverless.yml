@@ -75,7 +75,7 @@ functions:
             enabled: true
 
   all:
-      handler: bin/all
+      handler: bin/admin
 
       events:
         ##############
