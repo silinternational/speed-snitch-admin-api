@@ -326,11 +326,26 @@ func TestClientError(t *testing.T) {
 }
 
 func TestCleanBusinessTimes(t *testing.T) {
-	// Good - early
+	// Good - zero
 	start := "00:00"
-	close := "11:59"
+	close := "00:00"
 
 	resultStart, resultClose, err := CleanBusinessTimes(start, close)
+	if err != nil {
+		t.Errorf("Unexpected error.\n%s", err.Error())
+		return
+	}
+
+	if resultStart != start || resultClose != close {
+		t.Errorf("Bad results. Expected: %s and %s, but got %s and %s", start, close, resultStart, resultClose)
+		return
+	}
+
+	// Good - early
+	start = "00:00"
+	close = "11:59"
+
+	resultStart, resultClose, err = CleanBusinessTimes(start, close)
 	if err != nil {
 		t.Errorf("Unexpected error.\n%s", err.Error())
 		return
