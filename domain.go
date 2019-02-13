@@ -559,7 +559,7 @@ func CleanMACAddress(mAddr string) (string, error) {
 // Otherwise makes sure there is no error parsing them into time.Time values,
 // in which case it returns the original values
 func CleanBusinessTimes(start, close string) (string, string, error) {
-	if (start == "" && close == "") || (start == "00:00" && close == "00:00") {
+	if (start == "" || start == "00:00") && (close == "" || close == "00:00") {
 		return start, close, nil
 	}
 

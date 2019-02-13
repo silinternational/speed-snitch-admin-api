@@ -328,7 +328,7 @@ func TestClientError(t *testing.T) {
 func TestCleanBusinessTimes(t *testing.T) {
 	// Good - zero
 	start := "00:00"
-	close := "00:00"
+	close := ""
 
 	resultStart, resultClose, err := CleanBusinessTimes(start, close)
 	if err != nil {
