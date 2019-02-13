@@ -301,7 +301,10 @@ func hydrateSnapshotWithBusinessHourLogs(
 	node domain.Node,
 	date time.Time,
 ) error {
-	if node.BusinessStartTime == "" && node.BusinessCloseTime == "" {
+	start := node.BusinessStartTime
+	close := node.BusinessCloseTime
+
+	if (start == "" || start == "00:00") && (close == "" || close == "00:00") {
 		return nil
 	}
 
