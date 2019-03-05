@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
@@ -14,7 +13,7 @@ import (
 
 const UniqueNameErrorMessage = "Cannot update a Reporting Event with a NodeID, Name and Date that are already in use together."
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func reportingeventRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, eventSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "GET":
@@ -215,9 +214,4 @@ func deleteEvent(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 
 	err := db.DeleteItem(&reportingEvent, id)
 	return domain.ReturnJsonOrError(reportingEvent, err)
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }

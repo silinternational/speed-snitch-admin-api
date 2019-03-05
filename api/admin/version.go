@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
@@ -13,7 +12,7 @@ import (
 
 const UniqueNumberErrorMessage = "Cannot update a Version with a Number that is already in use."
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func versionRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, versionSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
@@ -114,9 +113,4 @@ func updateVersion(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 		return domain.ClientError(http.StatusConflict, UniqueNumberErrorMessage)
 	}
 	return domain.ReturnJsonOrError(version, err)
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }

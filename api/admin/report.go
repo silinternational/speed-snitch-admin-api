@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"github.com/silinternational/speed-snitch-admin-api/lib/reporting"
@@ -15,7 +14,7 @@ import (
 
 const PeriodTimeFormat = "2006-01-02"
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func reportRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	id := req.PathParameters["id"]
 	if id != "" {
 		if strings.HasSuffix(req.Path, "/raw") {
@@ -302,9 +301,4 @@ func getCSVFilename(node domain.Node, dataType string, startTimestamp, endTimest
 
 	filename := fmt.Sprintf(`"%s %s from %s to %s.csv"`, dataType, nodeName, startDate, endDate)
 	return filename
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }

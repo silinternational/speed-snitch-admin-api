@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
 	"net/http"
@@ -11,7 +10,7 @@ import (
 
 const SelfType = domain.DataTypeSTNetServerList
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func speedtestnetserverRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["id"]
 	_, countrySpecified := req.PathParameters["countryCode"]
 
@@ -93,9 +92,4 @@ func listCountries(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRes
 	var countries []domain.Country
 	err := db.ListItems(&countries, "code asc")
 	return domain.ReturnJsonOrError(countries, err)
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }

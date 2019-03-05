@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/jinzhu/gorm"
 	"github.com/silinternational/speed-snitch-admin-api"
 	"github.com/silinternational/speed-snitch-admin-api/db"
@@ -13,28 +12,28 @@ import (
 )
 
 const RelatedTaskErrorMessage = "Cannot delete a NamedServer that has a related Task."
-const UniqueNameErrorMessage = "Cannot update a NamedServer with a Name that is already in use."
+const UniqueServerNameErrorMessage = "Cannot update a NamedServer with a Name that is already in use."
 
-func router(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func namedserverRouter(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	_, serverSpecified := req.PathParameters["id"]
 	switch req.HTTPMethod {
 	case "DELETE":
-		return deleteServer(req)
+		return deleteNamedServer(req)
 	case "GET":
 		if serverSpecified {
-			return viewServer(req)
+			return viewNamedServer(req)
 		}
-		return listServers(req)
+		return listNamedServers(req)
 	case "POST":
-		return updateServer(req)
+		return updateNamedServer(req)
 	case "PUT":
-		return updateServer(req)
+		return updateNamedServer(req)
 	default:
 		return domain.ClientError(http.StatusMethodNotAllowed, "Bad request method: "+req.HTTPMethod)
 	}
 }
 
-func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func deleteNamedServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
@@ -55,7 +54,7 @@ func deleteServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	return domain.ReturnJsonOrError(server, err)
 }
 
-func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func viewNamedServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	id := domain.GetResourceIDFromRequest(req)
 	if id == 0 {
 		return domain.ClientError(http.StatusBadRequest, "Invalid ID")
@@ -83,7 +82,7 @@ func viewServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return domain.ReturnJsonOrError(server, nil)
 }
 
-func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func listNamedServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	var servers []domain.NamedServer
 
 	namedServerType, exists := req.QueryStringParameters["type"]
@@ -101,7 +100,7 @@ func listServers(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	return domain.ReturnJsonOrError(servers, err)
 }
 
-func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func updateNamedServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	statusCode, errMsg := db.GetAuthorizationStatus(req, domain.PermissionSuperAdmin, []domain.Tag{})
 	if statusCode > 0 {
 		return domain.ClientError(statusCode, errMsg)
@@ -185,12 +184,7 @@ func updateServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResp
 	// Update the namedserver in the database
 	err = db.PutItemWithAssociations(&server, replacement)
 	if err != nil && strings.Contains(err.Error(), db.UniqueFieldErrorCode) {
-		return domain.ClientError(http.StatusConflict, UniqueNameErrorMessage)
+		return domain.ClientError(http.StatusConflict, UniqueServerNameErrorMessage)
 	}
 	return domain.ReturnJsonOrError(server, err)
-}
-
-func main() {
-	defer db.Db.Close()
-	lambda.Start(router)
 }
