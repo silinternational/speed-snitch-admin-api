@@ -5,7 +5,8 @@ build:
     environment:
         go: go1.12.6
 
-    tests: false
+    tests:
+        - false
 
     nodes:
         analysis:
