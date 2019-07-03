@@ -23,9 +23,9 @@ filter:
         - api/admin/tag_test.go
         - api/admin/user_test.go
         - api/admin/version_test.go
-        - agent/config/main_test.go
-        - agent/hello/main_test.go
-        - agent/tasklog/main_test.go
+        - api/agent/config/main_test.go
+        - api/agent/hello/main_test.go
+        - api/agent/tasklog/main_test.go
         - lib/ipinfo/ipinfo_test.go
         - lib/reporting/snapshot_test.go
         - lib/speedtestnet/speedtestnet_test.go
