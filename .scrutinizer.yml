@@ -15,15 +15,17 @@ build:
 
 filter:
     excluded_paths:
-        - */*/namedserver_test.go
-        - */*/node_test.go
-        - */*/report_test.go
-        - */*/reportingevent_test.go
-        - */*/speedtestnetserver_test.go
-        - */*/tag_test.go
-        - */*/user_test.go
-        - */*/version_test.go
-        - */*/main_test.go
-        - */*/helpers_test.go
-        - */*/snapshot_test.go
-        - */*/speedtestnet_test.go
+        - api/admin/namedserver_test.go
+        - api/admin/node_test.go
+        - api/admin/report_test.go
+        - api/admin/reportingevent_test.go
+        - api/admin/speedtestnetserver_test.go
+        - api/admin/tag_test.go
+        - api/admin/user_test.go
+        - api/admin/version_test.go
+        - agent/config/main_test.go
+        - agent/hello/main_test.go
+        - agent/tasklog/main_test.go
+        - lib/ipinfo/ipinfo_test.go
+        - lib/reporting/snapshot_test.go
+        - lib/speedtestnet/speedtestnet_test.go
