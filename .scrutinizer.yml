@@ -15,4 +15,15 @@ build:
 
 filter:
     excluded_paths:
-        - *_test.go
+        - */*/namedserver_test.go
+        - */*/node_test.go
+        - */*/report_test.go
+        - */*/reportingevent_test.go
+        - */*/speedtestnetserver_test.go
+        - */*/tag_test.go
+        - */*/user_test.go
+        - */*/version_test.go
+        - */*/main_test.go
+        - */*/helpers_test.go
+        - */*/snapshot_test.go
+        - */*/speedtestnet_test.go
