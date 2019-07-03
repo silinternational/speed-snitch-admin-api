@@ -5,13 +5,11 @@ build:
     environment:
         go: go1.12.6
 
-    tests:
-        - false
-
     nodes:
         analysis:
             tests:
                 override:
+                    - true  # disable inferred commands, e.g. running tests based on the Makefile
                     - go-scrutinizer-run
                     - govet-run
                     - golint-run
