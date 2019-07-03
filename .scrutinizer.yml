@@ -9,7 +9,6 @@ build:
         analysis:
             tests:
                 override:
-                    - codeship/test.sh
                     - go-scrutinizer-run
                     - govet-run
                     - golint-run
