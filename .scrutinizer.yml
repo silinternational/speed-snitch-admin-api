@@ -9,13 +9,13 @@ build:
         analysis:
             tests:
                 override:
+                    - codeship/test.sh
                     - go-scrutinizer-run
                     - govet-run
                     - golint-run
 
 filter:
     excluded_paths:
-        - Makefile
         - api/admin/namedserver_test.go
         - api/admin/node_test.go
         - api/admin/report_test.go
@@ -30,3 +30,4 @@ filter:
         - lib/ipinfo/ipinfo_test.go
         - lib/reporting/snapshot_test.go
         - lib/speedtestnet/speedtestnet_test.go
+        - domain_test.go
