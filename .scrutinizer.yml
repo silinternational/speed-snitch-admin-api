@@ -15,6 +15,7 @@ build:
 
 filter:
     excluded_paths:
+        - Makefile
         - api/admin/namedserver_test.go
         - api/admin/node_test.go
         - api/admin/report_test.go
