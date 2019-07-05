@@ -1,0 +1,33 @@
+checks:
+    go: true
+
+build:
+    environment:
+        go: go1.12.6
+
+    nodes:
+        analysis:
+            tests:
+                override:
+                    - true  # disable inferred commands, e.g. running tests based on the Makefile
+                    - go-scrutinizer-run
+                    - govet-run
+                    - golint-run
+
+filter:
+    excluded_paths:
+        - api/admin/namedserver_test.go
+        - api/admin/node_test.go
+        - api/admin/report_test.go
+        - api/admin/reportingevent_test.go
+        - api/admin/speedtestnetserver_test.go
+        - api/admin/tag_test.go
+        - api/admin/user_test.go
+        - api/admin/version_test.go
+        - api/agent/config/main_test.go
+        - api/agent/hello/main_test.go
+        - api/agent/tasklog/main_test.go
+        - lib/ipinfo/ipinfo_test.go
+        - lib/reporting/snapshot_test.go
+        - lib/speedtestnet/speedtestnet_test.go
+        - domain_test.go
