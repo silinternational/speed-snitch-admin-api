@@ -12,6 +12,7 @@ provider:
   runtime: go1.x
   timeout: 30
   versionFunctions: false
+  logRetentionInDays: 14
   apiKeys:
     - ${self:custom.namespace}-agent
   vpc:
