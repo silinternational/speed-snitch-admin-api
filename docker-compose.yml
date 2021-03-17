@@ -20,7 +20,7 @@ services:
     command: ["bash"]
 
   db:
-    image: silintl/mariadb:latest
+    image: mariadb:10
     ports:
       - "3306:3306"
     environment:
