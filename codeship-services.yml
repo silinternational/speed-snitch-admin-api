@@ -7,10 +7,10 @@ app:
     - db
   environment:
     MYSQL_HOST: db
-  working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
+  working_dir: /src
 
 db:
-  image: silintl/mariadb:latest
+  image: mariadb:10
   environment:
     MYSQL_ROOT_PASSWORD: pass
     MYSQL_DATABASE: test
