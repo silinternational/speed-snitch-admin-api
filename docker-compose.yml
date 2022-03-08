@@ -3,9 +3,7 @@ version: "3"
 services:
 
   app:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    build: .
     environment:
       GOOS: linux
       MYSQL_HOST: db
@@ -15,8 +13,7 @@ services:
     env_file:
       - ./local.env
     volumes:
-      - ./:/go/src/github.com/silinternational/speed-snitch-admin-api
-    working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
+      - ./:/src
     command: ["bash"]
 
   db:
@@ -41,14 +38,11 @@ services:
       PMA_PASSWORD: pass
 
   test:
-    build:
-      context: ./
-      dockerfile: Dockerfile
+    build: .
     depends_on:
       - db
     environment:
       MYSQL_HOST: db
     volumes:
-      - ./:/go/src/github.com/silinternational/speed-snitch-admin-api
-    working_dir: /go/src/github.com/silinternational/speed-snitch-admin-api
+      - ./:/src
     command: ["./run-debug.sh"]
