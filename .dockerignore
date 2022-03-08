@@ -1,10 +1,19 @@
-# Ignore everything
-*
-
-# Whitelist required files
-!aws.env.encrypted
-!codeship/*
-!go.*
-!*.go
-!serverless.yml
-!package.json
+.dockerignore
+.git/*
+.gitignore
+.idea/*
+.scrutinizer.yml
+Dockerfile
+LICENSE
+Makefile
+README.md
+aws.env
+bin/*
+codeship-*.yml
+codeship.aes
+docker-compose.yml
+local.env
+local.env.example
+node_modules/
+package-lock.json
+run-debug.sh

@@ -23,6 +23,14 @@ export VPC_SUBNET3="${DEV_VPC_SUBNET3}"
 export SES_RETURN_TO_ADDR="${DEV_SES_RETURN_TO_ADDR}"
 export SES_AWS_REGION="${DEV_SES_AWS_REGION}"
 
+# Echo commands to console
+set -x
+
+# Print the Serverless version in the logs
+serverless --version
+
+echo "Deploying stage stg..."
+
 cd api/admin
 serverless deploy --verbose --stage stg
 
