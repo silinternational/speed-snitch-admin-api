@@ -1,3 +1,10 @@
-aws.credentials
-aws.env
-*.aes
+# Ignore everything
+*
+
+# Whitelist required files
+!aws.env.encrypted
+!codeship/*
+!go.*
+!*.go
+!serverless.yml
+!package.json
