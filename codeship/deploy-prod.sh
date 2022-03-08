@@ -23,7 +23,7 @@ export SES_RETURN_TO_ADDR="${PROD_SES_RETURN_TO_ADDR}"
 export SES_AWS_REGION="${PROD_SES_AWS_REGION}"
 
 cd api/admin
-serverless deploy -v --stage prod
+serverless deploy --verbose --stage prod
 
 cd ../agent
-serverless deploy -v --stage prod
+serverless deploy --verbose --stage prod

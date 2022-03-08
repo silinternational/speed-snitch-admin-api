@@ -1,11 +1,6 @@
-# For full config options, check the docs:
-#    docs.serverless.com
-
 service: speedsnitch
 
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
-# frameworkVersion: "=X.X.X"
+frameworkVersion: ^3.7.0
 
 provider:
   name: aws
@@ -13,8 +8,9 @@ provider:
   timeout: 30
   versionFunctions: false
   logRetentionInDays: 14
-  apiKeys:
-    - ${self:custom.namespace}-admin
+  apiGateway:
+    apiKeys:
+      - ${self:custom.namespace}-admin
   vpc:
     securityGroupIds:
       - ${env:VPC_SG_ID}
@@ -23,9 +19,8 @@ provider:
       - ${env:VPC_SUBNET2}
       - ${env:VPC_SUBNET3}
 
-  # you can define service wide environment variables here
   environment:
-    stage: ${self:custom.stage}
+    stage: ${sls:stage}
     namespace: ${self:custom.namespace}
     downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
     MYSQL_HOST: ${env:MYSQL_HOST}
@@ -33,39 +28,47 @@ provider:
     MYSQL_PASS: ${env:MYSQL_PASS}
     MYSQL_DB: ${env:MYSQL_DB}
     SES_RETURN_TO_ADDR: ${env:SES_RETURN_TO_ADDR}
-    SES_AWS_REGION: ${env:SES_AWS_REGION}
+    SES_AWS_REGION: ${env:AWS_REGION}
 
   stackTags:
     app: speedsnitch
-    app_env: ${opt:stage, self:provider.stage}
+    app_env: ${sls:stage}
 
-  iamRoleStatements:
-    - Effect: "Allow"
-      Action:
-        - "ses:SendEmail"
-      Resource: "*"
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "ses:SendEmail"
+          Resource: "*"
 
 custom:
-  stage: ${opt:stage, self:provider.stage}
-  namespace: ${self:service}_${self:custom.stage}
+  namespace: ${self:service}_${sls:stage}
 
 package:
- exclude:
-   - ./**
- include:
-   - ../../bin/**
+ patterns:
+   - '!./**'
+   - ../../bin/admin
+   - ../../bin/speedtestnetserverupdate
+   - ../../bin/alerts
+   - ../../bin/dailysnapshot
+   - ../../bin/migrations
 
 functions:
   dailysnapshot:
       handler: bin/dailysnapshot
       timeout: 300
       events:
+      # cron(Minutes Hours Day-of-month Month Day-of-week Year)
+      # Either `day-of-month` or `day-of-week` must be a question mark (?)
         - schedule: cron(0 1 * * ? *) # every day at 1 AM UTC
 
   alerts:
       handler: bin/alerts
       timeout: 300
       events:
+      # cron(Minutes Hours Day-of-month Month Day-of-week Year)
+      # Either `day-of-month` or `day-of-week` must be a question mark (?)
         - schedule: cron(30 1 ? * MON,THU *) # at 1:30 AM UTC on Monday and Thursday
 
   migrations:

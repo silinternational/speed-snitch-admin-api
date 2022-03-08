@@ -1,11 +1,6 @@
-# For full config options, check the docs:
-#    docs.serverless.com
-
 service: speedsnitch-agent
 
-# You can pin your service to only deploy with a specific Serverless version
-# Check out our docs for more details
-# frameworkVersion: "=X.X.X"
+frameworkVersion: ^3.7.0
 
 provider:
   name: aws
@@ -13,8 +8,9 @@ provider:
   timeout: 30
   versionFunctions: false
   logRetentionInDays: 14
-  apiKeys:
-    - ${self:custom.namespace}-agent
+  apiGateway:
+    apiKeys:
+      - ${self:custom.namespace}-agent
   vpc:
     securityGroupIds:
       - ${env:VPC_SG_ID}
@@ -23,9 +19,8 @@ provider:
       - ${env:VPC_SUBNET2}
       - ${env:VPC_SUBNET3}
 
-  # you can define service wide environment variables here
   environment:
-    stage: ${self:custom.stage}
+    stage: ${sls:stage}
     namespace: ${self:custom.namespace}
     downloadBaseUrl: ${env:DOWNLOAD_BASE_URL}
     MYSQL_HOST: ${env:MYSQL_HOST}
@@ -38,20 +33,18 @@ plugins:
   - serverless-domain-manager
 
 custom:
-  stage: ${opt:stage, self:provider.stage}
-  namespace: ${self:service}_${self:custom.stage}
+  namespace: ${self:service}_${sls:stage}
   customDomain:
     domainName: ${env:CUSTOM_DOMAIN_NAME}
     basePath: ''
-    stage: ${opt:stage, self:provider.stage}
+    stage: ${sls:stage}
     createRoute53Record: false
     certificateName: ${env:CERT_NAME}
     enabled: true
 
 package:
- exclude:
-   - ./**
- include:
+ patterns:
+   - '!./**'
    - ../../bin/hello
    - ../../bin/config
    - ../../bin/tasklog

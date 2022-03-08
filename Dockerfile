@@ -4,11 +4,10 @@ FROM golang:1.17
 RUN curl -sL https://deb.nodesource.com/setup_16.x | bash -
 RUN apt-get install -y nodejs netcat
 
-WORKDIR /src
-
 # Copy in source and install deps
+WORKDIR /src
 COPY ./package.json .
-RUN npm install -g serverless && npm install
+RUN npm --no-fund install -g serverless@3.7 && npm --no-fund install
 COPY ./ .
 RUN go get ./...
 
