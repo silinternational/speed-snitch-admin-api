@@ -18,11 +18,3 @@ done
 
 # Print the Serverless version in the logs
 serverless --version
-
-# Validate Serverless config
-
-cd api/admin
-serverless info --conceal
-
-cd ../agent
-serverless info --conceal
