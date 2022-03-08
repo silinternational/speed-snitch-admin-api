@@ -1,4 +1,4 @@
-FROM golang:latest
+FROM golang:1.17
 
 # Install packages
 RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
