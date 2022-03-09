@@ -29,10 +29,10 @@ set -x
 # Print the Serverless version in the logs
 serverless --version
 
-echo "Deploying stage stg..."
+echo "Deploying stage dev..."
 
 cd api/admin
-serverless deploy --verbose --stage stg
+serverless deploy --verbose --stage dev
 
 cd ../agent
-serverless deploy --verbose --stage stg
+serverless deploy --verbose --stage dev
