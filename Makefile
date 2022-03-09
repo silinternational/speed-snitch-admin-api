@@ -1,23 +1,11 @@
 build:
-	docker-compose run app ./codeship/build.sh
+	docker-compose run --rm app ./codeship/build.sh
 
-slsdeploy: slsdeployadmin slsdeployagent
-
-slsdeployadmin:
-	docker-compose run app bash -c "cd api/admin && sls deploy"
-
-slsdeployagent:
-	docker-compose run app bash -c "cd api/agent && sls deploy"
-
-deploy: build slsdeploy
-
-dep:
-	docker-compose run app dep ensure
+deploy: build
+	docker-compose run --rm app ./codeship/deploy-dev.sh
 
 test:
-	docker-compose run test ./codeship/test.sh
-
-codeshipsetup: dep build
+	docker-compose run --rm test ./codeship/test.sh
 
 clean:
 	docker-compose kill

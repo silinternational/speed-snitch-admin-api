@@ -3,6 +3,9 @@
 # Exit script with error if any step fails.
 set -e
 
+# Echo commands to console
+set -x
+
 # Wait until db is ready for testing
 /usr/local/bin/whenavail db 3306 100 echo "database is ready for tests"
 
@@ -12,3 +15,6 @@ i=0
 for testDir in $testDirs; do
     go test $testDir
 done
+
+# Print the Serverless version in the logs
+serverless --version
