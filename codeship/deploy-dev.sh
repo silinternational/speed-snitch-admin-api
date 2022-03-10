@@ -33,7 +33,7 @@ serverless --version
 echo "Deploying stage dev..."
 
 cd api/admin
-serverless deploy --verbose --stage dev
+serverless deploy --verbose --conceal --stage dev
 
 cd ../agent
-serverless deploy --verbose --stage dev
+serverless deploy --verbose --conceal --stage dev
