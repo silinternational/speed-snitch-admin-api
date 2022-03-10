@@ -8,6 +8,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 $DIR/build.sh
 
 # Export env vars
+export AGENT_API_TOKEN="${PROD_AGENT_API_TOKEN}"
 export CUSTOM_DOMAIN_NAME="${PROD_DOMAIN_NAME}"
 export CERT_NAME="${PROD_CERT_NAME}"
 export DOWNLOAD_BASE_URL="${PROD_DOWNLOAD_BASE_URL}"

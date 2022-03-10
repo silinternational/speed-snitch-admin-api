@@ -10,7 +10,8 @@ provider:
   logRetentionInDays: 14
   apiGateway:
     apiKeys:
-      - ${self:custom.namespace}-agent
+      - name: ${self:custom.namespace}-agent
+        value: ${env:AGENT_API_TOKEN}
   vpc:
     securityGroupIds:
       - ${env:VPC_SG_ID}
