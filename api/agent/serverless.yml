@@ -8,10 +8,10 @@ provider:
   timeout: 30
   versionFunctions: false
   logRetentionInDays: 14
-  apiGateway:
-    apiKeys:
-      - name: ${self:custom.namespace}-agent
-        value: ${env:AGENT_API_TOKEN}
+#  apiGateway:
+#    apiKeys:
+#      - name: ${self:custom.namespace}-agent
+#        value: ${env:AGENT_API_TOKEN}
   vpc:
     securityGroupIds:
       - ${env:VPC_SG_ID}
