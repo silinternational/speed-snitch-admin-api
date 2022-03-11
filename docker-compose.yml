@@ -4,12 +4,6 @@ services:
 
   app:
     build: .
-    environment:
-      GOOS: linux
-      MYSQL_HOST: db
-      MYSQL_USER: user
-      MYSQL_PASSWORD: pass
-      SES_RETURN_TO_ADDR: no_reply@example.com
     env_file:
       - ./local.env
     volumes:

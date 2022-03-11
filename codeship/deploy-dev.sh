@@ -8,6 +8,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 $DIR/build.sh
 
 # Export env vars
+export AGENT_API_TOKEN="${DEV_AGENT_API_TOKEN}"
 export CUSTOM_DOMAIN_NAME="${DEV_DOMAIN_NAME}"
 export CERT_NAME="${DEV_CERT_NAME}"
 export DOWNLOAD_BASE_URL="${DEV_DOWNLOAD_BASE_URL}"
@@ -32,7 +33,7 @@ serverless --version
 echo "Deploying stage dev..."
 
 cd api/admin
-serverless deploy --verbose --stage dev
+serverless deploy --verbose --conceal --stage dev
 
 cd ../agent
-serverless deploy --verbose --stage dev
+serverless deploy --verbose --conceal --stage dev
