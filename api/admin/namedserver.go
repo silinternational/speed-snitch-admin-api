@@ -63,7 +63,7 @@ func viewNamedServer(req events.APIGatewayProxyRequest) (events.APIGatewayProxyR
 	var server domain.NamedServer
 	err := db.GetItem(&server, id)
 	if err != nil {
-		domain.ReturnJsonOrError(server, err)
+		return domain.ReturnJsonOrError(server, err)
 	}
 
 	if server.ServerType != domain.ServerTypeSpeedTestNet {
