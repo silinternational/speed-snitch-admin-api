@@ -22,11 +22,6 @@
   tag: master
   command: lambda invoke --function speedsnitch-prod-migrations
 
-- name: track_deployment
-  service: tracker
-  tag: ^(master|develop)
-  command: "true"
-
 - name: ga4track_deployment
   service: ga4tracker
   tag: ^(master|develop)
