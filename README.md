@@ -1,3 +1,7 @@
+# Archived
+
+This project is archived and no longer maintained.
+
 # Admin API for Speed Snitch agent
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/silinternational/speed-snitch-admin-api)](https://goreportcard.com/report/github.com/silinternational/speed-snitch-admin-api)
